@@ -40,11 +40,9 @@ Instead of memorizing syntax like `;ws 50` or `;esp`, simply type *"Make me fast
 Copy the source code below or load it directly:
 
 ```lua
-loadstring(game:HttpGet("YOUR_PASTEBIN_OR_GITHUB_RAW_LINK_HERE"))()
+loadstring(game:HttpGet("https://raw.githubusercontent.com/BokX1/InfiniteYieldWithAI/refs/heads/main/InfiniteYieldWithAI.Lua"))()
 
 ```
-
-*(Replace the link above with the raw link to your V1.0 Stable script)*
 
 ---
 
