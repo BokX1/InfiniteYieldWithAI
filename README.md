@@ -83,7 +83,7 @@ You can modify the `CONFIG` table at the top of the script to customize your exp
 ```lua
 local CONFIG = {
     -- Your Pollinations.AI API Key (Required for high-speed requests)
-    ApiKey = "sk_AhgBekF9GuhskuuRLL9vJWIKfkFEN11E", 
+    ApiKey = "pk_js5tJnpmwpoif86u", 
     
     -- API Endpoint (OpenAI Standard)
     Endpoint = "https://gen.pollinations.ai/v1/chat/completions",
