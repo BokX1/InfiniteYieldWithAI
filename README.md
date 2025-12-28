@@ -1,88 +1,133 @@
-Here’s a polished **README.md** with eye‑catching badges added at the top. This will make your project look professional and immediately signal its license, language, and AI integration:
+# SmartInfiniteYield (SIY) V1.0 Stable
+
+> **Original Idea by VolQ5** | Powered by Pollinations.AI (Gemini Model)
+
+**SmartInfiniteYield** is an open-source, next-generation wrapper for the popular Roblox admin script [Infinite Yield](https://github.com/EdgeIY/infiniteyield). It integrates a Large Language Model (LLM) to translate natural language into executable admin commands, creating a seamless "Tactical Copilot" experience.
+
+Instead of memorizing syntax like `;ws 50` or `;esp`, simply type *"Make me fast"* or *"Show me where everyone is."*
 
 ---
 
-```markdown
-# InfiniteYieldWithAI 🚀
+## ⚡ Key Features
 
-![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)
-![Language](https://img.shields.io/badge/Lua-5.1%2B-green.svg)
-![AI](https://img.shields.io/badge/Powered%20by-Gemini-orange.svg)
-![Platform](https://img.shields.io/badge/Platform-Roblox-lightgrey.svg)
+* **🧠 Natural Language Processing:** Powered by the **Gemini** model via Pollinations.AI, SIY understands context, slang, and vague requests.
+* **🌉 The "Bridge" Architecture:** Uses a custom Source Injection method to hook directly into Infinite Yield's internal `execCmd` function. This ensures 100% execution reliability without relying on chat simulation or unstable GUI searching.
+* **📱 Modern UI (V1.0):**
+* **Glassmorphism Design:** Sleek dark mode with interactive hover states.
+* **Mobile-First:** Fully draggable and touch-friendly on all devices.
+* **Visual Feedback:** Input box glows green and locks during "Thinking" states to prevent spam.
+* **Floating Icon:** Minimizes to a subtle brain-chip icon to save screen space.
 
-**InfiniteYieldWithAI** integrates the famous Lua Roblox script **Infinite Yield** with the **Gemini model**, enabling natural language interaction with Roblox commands.  
 
-This project allows users to execute commands simply by typing human-like instructions, such as:  
-```
-make me fly
-```
-➡️ which automatically triggers the `fly` command in Infinite Yield.
+* **☯️ Dual Modes:**
+* **CMD Mode (Orange):** Translates text directly into Infinite Yield commands.
+* **CHAT Mode (Blue):** Acts as a Game Assistant. Ask questions like *"How do I play this game?"* and receive advice via IY Notifications.
 
----
 
-## ✨ Features
-- 🗣️ **Natural Language Commands**  
-  Execute Infinite Yield commands using plain English (e.g., "teleport me to spawn").
-- 🎮 **Game Awareness**  
-  Chat toggle intelligently adapts to the current Roblox game you’re playing.
-- ⚡ **Seamless Integration**  
-  Combines the flexibility of Infinite Yield with the power of Gemini AI.
+* **🌍 Context Awareness:** Automatically detects the **Game Name** and your **Username** to provide game-specific advice in Chat Mode.
 
 ---
 
-## 📦 Installation
-1. Clone the repository:
-   ```bash
-   git clone https://github.com/YourUsername/InfiniteYieldWithAI.git
-   ```
-2. Open the project in Roblox Studio.
-3. Insert the script into your game environment.
-4. Configure Gemini API access (see `config.lua`).
+## 🚀 Installation
 
----
+### Prerequisites
 
-## 🚀 Usage
-Once installed, simply type natural commands in the chat:
-- `make me fly` → Executes Infinite Yield’s fly command.
-- `give me admin` → Grants admin privileges.
-- `teleport me to base` → Teleports your character.
+* A Roblox Executor that supports `request` or `http_request` (e.g., Synapse Z, Solara, Krampus, Fluxus, etc.).
+* *Note: Standard Roblox Studio cannot run this script due to HTTP header restrictions.*
 
----
+### The Script
 
-## 🛡️ License
-This project is licensed under the **Apache License 2.0**.  
-See the [LICENSE](./LICENSE) file for details.
+Copy the source code below or load it directly:
 
----
+```lua
+loadstring(game:HttpGet("YOUR_PASTEBIN_OR_GITHUB_RAW_LINK_HERE"))()
 
-## 🤝 Contributing
-Contributions are welcome!  
-- Fork the repo  
-- Create a new branch (`feature/my-feature`)  
-- Commit your changes  
-- Open a Pull Request  
-
----
-
-## 📢 Disclaimer
-This project is for **educational and experimental purposes**.  
-Use responsibly and in compliance with Roblox’s community guidelines.
-
----
-
-## ⭐ Acknowledgements
-- [Infinite Yield](https://github.com/EdgeIY/infiniteyield) for the original script.  
-- Google **Gemini** for natural language processing capabilities.  
-
----
 ```
 
+*(Replace the link above with the raw link to your V1.0 Stable script)*
+
 ---
 
-This version includes **shields.io badges** for:
-- License (Apache 2.0)  
-- Language (Lua)  
-- AI (Gemini)  
-- Platform (Roblox)  
+## 📖 Usage Guide
 
-Would you like me to also add a **“Getting Started” quick demo GIF section** (showing a user typing “make me fly” and flying in Roblox) so visitors instantly see how it works?
+### 1. The Interface
+
+Upon execution, you will see the **Smart Bar** at the top of the screen.
+
+* **Input Box:** Type your request here and press Enter.
+* **Mode Button:** Toggles between **CMD** and **CHAT**.
+* **Minimize (-):** Shrinks the UI to a floating icon.
+
+### 2. CMD Mode (Orange)
+
+**Goal:** Execute commands.
+
+* *User:* "Fly me and make me invisible."
+* *AI:* Executes `;fly` and `;invisible`.
+* *User:* "Kill the guy next to me."
+* *AI:* Executes `;kill [PlayerName]`.
+
+### 3. CHAT Mode (Blue)
+
+**Goal:** Get information/strategy.
+
+* *User:* "Where is the safe spot in this game?"
+* *AI:* (Notification) "Check the top of the tower, usually safe from zombies."
+* *User:* "What does ;noclip do?"
+* *AI:* (Notification) "It allows you to walk through walls."
+
+---
+
+## ⚙️ Configuration
+
+You can modify the `CONFIG` table at the top of the script to customize your experience:
+
+```lua
+local CONFIG = {
+    -- Your Pollinations.AI API Key (Required for high-speed requests)
+    ApiKey = "sk_AhgBekF9GuhskuuRLL9vJWIKfkFEN11E", 
+    
+    -- API Endpoint (OpenAI Standard)
+    Endpoint = "https://gen.pollinations.ai/v1/chat/completions",
+    
+    -- Model Selection
+    Model = "gemini", -- Options: 'gemini', 'gemini-fast', 'openai'
+}
+
+```
+
+---
+
+## 🏗 Architecture
+
+**SmartInfiniteYield** solves the "Sandboxing" problem of Roblox scripts using a specific load order:
+
+1. **Check:** Looks for an existing Infinite Yield instance.
+2. **Fetch:** If missing, it fetches the raw Infinite Yield source code.
+3. **Inject:** It appends a custom "Bridge Function" to the source code before running it:
+```lua
+getgenv().PseudoBridge = { Exec = function(cmd) if execCmd then execCmd(cmd) end end }
+
+```
+
+
+4. **Execute:** It runs the modified IY, exposing `execCmd` to the global environment securely.
+5. **Connect:** The AI interface connects to `PseudoBridge` to send commands directly to the engine.
+
+---
+
+## ⚖️ License
+
+Licensed under the **Apache License, Version 2.0** (the "License"); you may not use this file except in compliance with the License. You may obtain a copy of the License at:
+
+[http://www.apache.org/licenses/LICENSE-2.0](http://www.apache.org/licenses/LICENSE-2.0)
+
+Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific language governing permissions and limitations under the License.
+
+---
+
+## 📝 Credits
+
+* **Original Idea & Concept:** VolQ5
+* **AI Integration:** Gemini (Google) via Pollinations.AI
+* **Backend:** Infinite Yield (EdgeIY)
