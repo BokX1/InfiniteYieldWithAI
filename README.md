@@ -10,7 +10,7 @@ It features a **Recursive Feedback Loop**: if the AI targets a non-existent play
 
 **🧠 Cybernetic Intelligence**
 
-* **Context Injection:** The script reads the current server's player list dynamically. If you say "Kill ben," it knows whether you mean "Ben_123" or "BennyGamer" based on who is actually in the server.
+* **Context Injection:** The script reads the current server's player list dynamically. If you say "Goto ben," it knows whether you mean "Ben_123" or "BennyGamer" based on who is actually in the server.
 * **Recursive Error Correction:** If the AI generates a bad command (e.g., typos a username), the script catches the error, feeds it back to the AI with a `[FEEDBACK ERROR]` tag, and retries automatically.
 * **Knowledge Base:** Hardcoded syntax dictionaries for Movement, Visuals, and Admin commands ensure the AI adheres to strict Infinite Yield syntax.
 
@@ -138,17 +138,17 @@ local CONFIG = {
 
 **SmartInfiniteYield V1.1** solves the "Hallucination" problem common in AI scripts using a **Validation-Retry Loop**:
 
-1. **Input:** User types "Kill vol".
+1. **Input:** User types "Goto vol".
 2. **Context:** Script grabs current player list (e.g., `[VolQ5, Player2, Player3]`).
 3. **Prompting:** Sends request + player list to AI.
 4. **Validation:**
-* *Scenario A:* AI returns `;kill VolQ5`. Target exists. **EXECUTE.**
-* *Scenario B:* AI returns `;kill Volcano`. Target missing. **HALT.**
+* *Scenario A:* AI returns `;goto VolQ5`. Target exists. **EXECUTE.**
+* *Scenario B:* AI returns `;goto Volcano`. Target missing. **HALT.**
 
 
 5. **Recursion (If Scenario B):**
 * Script sends: `[FEEDBACK ERROR: Target 'Volcano' not found.]`
-* AI Retries: "Ah, looking at the list, it must be VolQ5." -> Returns `;kill VolQ5`.
+* AI Retries: "Ah, looking at the list, it must be VolQ5." -> Returns `;goto VolQ5`.
 * **EXECUTE.**
 
 
