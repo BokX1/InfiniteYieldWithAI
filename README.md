@@ -14,7 +14,7 @@ Instead of memorizing syntax like ;ws 50 or ;esp, simply type "Make me fast" or 
 
 ## ⚡ Key Features
 
-* **🧠 Natural Language Processing:** Powered by the **Gemini** model via Pollinations.AI, SIY understands context, slang, and vague requests.
+* **🧠 Natural Language Processing:** Powered by the **Gemini/Grok** model via Pollinations.AI, SIY understands context, slang, and vague requests.
 * **🌉 The "Bridge" Architecture:** Uses a custom Source Injection method to hook directly into Infinite Yield's internal `execCmd` function. This ensures 100% execution reliability without relying on chat simulation or unstable GUI searching.
 * **📱 Modern UI (V1.0):**
 * **Glassmorphism Design:** Sleek dark mode with interactive hover states.
@@ -87,13 +87,13 @@ You can modify the `CONFIG` table at the top of the script to customize your exp
 ```lua
 local CONFIG = {
     -- Your Pollinations.AI API Key (Required for high-speed requests)
-    ApiKey = "pk_js5tJnpmwpoif86u", 
+    ApiKey = "your_key", 
     
     -- API Endpoint (OpenAI Standard)
     Endpoint = "https://gen.pollinations.ai/v1/chat/completions",
     
     -- Model Selection
-    Model = "gemini", -- Options: 'gemini', 'gemini-fast', 'openai'
+    Model = "gemini", -- Options: 'gemini', 'gemini-fast', 'openai', 'grok'
 }
 
 ```
