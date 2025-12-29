@@ -1,12 +1,8 @@
 --[[ 
-    SMART INFINITE YIELD - V1.0 STABLE
-    Original Idea by VolQ5
-    Powered by Pollinations.AI (Grok Model)
-    
-    RELEASE NOTES:
-    - [STABLE]: Finalized V1.0.1 ModelHotfix Release.
-    - [UX]: Added "Thinking..." indicator in the text box.
-    - [VISUAL]: Persistent quality updates from V0.3.
+    SMART INFINITE YIELD - V1.1 STABLE
+    - Architecture: Has Context Awareness
+    - Logic: VolQ5 & Pollinations.AI (Grok Model)
+    - Status: Stable
 ]]
 
 -- 1. CONFIGURATION
@@ -16,42 +12,87 @@ local CONFIG = {
     
     Endpoint = "https://gen.pollinations.ai/v1/chat/completions",
     Model = "grok",
+    MaxRetries = 2, 
     
     CommandPrompt = [[
-        You are a Roblox Command Translator.
-        1. Output ONLY the valid Infinite Yield command.
-        2. NO chat, NO explanations.
-        3. Example: "fly" -> "fly"
+        You are a Kernel Interface for the Roblox script "Infinite Yield".
+        YOUR OBJECTIVE: Translate natural language user requests into precise Infinite Yield command strings.
+        
+        ### STRICT OUTPUT PROTOCOL ###
+        1. Output ONLY the raw command string.
+        2. NO markdown, NO explanations.
+        3. ALWAYS start the command with the prefix ';'.
+        
+        ### KNOWLEDGE BASE ###
+        [MOVEMENT]
+        - "fly" -> ;fly [speed]
+        - "noclip" -> ;noclip
+        - "float" -> ;float
+        - "swim" -> ;swim
+        - "goto" -> ;goto [player]
+        - "tpwalk" -> ;tpwalk [speed]
+        
+        [VISUALS]
+        - "esp" -> ;esp
+        - "chams" -> ;chams
+        - "xray" -> ;xray
+        - "fullbright" -> ;fullbright
+        - "view" -> ;view [player]
+        - "unview" -> ;unview
+        
+        [ADMIN/SERVER]
+        - "dex" -> ;explorer
+        - "spy" -> ;remotespy
+        - "rejoin" -> ;rj
+        - "hop" -> ;serverhop
+        - "jobid" -> ;jobid
+        - "btools" -> ;btools
+        
+        [INTERACTION]
+        - "kill" -> ;kill [player]
+        - "fling" -> ;fling [player]
+        - "bring" -> ;bring [player]
+        - "loopkill" -> ;loopkill [player]
+        
+        ### DYNAMIC TARGETING ###
+        - Use provided [SYSTEM DATA] to match player names.
+        - If [FEEDBACK ERROR] occurs, correct the username and retry.
     ]],
 }
 
--- 2. CONTEXT ENGINE
+-- 2. SERVICES & CONTEXT
 local Players = game:GetService("Players")
 local MarketplaceService = game:GetService("MarketplaceService")
-local User = Players.LocalPlayer or Players.PlayerAdded:Wait()
-local GameName = "Unknown Game"
-
-task.spawn(function()
-    pcall(function()
-        local info = MarketplaceService:GetProductInfo(game.PlaceId)
-        GameName = info.Name
-        print(">> SIY V1.0: Connected to " .. GameName)
-    end)
-end)
-
--- 3. SERVICES
 local HttpService = game:GetService("HttpService")
 local UserInputService = game:GetService("UserInputService")
 local TweenService = game:GetService("TweenService")
 local CoreGui = game:GetService("CoreGui")
 
-local httpRequest = (syn and syn.request) or (http and http.request) or http_request or (fluxus and fluxus.request) or request
-if not httpRequest then warn("Executor incompatible.") end
+local User = Players.LocalPlayer or Players.PlayerAdded:Wait()
+local GameName = "Loading..." 
 
--- 4. THE BRIDGE (Stable)
-local IY_Interface = nil
+-- Async Game Name Fetcher
 task.spawn(function()
-    if getgenv().PseudoBridge then IY_Interface = getgenv().PseudoBridge; return end
+    local success, info = pcall(function() return MarketplaceService:GetProductInfo(game.PlaceId) end)
+    if success and info then
+        GameName = info.Name
+    else
+        GameName = "Unknown Game"
+    end
+end)
+
+local httpRequest = (syn and syn.request) or (http and http.request) or http_request or (fluxus and fluxus.request) or request
+if not httpRequest then warn("SIY: Executor incompatible.") end
+
+-- 3. THE BRIDGE (PRESERVED & STABLE)
+local IY_Interface = nil
+
+task.spawn(function()
+    if getgenv().PseudoBridge then 
+        IY_Interface = getgenv().PseudoBridge
+        return 
+    end
+
     if not game.CoreGui:FindFirstChild("InfiniteYield") then
         local Success, IY_Source = pcall(function() return game:HttpGet("https://raw.githubusercontent.com/EdgeIY/infiniteyield/master/source") end)
         if Success then
@@ -59,84 +100,74 @@ task.spawn(function()
             loadstring(IY_Source .. "\n" .. BridgeCode)()
         end
     end
-    repeat task.wait(0.5) until getgenv().PseudoBridge
+    
+    local timeout = 0
+    repeat task.wait(0.2); timeout = timeout + 0.2 until getgenv().PseudoBridge or timeout > 10
     IY_Interface = getgenv().PseudoBridge
 end)
 
--- 5. GUI CONSTRUCTION
+-- 4. GUI CONSTRUCTION
 if CoreGui:FindFirstChild("SmartInfiniteYieldGUI") then CoreGui.SmartInfiniteYieldGUI:Destroy() end
 local SIY_Screen = Instance.new("ScreenGui")
 SIY_Screen.Name = "SmartInfiniteYieldGUI"
 SIY_Screen.Parent = CoreGui 
+SIY_Screen.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 
--- [[ STYLES ]] --
 local Colors = {
     Background = Color3.fromRGB(20, 20, 25),
-    InputBg = Color3.fromRGB(30, 30, 35),
-    Orange = Color3.fromRGB(255, 140, 0),
-    Blue = Color3.fromRGB(0, 190, 255),
-    Green = Color3.fromRGB(0, 255, 160),
-    Text = Color3.fromRGB(240, 240, 240),
-    TextDim = Color3.fromRGB(150, 150, 160)
+    InputBg    = Color3.fromRGB(30, 30, 35),
+    Orange     = Color3.fromRGB(255, 140, 0), -- CMD
+    Blue       = Color3.fromRGB(0, 190, 255), -- Chat
+    Green      = Color3.fromRGB(0, 255, 160), -- Success/Thinking
+    Red        = Color3.fromRGB(255, 80, 80), -- Error
+    Text       = Color3.fromRGB(240, 240, 240),
+    TextDim    = Color3.fromRGB(150, 150, 160)
 }
 
 local function addCorner(obj, radius)
-    local c = Instance.new("UICorner")
-    c.CornerRadius = UDim.new(0, radius)
-    c.Parent = obj
-    return c
+    local c = Instance.new("UICorner"); c.CornerRadius = UDim.new(0, radius); c.Parent = obj; return c
 end
 
-local function animateButton(btn)
-    btn.MouseEnter:Connect(function() TweenService:Create(btn, TweenInfo.new(0.2), {BackgroundTransparency = 0.2}):Play() end)
-    btn.MouseLeave:Connect(function() TweenService:Create(btn, TweenInfo.new(0.2), {BackgroundTransparency = 0}):Play() end)
-end
-
--- [[ FLOATING ICON (SUBTLE LOGO) ]]
+-- Floating Icon
 local OpenButton = Instance.new("ImageButton")
 OpenButton.Size = UDim2.new(0, 45, 0, 45)
 OpenButton.Position = UDim2.new(0, 20, 0.5, -22)
 OpenButton.BackgroundColor3 = Colors.Background
-OpenButton.Image = "rbxassetid://6035193498" 
+OpenButton.Image = "rbxassetid://6035193498"
 OpenButton.ImageColor3 = Colors.Green
 OpenButton.Visible = false
 OpenButton.Parent = SIY_Screen
 addCorner(OpenButton, 12)
 
-local OpenStroke = Instance.new("UIStroke")
-OpenStroke.Color = Colors.Green; OpenStroke.Thickness = 1.5; OpenStroke.Parent = OpenButton
-
--- [[ MAIN BAR ]]
+-- Main Bar
 local MainFrame = Instance.new("Frame")
 MainFrame.Name = "MainFrame"
-MainFrame.Size = UDim2.new(0, 500, 0, 55)
+MainFrame.Size = UDim2.new(0, 500, 0, 55) 
 MainFrame.Position = UDim2.new(0.5, -250, 0.15, 0)
 MainFrame.BackgroundColor3 = Colors.Background
 MainFrame.BorderSizePixel = 0
 MainFrame.Parent = SIY_Screen
 addCorner(MainFrame, 10)
 
--- Soft Shadow
+-- Glow/Stroke (Animated)
+local MainStroke = Instance.new("UIStroke")
+MainStroke.Color = Colors.Orange 
+MainStroke.Thickness = 1.5
+MainStroke.Parent = MainFrame
+
+-- Shadow
 local Shadow = Instance.new("ImageLabel")
-Shadow.Name = "Shadow"
 Shadow.AnchorPoint = Vector2.new(0.5, 0.5)
 Shadow.Position = UDim2.new(0.5, 0, 0.5, 2)
 Shadow.Size = UDim2.new(1, 15, 1, 15)
 Shadow.BackgroundTransparency = 1
 Shadow.Image = "rbxassetid://6015897843"
 Shadow.ImageColor3 = Color3.new(0,0,0)
-Shadow.ImageTransparency = 0.6 
-Shadow.ZIndex = 0
+Shadow.ImageTransparency = 0.5 
+Shadow.ZIndex = -1
 Shadow.Parent = MainFrame
 
--- Main Glow Border
-local MainStroke = Instance.new("UIStroke")
-MainStroke.Color = Colors.Orange 
-MainStroke.Thickness = 1.5
-MainStroke.Transparency = 0 
-MainStroke.Parent = MainFrame
-
--- [[ INNER ELEMENTS ]]
+-- Controls
 local ModeBtn = Instance.new("TextButton")
 ModeBtn.Size = UDim2.new(0, 80, 0, 32)
 ModeBtn.Position = UDim2.new(0, 12, 0.5, -16)
@@ -147,7 +178,6 @@ ModeBtn.Font = Enum.Font.GothamBold
 ModeBtn.TextSize = 13
 ModeBtn.Parent = MainFrame
 addCorner(ModeBtn, 6)
-animateButton(ModeBtn)
 
 local MinBtn = Instance.new("TextButton")
 MinBtn.Size = UDim2.new(0, 32, 0, 32)
@@ -159,8 +189,8 @@ MinBtn.Font = Enum.Font.GothamBold
 MinBtn.TextSize = 20
 MinBtn.Parent = MainFrame
 addCorner(MinBtn, 6)
-animateButton(MinBtn)
 
+-- Input Field
 local InputContainer = Instance.new("Frame")
 InputContainer.Size = UDim2.new(1, -150, 0, 32)
 InputContainer.Position = UDim2.new(0, 102, 0.5, -16)
@@ -182,14 +212,14 @@ InputBox.TextXAlignment = Enum.TextXAlignment.Left
 InputBox.ClearTextOnFocus = false
 InputBox.Parent = InputContainer
 
--- [[ TUTORIAL MODAL ]]
+-- [[ COMPONENT: TUTORIAL & TRADEMARK ]]
 local TutorialFrame = Instance.new("Frame")
 TutorialFrame.Name = "Tutorial"
 TutorialFrame.Size = UDim2.new(0, 420, 0, 240)
 TutorialFrame.Position = UDim2.new(0.5, -210, 0.5, -120)
 TutorialFrame.BackgroundColor3 = Colors.Background
 TutorialFrame.Parent = SIY_Screen
-TutorialFrame.Visible = false 
+TutorialFrame.Visible = true 
 addCorner(TutorialFrame, 16)
 
 local TutStroke = Instance.new("UIStroke")
@@ -220,11 +250,12 @@ TutDesc.RichText = true
 TutDesc.TextWrapped = true
 TutDesc.Parent = TutorialFrame
 
+-- [[ TRADEMARK ]]
 local Trademark = Instance.new("TextLabel")
 Trademark.Size = UDim2.new(1, 0, 0, 20)
 Trademark.Position = UDim2.new(0, 0, 1, -15) 
 Trademark.BackgroundTransparency = 1
-Trademark.Text = "Original idea by VolQ5"
+Trademark.Text = "Created by VolQ5"
 Trademark.TextColor3 = Color3.fromRGB(100, 100, 100)
 Trademark.Font = Enum.Font.Gotham
 Trademark.TextSize = 10
@@ -252,60 +283,136 @@ TutBtn.MouseButton1Click:Connect(function()
     TutorialFrame.Visible = false
 end)
 
--- 6. LOGIC & INTELLIGENCE
+
+-- 5. LOGIC ENGINE
 local IS_CHAT_MODE = false
 
 -- Draggable Logic
 local function makeDraggable(frame)
     local dragging, dragStart, startPos
     frame.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-            dragging = true; dragStart = input.Position; startPos = frame.Position
-            input.Changed:Connect(function() if input.UserInputState == Enum.UserInputState.End then dragging = false end end)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then 
+            dragging=true; dragStart=input.Position; startPos=frame.Position 
         end
     end)
     frame.InputChanged:Connect(function(input)
-        if (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) and dragging then
+        if input.UserInputType==Enum.UserInputType.MouseMovement and dragging then
             local delta = input.Position - dragStart
-            frame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+            TweenService:Create(frame, TweenInfo.new(0.05), {Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)}):Play()
         end
     end)
+    frame.InputEnded:Connect(function(input) if input.UserInputType==Enum.UserInputType.MouseButton1 then dragging=false end end)
 end
 makeDraggable(MainFrame); makeDraggable(OpenButton)
 
+-- Logic Helpers
 local function getChatPrompt()
+    -- [[ FIX: ENSURE GAME NAME IS UPDATED ]]
+    local displayName = (GameName ~= "Loading...") and GameName or "this game"
     return string.format([[
         You are a helpful Infinite Yield Assistant for the player '%s'.
-        They are currently playing the Roblox game: '%s'.
-        RULES: Give advice specific to '%s' (max 20 words). No markdown.
-    ]], User.Name, GameName, GameName)
+        Playing: '%s'. RULES: Give advice specific to '%s' (max 20 words). No markdown.
+    ]], User.Name, displayName, displayName)
 end
 
+local function getPlayerList()
+    local names = {}; for _, p in pairs(Players:GetPlayers()) do table.insert(names, p.Name) end
+    return table.concat(names, ", ")
+end
+
+local TargetTriggers = {"kill", "fling", "goto", "tp", "spectate", "view", "watch", "bring", "to", "attach", "loopkill"}
+local function needsPlayerContext(text)
+    local lowerText = text:lower()
+    for _, trigger in ipairs(TargetTriggers) do if string.find(lowerText, trigger) then return true end end
+    return false
+end
+
+-- [[ CRITICAL FIX: EXECUTION BRIDGE ]]
 local function executeBridge(text)
-    if not IY_Interface then return end
+    if not IY_Interface then 
+        warn("SIY: Bridge not connected.")
+        InputBox.PlaceholderText = "Error: Bridge Failed"
+        InputBox.PlaceholderColor3 = Colors.Red
+        return 
+    end
+    
+    local cleanText = text:gsub("^%s*", ""):gsub("%s*$", "")
+    
     if IS_CHAT_MODE then
-        local clean = text:gsub("'", ""):gsub('"', '')
-        IY_Interface.Exec("notify Gemini " .. clean)
+        -- [[ CLEAN CHAT FIX: NO PREFIX ]]
+        local safeText = cleanText:gsub("'", ""):gsub('"', '')
+        -- Removed "Gemini " prefix
+        IY_Interface.Exec("notify " .. safeText) 
     else
-        IY_Interface.Exec(text)
+        -- [[ CMD FIX: STRIP PREFIX ]]
+        if cleanText:sub(1,1) == ";" then
+            local rawCommand = cleanText:sub(2) 
+            IY_Interface.Exec(rawCommand) 
+        else
+            warn("AI Output Error: " .. cleanText)
+            IY_Interface.Exec("notify Error Invalid AI Syntax.")
+        end
     end
 end
 
-local function queryAI(promptText)
-    -- VISUAL: Thinking State
-    local oldPlaceholder = InputBox.PlaceholderText
-    InputBox.PlaceholderText = "Thinking..."
-    InputBox.PlaceholderColor3 = Colors.Green
-    InputBox.TextEditable = false -- Lock input
+-- Logic: Validation
+local function validateCommandTarget(cmdString)
+    local args = cmdString:split(" ")
+    if #args < 2 then return true, "" end 
+    local targetName = args[2]
+    if table.find({"me", "all", "others", "random"}, targetName:lower()) then return true, "" end
     
-    local pulse = TweenService:Create(MainStroke, TweenInfo.new(0.6, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true), {Transparency = 0.6})
+    if Players:FindFirstChild(targetName) then return true, "" else
+        local matchFound = false
+        for _, p in pairs(Players:GetPlayers()) do
+            if p.Name:lower():sub(1, #targetName) == targetName:lower() then matchFound = true; break end
+        end
+        if matchFound then return true, "" else return false, "Target '"..targetName.."' not found." end
+    end
+end
+
+-- Logic: Visual Reset
+local function resetVisuals()
+    local pulse = TweenService:Create(MainStroke, TweenInfo.new(0.3), {Transparency = 0})
+    pulse:Play()
+    InputBox.TextEditable = true
+    InputBox.Text = "" 
+    InputBox.PlaceholderColor3 = Colors.TextDim
+    -- [[ FIX: UI UPDATE ]]
+    local uiName = (GameName ~= "Loading...") and GameName or "game"
+    InputBox.PlaceholderText = IS_CHAT_MODE and ("Ask about " .. uiName .. "...") or "Enter command..."
+end
+
+-- Logic: Recursive Query
+function queryAI(promptText, retryContext, attemptCount)
+    attemptCount = attemptCount or 0
+    
+    local statusText = (attemptCount > 0) and "Fixing..." or "Thinking..."
+    local statusColor = (attemptCount > 0) and Colors.Orange or Colors.Green
+    InputBox.PlaceholderText = statusText
+    InputBox.PlaceholderColor3 = statusColor
+    InputBox.TextEditable = false
+    
+    local pulse = TweenService:Create(MainStroke, TweenInfo.new(0.6, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true), {Transparency = 0.5})
     pulse:Play()
     
-    local activeSystemPrompt = IS_CHAT_MODE and getChatPrompt() or CONFIG.CommandPrompt
-    
+    if attemptCount > CONFIG.MaxRetries then 
+        InputBox.PlaceholderText = "Failed: Target invalid."
+        InputBox.PlaceholderColor3 = Colors.Red
+        task.wait(2); resetVisuals(); return 
+    end
+
+    local systemPayload = IS_CHAT_MODE and getChatPrompt() or CONFIG.CommandPrompt
+    local userPayload = promptText
+
+    if not IS_CHAT_MODE and needsPlayerContext(promptText) then
+        userPayload = userPayload .. "\n[SYSTEM DATA: Current Players: " .. getPlayerList() .. "]"
+    end
+    if retryContext then userPayload = userPayload .. "\n[FEEDBACK ERROR: " .. retryContext .. "]" end
+
     local body = HttpService:JSONEncode({
         model = CONFIG.Model,
-        messages = { {role = "system", content = activeSystemPrompt}, {role = "user", content = promptText} },
+        messages = { {role = "system", content = systemPayload}, {role = "user", content = userPayload} },
         temperature = 0.3
     })
 
@@ -318,53 +425,59 @@ local function queryAI(promptText)
             })
         end)
 
-        if success and response and response.StatusCode == 200 then
+        pulse:Cancel() 
+
+        if success and response.StatusCode == 200 then
             local data = HttpService:JSONDecode(response.Body)
-            executeBridge(data.choices[1].message.content)
-        end
-        
-        -- VISUAL: Reset State
-        pulse:Cancel()
-        MainStroke.Transparency = 0
-        InputBox.TextEditable = true
-        InputBox.PlaceholderColor3 = Colors.TextDim
-        if IS_CHAT_MODE then
-            InputBox.PlaceholderText = "Ask about " .. GameName .. "..."
+            local aiOutput = data.choices[1].message.content
+            
+            if IS_CHAT_MODE then
+                 executeBridge(aiOutput); resetVisuals()
+            else
+                local cleanCmd = aiOutput:gsub("^%s*", ""):gsub("%s*$", "")
+                if cleanCmd:sub(1,1) == ";" then
+                    local isValid, errorMsg = validateCommandTarget(cleanCmd)
+                    if isValid then 
+                        executeBridge(cleanCmd); resetVisuals()
+                    else
+                        queryAI(promptText, errorMsg, attemptCount + 1)
+                    end
+                else
+                    executeBridge("notify Gemini Output Invalid"); resetVisuals()
+                end
+            end
         else
-            InputBox.PlaceholderText = "Enter command..."
+            InputBox.PlaceholderText = "Connection Error"
+            InputBox.PlaceholderColor3 = Colors.Red
+            task.wait(2); resetVisuals()
         end
     end)
 end
 
--- 7. EVENTS
+-- 6. EVENTS & HANDLERS
 InputBox.FocusLost:Connect(function(enter)
     if enter and InputBox.Text ~= "" then
-        local t = InputBox.Text; InputBox.Text = ""; queryAI(t)
+        local text = InputBox.Text
+        InputBox.Text = "" 
+        queryAI(text) 
     end
 end)
 
-MinBtn.MouseButton1Click:Connect(function()
-    MainFrame.Visible = false; OpenButton.Visible = true
-end)
-
-OpenButton.MouseButton1Click:Connect(function()
-    OpenButton.Visible = false; MainFrame.Visible = true
-end)
+MinBtn.MouseButton1Click:Connect(function() MainFrame.Visible = false; OpenButton.Visible = true end)
+OpenButton.MouseButton1Click:Connect(function() OpenButton.Visible = false; MainFrame.Visible = true end)
 
 ModeBtn.MouseButton1Click:Connect(function()
     IS_CHAT_MODE = not IS_CHAT_MODE
+    local uiName = (GameName ~= "Loading...") and GameName or "game"
     if IS_CHAT_MODE then
         ModeBtn.Text = "CHAT"
-        ModeBtn.BackgroundColor3 = Colors.Blue
-        MainStroke.Color = Colors.Blue 
-        InputBox.PlaceholderText = "Ask about " .. GameName .. "..."
+        TweenService:Create(ModeBtn, TweenInfo.new(0.3), {BackgroundColor3 = Colors.Blue}):Play()
+        TweenService:Create(MainStroke, TweenInfo.new(0.3), {Color = Colors.Blue}):Play()
+        InputBox.PlaceholderText = "Ask about " .. uiName .. "..."
     else
         ModeBtn.Text = "CMD"
-        ModeBtn.BackgroundColor3 = Colors.Orange
-        MainStroke.Color = Colors.Orange 
+        TweenService:Create(ModeBtn, TweenInfo.new(0.3), {BackgroundColor3 = Colors.Orange}):Play()
+        TweenService:Create(MainStroke, TweenInfo.new(0.3), {Color = Colors.Orange}):Play()
         InputBox.PlaceholderText = "Enter command..."
     end
 end)
-
-
-TutorialFrame.Visible = true
