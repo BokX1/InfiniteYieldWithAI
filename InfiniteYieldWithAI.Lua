@@ -1,10 +1,10 @@
 --[[ 
     SMART INFINITE YIELD - V1.0 STABLE
     Original Idea by VolQ5
-    Powered by Pollinations.AI (Gemini Model)
+    Powered by Pollinations.AI (Grok Model)
     
     RELEASE NOTES:
-    - [STABLE]: Finalized V1.0 Release.
+    - [STABLE]: Finalized V1.0.1 ModelHotfix Release.
     - [UX]: Added "Thinking..." indicator in the text box.
     - [VISUAL]: Persistent quality updates from V0.3.
 ]]
@@ -12,10 +12,10 @@
 -- 1. CONFIGURATION
 local CONFIG = {
     -- !!! REPLACE THIS WITH YOUR KEY !!!
-    ApiKey = "sk_peH4pPXNh86yHr9XzdeSEzUojwWUiOFo", 
+    ApiKey = "sk_KOF9Cw14T3l8nJ1RtTOE5wgxVI3QZAFY", 
     
     Endpoint = "https://gen.pollinations.ai/v1/chat/completions",
-    Model = "gemini",
+    Model = "grok",
     
     CommandPrompt = [[
         You are a Roblox Command Translator.
@@ -368,8 +368,3 @@ end)
 
 
 TutorialFrame.Visible = true
-
-
-
-
-
