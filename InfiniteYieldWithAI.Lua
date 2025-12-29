@@ -12,10 +12,10 @@
 -- 1. CONFIGURATION
 local CONFIG = {
     -- !!! REPLACE THIS WITH YOUR KEY !!!
-    ApiKey = "pk_js5tJnpmwpoif86u", 
+    ApiKey = "sk_peH4pPXNh86yHr9XzdeSEzUojwWUiOFo", 
     
     Endpoint = "https://gen.pollinations.ai/v1/chat/completions",
-    Model = "gemini-fast",
+    Model = "gemini",
     
     CommandPrompt = [[
         You are a Roblox Command Translator.
@@ -368,6 +368,7 @@ end)
 
 
 TutorialFrame.Visible = true
+
 
 
 
