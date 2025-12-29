@@ -8,9 +8,9 @@
 -- 1. CONFIGURATION
 local CONFIG = {
     -- !!! REPLACE THIS WITH YOUR KEY !!!
-    ApiKey = "sk_KOF9Cw14T3l8nJ1RtTOE5wgxVI3QZAFY", 
+    ApiKey = "Null", 
     
-    Endpoint = "https://gen.pollinations.ai/v1/chat/completions",
+    Endpoint = "https://infiniteyieldai.ahazihak03.workers.dev/v1/chat/completions",
     Model = "grok",
     MaxRetries = 2, 
     
@@ -420,7 +420,7 @@ function queryAI(promptText, retryContext, attemptCount)
         local success, response = pcall(function()
             return httpRequest({
                 Url = CONFIG.Endpoint, Method = "POST",
-                Headers = { ["Content-Type"]="application/json", ["Authorization"]="Bearer "..CONFIG.ApiKey },
+                Headers = { ["Content-Type"] = "application/json" },
                 Body = body
             })
         end)
