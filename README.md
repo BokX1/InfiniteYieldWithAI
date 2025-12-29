@@ -1,6 +1,6 @@
 # SmartInfiniteYield (SIY) V1.0 Stable
 
-> **Original Idea by VolQ5** | Powered by Pollinations.AI (Gemini Model)
+> **Original Idea by VolQ5** | Powered by Pollinations.AI (Gemini/Grok Model)
 
 **SmartInfiniteYield** is an open-source, next-generation wrapper for the popular Roblox admin script Infinite Yield. It integrates a Large Language Model (LLM) to translate natural language into executable admin commands, creating a seamless "Assistant" experience.
 
@@ -36,7 +36,7 @@ Instead of memorizing syntax like ;ws 50 or ;esp, simply type "Make me fast" or 
 
 ### Prerequisites
 
-* A Roblox Executor that supports `request` or `http_request` (e.g., Synapse Z, Solara, Krampus, Fluxus, etc.).
+* A Roblox Executor that supports `request` or `http_request`.
 * *Note: Standard Roblox Studio cannot run this script due to HTTP header restrictions.*
 
 ### The Script
