@@ -1,46 +1,79 @@
-# SmartInfiniteYield (SIY) V1.0 Stable
+# SmartInfiniteYield (SIY) - V1.1 Stable
 
-> **Original Idea by VolQ5** | Powered by Pollinations.AI (Gemini/Grok Model)
+**Original Idea by VolQ5 | Powered by Pollinations.AI (Grok/Gemini Model)**
 
-**SmartInfiniteYield** is an open-source, next-generation wrapper for the popular Roblox admin script Infinite Yield. It integrates a Large Language Model (LLM) to translate natural language into executable admin commands, creating a seamless "Assistant" experience.
+**SmartInfiniteYield** is an open-source, cybernetic wrapper for the popular Roblox admin script, Infinite Yield. Unlike standard wrappers, SIY implements a **Self-Correcting Logic Engine** that translates natural language into precise execution strings.
 
-It also features a chat mode that knows what game you’re playing and your username, giving it context and knowledge to act as an assistant for the game.
+It features a **Recursive Feedback Loop**: if the AI targets a non-existent player or generates invalid syntax, the script detects the error, injects the correct server context, and forces the AI to fix its own mistake before executing.
 
-Instead of memorizing syntax like ;ws 50 or ;esp, simply type "Make me fast" or "Show me where everyone is."
+### ⚡ Key Features
 
-- Current Version **1.0 Stable**. More features is coming!
+**🧠 Cybernetic Intelligence**
 
----
+* **Context Injection:** The script reads the current server's player list dynamically. If you say "Kill ben," it knows whether you mean "Ben_123" or "BennyGamer" based on who is actually in the server.
+* **Recursive Error Correction:** If the AI generates a bad command (e.g., typos a username), the script catches the error, feeds it back to the AI with a `[FEEDBACK ERROR]` tag, and retries automatically.
+* **Knowledge Base:** Hardcoded syntax dictionaries for Movement, Visuals, and Admin commands ensure the AI adheres to strict Infinite Yield syntax.
 
-## ⚡ Key Features
+**🛡️ The "Bridge" Architecture**
 
-* **🧠 Natural Language Processing:** Powered by the **Gemini/Grok** model via Pollinations.AI, SIY understands context, slang, and vague requests.
-* **🌉 The "Bridge" Architecture:** Uses a custom Source Injection method to hook directly into Infinite Yield's internal `execCmd` function. This ensures 100% execution reliability without relying on chat simulation or unstable GUI searching.
-* **📱 Modern UI (V1.0):**
-* **Glassmorphism Design:** Sleek dark mode with interactive hover states.
-* **Mobile-First:** Fully draggable and touch-friendly on all devices.
-* **Visual Feedback:** Input box glows green and locks during "Thinking" states to prevent spam.
+* Uses a custom **Source Injection** method to hook directly into Infinite Yield's internal `execCmd` function.
+* **Bridge Timeout:** Includes a failsafe mechanism to prevent the script from hanging if the bridge takes too long to initialize.
+
+**📱 Modern UI (V1.1)**
+
+* **State Indication:** The input box provides real-time feedback:
+* <span style="color:#00ff00">**Thinking...**</span> (Green): Generating initial command.
+* <span style="color:#ff8c00">**Fixing...**</span> (Orange): Auto-correcting an invalid target/syntax.
+
+
+* **Glassmorphism Design:** Sleek dark mode with animated `UIStroke` pulses.
 * **Floating Icon:** Minimizes to a subtle brain-chip icon to save screen space.
 
+**☯️ Dual Modes**
 
-* **☯️ Dual Modes:**
-* **CMD Mode (Orange):** Translates text directly into Infinite Yield commands.
-* **CHAT Mode (Blue):** Acts as a Game Assistant. Ask questions like *"How do I play this game?"* and receive advice via IY Notifications.
-
-
-* **🌍 Context Awareness:** Automatically detects the **Game Name** and your **Username** to provide game-specific advice in Chat Mode.
+* **CMD Mode (Orange):** Translates text directly into commands with strict validation.
+* **CHAT Mode (Blue):** Acts as a Game Assistant. Ask questions like *"How do I win this?"* The AI detects the Game Name and provides specific advice via Notifications.
 
 ---
 
-## 🚀 Installation
+### 📜 Changelog
 
-### Prerequisites
+#### **Version 1.1 Stable (Current)**
 
-* A Roblox Executor that supports `request` or `http_request`.
+* **System Architecture:**
+* **Recursive Error Correction:** Added a feedback loop that validates targets. If a target is invalid, the system automatically retries with corrected data.
+* **Context Injection:** Commands involving players now dynamically inject the current server player list into the prompt for higher accuracy.
+* **Knowledge Base:** Integrated rigid syntax dictionaries for `[MOVEMENT]`, `[VISUALS]`, and `[ADMIN]` commands to eliminate hallucinations.
+
+
+* **UX & Visuals:**
+* **Status Indicators:** Added "Fixing..." (Orange) state to indicate when the AI is self-correcting an error.
+* **UI Polish:** Added animated pulse effects during processing and updated the Tutorial Modal.
+* **Chat Mode:** Cleaned up output to remove prefixes for a more natural assistant experience.
+
+
+* **Stability:**
+* **Bridge Timeout:** Added a 10-second timeout to the connection bridge to prevent execution freezes.
+* **Async Fetching:** Game name fetching is now asynchronous to prevent UI locking.
+
+
+
+#### **Version 1.0**
+
+* Initial release with basic "Input -> API -> Output" linear logic.
+* Introduced the Glassmorphism UI and Dual Mode (CMD/CHAT) concepts.
+* Established the foundational "Bridge" injection method for Infinite Yield.
+
+---
+
+### 🚀 Installation
+
+**Prerequisites**
+
+* A Roblox Executor that supports `request`, `http_request`, or `fluxus.request`.
 * *Note: Standard Roblox Studio cannot run this script due to HTTP header restrictions.*
 
-### The Script
-
+**The Script**
 Copy the source code below or load it directly:
 
 ```lua
@@ -50,75 +83,79 @@ loadstring(game:HttpGet("https://raw.githubusercontent.com/BokX1/InfiniteYieldWi
 
 ---
 
-## 📖 Usage Guide
+### 📖 Usage Guide
 
-### 1. The Interface
+#### 1. The Interface
 
-Upon execution, you will see the **Smart Bar** at the top of the screen.
+* **Input Box:** Type your request here.
+* **Mode Button:** Toggles between **CMD** (Execution) and **CHAT** (Advice).
+* **Minimize (-):** Shrinks the UI to the floating icon.
 
-* **Input Box:** Type your request here and press Enter.
-* **Mode Button:** Toggles between **CMD** and **CHAT**.
-* **Minimize (-):** Shrinks the UI to a floating icon.
+#### 2. CMD Mode (Orange)
 
-### 2. CMD Mode (Orange)
+*Goal: Precise Execution with Auto-Targeting.*
 
-**Goal:** Execute commands.
+* **User:** "Fling that bacon hair guy."
+* **SIY Logic:**
+1. Scans players. Finds "BaconHairUser_99".
+2. Generates `;fling BaconHairUser_99`.
+3. Executes.
 
-* *User:* "Fly me and make me invisible."
-* *AI:* Executes `;fly` and `;invisible`.
-* *User:* "Kill the guy next to me."
-* *AI:* Executes `;kill [PlayerName]`.
 
-### 3. CHAT Mode (Blue)
+* **User:** "Fly at speed 50."
+* **SIY Logic:** Matches `[MOVEMENT]` knowledge base -> `;fly 50`.
 
-**Goal:** Get information/strategy.
+#### 3. CHAT Mode (Blue)
 
-* *User:* "Where is the safe spot in this game?"
-* *AI:* (Notification) "Check the top of the tower, usually safe from zombies."
-* *User:* "What does ;noclip do?"
-* *AI:* (Notification) "It allows you to walk through walls."
+*Goal: Strategy & Information.*
+
+* **User:** "Where is the safe spot?"
+* **SIY Logic:** Detects game is "Tower of Hell" -> Returns: *"Stay on the center platforms to avoid the rotating lasers."*
 
 ---
 
-## ⚙️ Configuration
+### ⚙️ Configuration
 
 You can modify the `CONFIG` table at the top of the script to customize your experience:
 
 ```lua
 local CONFIG = {
-    -- Your Pollinations.AI API Key (Required for high-speed requests)
+    -- Your Pollinations.AI API Key
     ApiKey = "your_key", 
     
-    -- API Endpoint (OpenAI Standard)
-    Endpoint = "https://gen.pollinations.ai/v1/chat/completions",
+    -- AI Model (Grok is recommended for logic, Gemini for speed)
+    Model = "grok", 
     
-    -- Model Selection
-    Model = "gemini", -- Options: 'gemini', 'gemini-fast', 'openai', 'grok'
+    -- Cybernetic Loop Settings
+    MaxRetries = 2, -- How many times the AI tries to fix itself before giving up
 }
 
 ```
 
 ---
 
-## 🏗 Architecture
+### 🏗 Architecture
 
-**SmartInfiniteYield** solves the "Sandboxing" problem of Roblox scripts using a specific load order:
+**SmartInfiniteYield V1.1** solves the "Hallucination" problem common in AI scripts using a **Validation-Retry Loop**:
 
-1. **Check:** Looks for an existing Infinite Yield instance.
-2. **Fetch:** If missing, it fetches the raw Infinite Yield source code.
-3. **Inject:** It appends a custom "Bridge Function" to the source code before running it:
-```lua
-getgenv().PseudoBridge = { Exec = function(cmd) if execCmd then execCmd(cmd) end end }
+1. **Input:** User types "Kill vol".
+2. **Context:** Script grabs current player list (e.g., `[VolQ5, Player2, Player3]`).
+3. **Prompting:** Sends request + player list to AI.
+4. **Validation:**
+* *Scenario A:* AI returns `;kill VolQ5`. Target exists. **EXECUTE.**
+* *Scenario B:* AI returns `;kill Volcano`. Target missing. **HALT.**
 
-```
+
+5. **Recursion (If Scenario B):**
+* Script sends: `[FEEDBACK ERROR: Target 'Volcano' not found.]`
+* AI Retries: "Ah, looking at the list, it must be VolQ5." -> Returns `;kill VolQ5`.
+* **EXECUTE.**
 
 
-4. **Execute:** It runs the modified IY, exposing `execCmd` to the global environment securely.
-5. **Connect:** The AI interface connects to `PseudoBridge` to send commands directly to the engine.
 
 ---
 
-## ⚖️ License
+### ⚖️ License
 
 Licensed under the **Apache License, Version 2.0** (the "License"); you may not use this file except in compliance with the License. You may obtain a copy of the License at:
 
@@ -128,8 +165,8 @@ Unless required by applicable law or agreed to in writing, software distributed 
 
 ---
 
-## 📝 Credits
+### 📝 Credits
 
 * **Original Idea & Concept:** VolQ5
-* **AI Integration:** Gemini (Google) via Pollinations.AI
+* **AI Integration:** Pollinations.AI (Grok/Gemini)
 * **Backend:** Infinite Yield (EdgeIY)
