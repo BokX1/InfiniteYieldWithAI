@@ -8,7 +8,7 @@ It features a **Recursive Feedback Loop**: if the AI targets a non-existent play
 
 ### ⚡ Key Features
 
-**🧠 Awareness **
+**🧠 Awareness**
 
 * **Context Injection:** The script reads the current server's player list dynamically. If you say "Goto ben," it knows whether you mean "Ben_123" or "BennyGamer" based on who is actually in the server.
 * **Recursive Error Correction:** If the AI generates a bad command (e.g., typos a username), the script catches the error, feeds it back to the AI with a `[FEEDBACK ERROR]` tag, and retries automatically.
