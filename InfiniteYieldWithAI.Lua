@@ -341,7 +341,7 @@ local function executeBridge(text)
     if IS_CHAT_MODE then
         -- [[ CLEAN CHAT FIX: NO PREFIX ]]
         local safeText = cleanText:gsub("'", ""):gsub('"', '')
-        -- Removed "Gemini " prefix
+        -- Just send the AI text directly, no "Gemini " prefix
         IY_Interface.Exec("notify " .. safeText) 
     else
         -- [[ CMD FIX: STRIP PREFIX ]]
