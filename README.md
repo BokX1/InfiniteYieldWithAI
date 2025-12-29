@@ -2,9 +2,13 @@
 
 > **Original Idea by VolQ5** | Powered by Pollinations.AI (Gemini Model)
 
-**SmartInfiniteYield** is an open-source, next-generation wrapper for the popular Roblox admin script [Infinite Yield](https://github.com/EdgeIY/infiniteyield). It integrates a Large Language Model (LLM) to translate natural language into executable admin commands, creating a seamless "Tactical Copilot" experience.
+**SmartInfiniteYield** is an open-source, next-generation wrapper for the popular Roblox admin script Infinite Yield. It integrates a Large Language Model (LLM) to translate natural language into executable admin commands, creating a seamless "Assistant" experience.
 
-Instead of memorizing syntax like `;ws 50` or `;esp`, simply type *"Make me fast"* or *"Show me where everyone is."*
+It also features a chat mode that knows what game you’re playing and your username, giving it context and knowledge to act as an assistant for the game.
+
+Instead of memorizing syntax like ;ws 50 or ;esp, simply type "Make me fast" or "Show me where everyone is."
+
+- Current Version **1.0 Stable**. More features is coming!
 
 ---
 
