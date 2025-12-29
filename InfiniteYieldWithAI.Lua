@@ -12,7 +12,7 @@
 -- 1. CONFIGURATION
 local CONFIG = {
     -- !!! REPLACE THIS WITH YOUR KEY !!!
-    ApiKey = "sk_AhgBekF9GuhskuuRLL9vJWIKfkFEN11E", 
+    ApiKey = "pk_js5tJnpmwpoif86u", 
     
     Endpoint = "https://gen.pollinations.ai/v1/chat/completions",
     Model = "gemini",
@@ -365,5 +365,6 @@ ModeBtn.MouseButton1Click:Connect(function()
         InputBox.PlaceholderText = "Enter command..."
     end
 end)
+
 
 TutorialFrame.Visible = true
