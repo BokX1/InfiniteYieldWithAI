@@ -571,4 +571,3 @@ ModeBtn.MouseButton1Click:Connect(function()
         InputBox.PlaceholderText = "Enter command..."
     end
 end)
-
