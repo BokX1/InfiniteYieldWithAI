@@ -4,7 +4,7 @@
     - Logic: VolQ5 & Pollinations.AI (Grok Model)
     - Status: Stable 
 ]]
-
+    
 -- 1. CONFIGURATION
 local CONFIG = {
     -- !!! REPLACE THIS WITH YOUR KEY !!!
@@ -15,26 +15,22 @@ local CONFIG = {
     MaxRetries = 2, 
     
     CommandPrompt = [[
-        Role: Infinite Yield Kernel. Output: Command syntax ONLY.
+        Task: Translate text to Infinite Yield syntax.
 
-        ### PROTOCOL (CRITICAL) ###
-        1. **Negative Logic**: If input says "stop/don't/remove", YOU MUST find the "un-" or "no-" variant.
-           - Ex: "stop flying" -> ;unfly | "remove esp" -> ;noesp
-        2. **Inference**: 
-           - "Fast"->;speed 100. "Privacy"->;serverhop. "Lag"->;nocals.
-           - "Crash/Destroy" -> Use [OP] cmds.
-        3. **Syntax Rule**: 
-           - Stats (speed/jump) -> Append [num]. 
-           - Actions (kill/goto) -> Append [player].
-           - "Everyone" -> "all".
+        ### RULES ###
+        1. STOP/REMOVE: Critical. Find 'un'/'no' variant (e.g. stop fly -> ;unfly).
+        2. INFER: Fast->;speed 100. Privacy->;serverhop. Lag->;nocals. Crash->;crash.
+        3. SYNTAX: Stats->add [num]. Actions->add [player]. "Everyone"->"all".
 
         ### COMMANDS ###
-        [MOVE] ;fly/unfly, ;noclip/unnoclip, ;float/unfloat, ;swim/unswim, ;speed, ;jumppower, ;tpwalk, ;vehiclefly
-        [TP] ;goto, ;bring, ;to, ;spawnpoint, ;flashback, ;serverhop, ;rejoin
-        [VIS] ;esp/noesp, ;chams/nochams, ;xray/unxray, ;fullbright, ;spectate/unspectate, ;freecam/unfreecam
-        [ACT] ;kill, ;loopkill, ;fling/unfling, ;freeze/thaw, ;view/unview, ;bang/unbang
-        [TOOL] ;btools, ;f3x, ;delete, ;tools, ;equiptools, ;removeterrain
-        [OP] ;crash, ;lagswitch, ;invisfling, ;loopoof, ;clearnilinstances, ;firetouchinterests
+        ;fly/unfly ;noclip/clip ;vfly/unvfly ;cfly/uncfly ;float/unfloat ;swim/unswim ;tpwalk/untpwalk
+        ;esp/noesp ;chams/nochams ;xray/unxray ;spectate/unspectate ;freecam/unfreecam ;fullbright/unloopfullbright
+        ;kill ;loopkill ;fling/unfling ;invisfling ;walkfling ;loopoof/unloopoof ;god ;invisible/visible
+        ;speed ;jumppower ;sit/unnosit ;infjump/uninfjump ;autojump/unautojump ;stun/unstun ;platform
+        ;goto ;bring ;to ;spawnpoint ;flashback ;serverhop ;rejoin ;jobid ;gametp ;tppos
+        ;btools ;f3x ;delete ;partpath ;rterrain ;destroyheight ;tools ;equiptools ;grabtools
+        ;crash ;lagswitch ;hkill ;cni ;touchinterests ;firecd ;cleanhats ;ip ;getip
+        ;spam/unspam ;pmspam/unpmspam ;logs ;chatlogs ;console ;explorer ;remotespy
     ]],
 }
 
