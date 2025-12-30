@@ -1,8 +1,8 @@
 --[[ 
-    SMART INFINITE YIELD - V1.1 STABLE
-    - Architecture: Has Context Awareness
+    SMART INFINITE YIELD - V1.1 STABLE+HOTFIX
+    - Architecture: Context Awareness + Logic Engine (Brain)
     - Logic: VolQ5 & Pollinations.AI (Grok Model)
-    - Status: Stable
+    - Status: Stable 
 ]]
 
 -- 1. CONFIGURATION
@@ -15,48 +15,107 @@ local CONFIG = {
     MaxRetries = 2, 
     
     CommandPrompt = [[
-        You are a Kernel Interface for the Roblox script "Infinite Yield".
+        You are the Kernel Interface for "Infinite Yield", a Roblox administration suite.
         YOUR OBJECTIVE: Translate natural language user requests into precise Infinite Yield command strings.
-        
-        ### STRICT OUTPUT PROTOCOL ###
-        1. Output ONLY the raw command string.
-        2. NO markdown, NO explanations.
-        3. ALWAYS start the command with the prefix ';'.
-        
+
+        ### OPERATIONAL PROTOCOL ###
+        1. **Intent Analysis**: Analyze the user's request. Match it to the most logical command in the [KNOWLEDGE BASE].
+        2. **Negative Handling**: If the user says "stop", "remove", "disable", or "don't", look for the "un-" or "no-" variant of the command (e.g., "stop flying" -> ;unfly).
+        3. **Logic Parsing**: If the user implies a value without specifying one (e.g., "make me fast", "jump high"), infer a reasonable integer (e.g., "fast" -> 100, "high" -> 100).
+        4. **Target Inference**: Smartly infer arguments. If the user says "kill him" and the [SYSTEM DATA] lists a player "BaconHair123", output ";kill BaconHair123".
+        5. **Strict Output**: Output ONLY the command string (e.g., ";fly"). NO markdown, NO explanations.
+
         ### KNOWLEDGE BASE ###
+        
         [MOVEMENT]
-        - "fly" -> ;fly [speed]
-        - "noclip" -> ;noclip
-        - "float" -> ;float
-        - "swim" -> ;swim
-        - "goto" -> ;goto [player]
-        - "tpwalk" -> ;tpwalk [speed]
-        
+        - "fly (Makes you fly) -> ;fly [speed]"
+        - "unfly (Stops flying) -> ;unfly"
+        - "noclip (Walk through walls) -> ;noclip"
+        - "unnoclip (Enable collisions) -> ;unnoclip"
+        - "speed (Change walkspeed) -> ;speed [num]"
+        - "jumppower (Change jump height) -> ;jumppower [num]"
+        - "tpwalk (Teleport forward) -> ;tpwalk [num]"
+        - "float (Spawn platform) -> ;float"
+        - "unfloat (Remove platform) -> ;unfloat"
+        - "swim (Swim in air) -> ;swim"
+        - "unswim (Stop swimming) -> ;unswim"
+        - "vehiclefly (Fly in vehicle) -> ;vehiclefly [speed]"
+        - "unvehiclefly (Stop vehicle fly) -> ;unvehiclefly"
+        - "cframefly (Bypass fly) -> ;cframefly [speed]"
+        - "uncframefly (Stop cframe fly) -> ;uncframefly"
+
+        [TELEPORT]
+        - "goto (Teleport to player) -> ;goto [player]"
+        - "tppos (Teleport to coordinates) -> ;tpposition [X Y Z]"
+        - "spawnpoint (Set spawn) -> ;spawnpoint"
+        - "nospawnpoint (Remove spawn) -> ;nospawnpoint"
+        - "flashback (TP to last death) -> ;flashback"
+        - "serverhop (Join different server) -> ;serverhop"
+        - "rejoin (Rejoin current server) -> ;rejoin"
+
         [VISUALS]
-        - "esp" -> ;esp
-        - "chams" -> ;chams
-        - "xray" -> ;xray
-        - "fullbright" -> ;fullbright
-        - "view" -> ;view [player]
-        - "unview" -> ;unview
+        - "esp (See players through walls) -> ;esp"
+        - "noesp (Remove ESP) -> ;noesp"
+        - "chams (ESP without text) -> ;chams"
+        - "nochams (Remove chams) -> ;nochams"
+        - "xray (See through blocks) -> ;xray"
+        - "unxray (Disable xray) -> ;unxray"
+        - "fullbright (Max brightness) -> ;fullbright"
+        - "spectate (View player) -> ;spectate [player]"
+        - "unspectate (Stop viewing) -> ;unspectate"
+        - "freecam (Move camera freely) -> ;freecam"
+        - "unfreecam (Stop freecam) -> ;unfreecam"
+        - "nofog (Remove fog) -> ;nofog"
+        - "day (Set time to day) -> ;day"
+        - "night (Set time to night) -> ;night"
+
+        [PLAYER INTERACTION]
+        - "kill (Kill player) -> ;kill [player]"
+        - "loopkill (Kill repeatedly) -> ;loopkill [player]"
+        - "unloopkill (Stop loopkill) -> ;unloopkill [player]"
+        - "fling (Fling player) -> ;fling [player]"
+        - "unfling (Stop fling) -> ;unfling"
+        - "bring (Bring player to you) -> ;bring [player]"
+        - "freeze (Freeze player) -> ;freeze [player]"
+        - "thaw (Unfreeze player) -> ;thaw [player]"
+        - "bang (Animation) -> ;bang [player]"
+        - "unbang (Stop animation) -> ;unbang"
+        - "view (Watch player) -> ;view [player]"
+        - "unview (Stop watching) -> ;unview"
+
+        [WORKSPACE & TOOLS]
+        - "btools (Give building tools) -> ;btools"
+        - "f3x (Give F3X tools) -> ;f3x"
+        - "delete (Delete part) -> ;delete [name]"
+        - "destroyheight (Set void height) -> ;destroyheight [num]"
+        - "removeterrain (Delete all terrain) -> ;removeterrain"
+        - "tools (Get tools from ReplicatedStorage) -> ;tools"
+        - "notools (Remove tools) -> ;notools"
+        - "equiptools (Equip all tools) -> ;equiptools"
+        - "droptools (Drop all tools) -> ;droptools"
+
+        [DANGEROUS / OP]
+        - "fling (High-torque rotation to launch players) -> ;fling"
+        - "invisfling (Invisible collision destruction) -> ;invisfling"
+        - "walkfling (Kill aura without spinning) -> ;walkfling"
+        - "loopoof (Spam 'oof' sound to server) -> ;loopoof"
+        - "tpunanchored (Bring all unanchored parts to player) -> ;tpunanchored [player]"
+        - "freezeunanchored (Freeze all unanchored parts) -> ;freezeunanchored"
+        - "handlekill (Instant kill using tool handle) -> ;handlekill [player]"
+        - "clearnilinstances (Destroy hidden/nil instances) -> ;clearnilinstances"
+        - "firetouchinterests (Trigger all touch events/traps) -> ;firetouchinterests"
+        - "fireclickdetectors (Trigger all buttons/clicks) -> ;fireclickdetectors"
+        - "crash (Attempt to crash server via overload) -> ;crash"
+        - "clientantikick (Prevent being kicked) -> ;clientantikick"
+        - "clientantiteleport (Prevent being teleported) -> ;clientantiteleport"
+        - "clearhats (Remove all hats in workspace) -> ;clearhats"
+        - "lagswitch (Freeze traffic) -> ;lagswitch [on/off]"
         
-        [ADMIN/SERVER]
-        - "dex" -> ;explorer
-        - "spy" -> ;remotespy
-        - "rejoin" -> ;rj
-        - "hop" -> ;serverhop
-        - "jobid" -> ;jobid
-        - "btools" -> ;btools
-        
-        [INTERACTION]
-        - "kill" -> ;kill [player]
-        - "fling" -> ;fling [player]
-        - "bring" -> ;bring [player]
-        - "loopkill" -> ;loopkill [player]
-        
-        ### DYNAMIC TARGETING ###
-        - Use provided [SYSTEM DATA] to match player names.
+        ### DYNAMIC INSTRUCTIONS ###
+        - Use [SYSTEM DATA] to match player names.
         - If [FEEDBACK ERROR] occurs, correct the username and retry.
+        - If the user implies "all" or "everyone" (e.g., "kill everyone"), use the argument "all".
+        - Priority: If a request matches a [DANGEROUS / OP] command, execute it ONLY if the intent is clear (e.g. "destroy the server", "crash", "fling him").
     ]],
 }
 
@@ -355,11 +414,145 @@ local function executeBridge(text)
     end
 end
 
+-- [[ 5.1 LOGIC ENGINE: THE BRAIN (INTEGRATED) ]]
+-- This section handles Reflexes (Auto-Events) and Guardrails (Safety)
+local SIY_Brain = {
+    -- [REFLEXES: AUTO-TRIGGERS]
+    Reflexes = {
+        ['CharacterAdded'] = {
+            'esp',          -- Keep visuals active on death
+            'chams',        -- Keep visuals active on death
+            'fly',          -- Re-enable flight on respawn
+            'loopspeed',    -- Maintain speed advantage
+            'loopjumppower',-- Maintain jump advantage
+            'autojump',     -- Keep bunnyhopping
+            'infinitejump'  -- Keep air-jump
+        },
+        ['PlayerAdded'] = {
+            'notify New Player Joined', -- Proactive awareness
+            'staffwatch'    -- Check if they are an admin
+        },
+        ['ChildAdded'] = {
+            'partesp',      -- Highlight new objectives instantly
+            'grabtools'     -- Auto-steal new tools
+        }
+    },
+
+    -- [GUARDRAILS: SAFETY PROTOCOLS]
+    Guardrails = {
+        ['speed'] = { 
+            Limit = 150, 
+            Warning = "High Risk > 150. Consider ';spoofspeed' instead.",
+            RiskLevel = "Medium"
+        },
+        ['jumppower'] = { 
+            Limit = 100, 
+            Warning = "Physics Check Risk. Use ';spoofjumppower'.",
+            RiskLevel = "Medium"
+        },
+        ['fly'] = { 
+            Recommended = "vehiclefly",
+            Warning = "Standard fly is detectable in newer games."
+        },
+        ['cframefly'] = { 
+            Note = "Safest option for anti-cheat games."
+        },
+        ['noclip'] = { 
+            Warning = "May fail on thick walls (MeshParts)."
+        },
+        ['invisfling'] = { 
+            Requirement = "Use ';god' first to prevent self-death.",
+            RiskLevel = "High"
+        }
+    }
+}
+
+local ActiveStates = {} -- Tracks what the user has turned on
+local OriginalExec = nil -- Storage for the real IY execution function
+
+-- Middleware: Intercepts commands to check Guardrails
+local function checkGuardrails(cmdString)
+    local cmd = cmdString:split(" ")[1]:sub(2) -- Remove ";"
+    local args = cmdString:split(" ")
+    local value = tonumber(args[2])
+
+    local protocol = SIY_Brain.Guardrails[cmd]
+    if protocol then
+        -- Check Logic: Speed Limit
+        if value and protocol.Limit and value > protocol.Limit then
+            local msg = "notify [AI WARNING] " .. protocol.Warning
+            if OriginalExec then OriginalExec(msg) else executeBridge(msg) end
+            task.wait(0.1) 
+        end
+        -- Check Logic: Dependencies
+        if protocol.Requirement then
+             local msg = "notify [AI TIP] " .. protocol.Requirement
+             if OriginalExec then OriginalExec(msg) else executeBridge(msg) end
+        end
+    end
+    
+    -- Track State (Remember that user turned this ON)
+    if not cmdString:find("un") and not cmdString:find("no") then
+        ActiveStates[cmd] = true
+    elseif cmdString:find("un") or cmdString:find("no") then
+        -- If user types ;unfly, remove 'fly' from active states
+        local clean = cmd:gsub("un", ""):gsub("no", "")
+        ActiveStates[clean] = nil
+    end
+end
+
+-- Handler: Auto-Reflex System
+local function activateReflexes()
+    Players.LocalPlayer.CharacterAdded:Connect(function(newChar)
+        task.wait(1) -- Wait for load
+        -- Check what was active before death
+        for cmd, isActive in pairs(ActiveStates) do
+            if isActive and table.find(SIY_Brain.Reflexes['CharacterAdded'], cmd) then
+                if OriginalExec then OriginalExec("notify [AI] Restoring " .. cmd .. "...") end
+                executeBridge(";" .. cmd)
+            end
+        end
+    end)
+
+    Players.PlayerAdded:Connect(function(p)
+        if ActiveStates['staffwatch'] then
+            executeBridge(";staffwatch") -- Re-trigger checks
+        end
+    end)
+end
+
+-- Async Hook: Connects Brain to Bridge once loaded
+task.spawn(function()
+    -- Wait for Bridge to be ready
+    local timeout = 0
+    repeat task.wait(0.5); timeout = timeout + 0.5 until IY_Interface and IY_Interface.Exec or timeout > 15
+    
+    if IY_Interface and IY_Interface.Exec then
+        OriginalExec = IY_Interface.Exec
+        -- Activate Reflexes
+        activateReflexes()
+        -- Activate Guardrails Hook
+        IY_Interface.Exec = function(cmd)
+            checkGuardrails(cmd) -- Run checks
+            OriginalExec(cmd)    -- Execute Command
+        end
+        print("SIY: Brain Connected & Logic Engine Online.")
+    else
+        warn("SIY: Failed to hook Brain Logic.")
+    end
+end)
+
+
 -- Logic: Validation
 local function validateCommandTarget(cmdString)
     local args = cmdString:split(" ")
     if #args < 2 then return true, "" end 
     local targetName = args[2]
+
+    -- [[ FIX: IGNORE NUMBERS ]] 
+    -- If the argument is a number (like speed/jump power), skip validation
+    if tonumber(targetName) then return true, "" end
+
     if table.find({"me", "all", "others", "random"}, targetName:lower()) then return true, "" end
     
     if Players:FindFirstChild(targetName) then return true, "" else
