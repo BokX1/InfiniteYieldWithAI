@@ -1,6 +1,6 @@
 --[[ 
     SMART INFINITE YIELD - V1.1 STABLE+HOTFIX
-    - Architecture: Context Awareness + Logic Engine (Brain)
+    - Architecture: Context Awareness
     - Logic: VolQ5 & Pollinations.AI (Grok Model)
     - Status: Stable 
 ]]
@@ -571,3 +571,4 @@ ModeBtn.MouseButton1Click:Connect(function()
         InputBox.PlaceholderText = "Enter command..."
     end
 end)
+
