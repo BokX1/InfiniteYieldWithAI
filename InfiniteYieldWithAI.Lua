@@ -542,26 +542,51 @@ task.spawn(function()
     end
 end)
 
-
--- Logic: Validation
+-- [[ LOGIC FIX: ROBUST TARGET VALIDATION ]]
 local function validateCommandTarget(cmdString)
     local args = cmdString:split(" ")
-    if #args < 2 then return true, "" end 
-    local targetName = args[2]
+    if #args < 2 then return true, "" end -- No arguments? Safe to execute.
 
-    -- [[ FIX: IGNORE NUMBERS ]] 
-    -- If the argument is a number (like speed/jump power), skip validation
-    if tonumber(targetName) then return true, "" end
+    -- Isolate the command name (remove ";" and lowercase)
+    local cmdName = args[1]:sub(2):lower()
+    local targetArg = args[2]
 
-    if table.find({"me", "all", "others", "random"}, targetName:lower()) then return true, "" end
-    
-    if Players:FindFirstChild(targetName) then return true, "" else
-        local matchFound = false
-        for _, p in pairs(Players:GetPlayers()) do
-            if p.Name:lower():sub(1, #targetName) == targetName:lower() then matchFound = true; break end
-        end
-        if matchFound then return true, "" else return false, "Target '"..targetName.."' not found." end
+    -- LIST: Commands that strictly require a PLAYER target
+    -- We ONLY check the database if the command is in this list.
+    local PlayerTargetCommands = {
+        "kill", "loopkill", "unloopkill",
+        "fling", "unfling", "loopfling", "invisfling",
+        "goto", "bring", "to", "tp",
+        "spectate", "view", "watch",
+        "freeze", "thaw",
+        "bang", "attach", "handlekill",
+        "firetouchinterests"
+    }
+
+    -- 1. BYPASS: If command is NOT in the list (e.g. speed, time, notify), allow it.
+    if not table.find(PlayerTargetCommands, cmdName) then
+        return true, "" 
     end
+
+    -- 2. VALIDATION: If it IS in the list, strictly check for a valid player.
+    -- Check special keywords first
+    if table.find({"me", "all", "others", "random"}, targetArg:lower()) then 
+        return true, "" 
+    end
+    
+    -- Check exact match
+    if Players:FindFirstChild(targetArg) then 
+        return true, "" 
+    end
+
+    -- Check fuzzy match (e.g. "bac" -> "BaconHair123")
+    for _, p in pairs(Players:GetPlayers()) do
+        if p.Name:lower():sub(1, #targetArg) == targetArg:lower() then 
+            return true, "" 
+        end
+    end
+    
+    return false, "Target '"..targetArg.."' not found."
 end
 
 -- Logic: Visual Reset
