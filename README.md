@@ -1,6 +1,6 @@
 # SmartInfiniteYield (SIY) - V1.1 Stable+CloudFlare
 
-**Original Idea by VolQ5 | Powered by Pollinations.AI (Grok/Gemini Model)**
+**Original Idea by VolQ5 | Powered by Pollinations.AI (LLM Model)**
 
 **SmartInfiniteYield** is an open-source, next-generation wrapper for the popular Roblox admin script, Infinite Yield. Unlike standard wrappers, SIY implements a **Self-Correcting Logic Engine** that translates natural language into precise execution strings.
 
