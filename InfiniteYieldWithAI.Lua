@@ -80,7 +80,7 @@ task.spawn(function()
     IY_Interface = getgenv().PseudoBridge
 end)
 
--- 4. GUI CONSTRUCTION (MOBILE SCALING FIX)
+-- 4. GUI CONSTRUCTION (WITH SMART STATUS BAR)
 if CoreGui:FindFirstChild("SmartInfiniteYieldGUI") then CoreGui.SmartInfiniteYieldGUI:Destroy() end
 
 local SIY_Screen = Instance.new("ScreenGui")
@@ -101,7 +101,8 @@ local Colors = {
     Blue       = Color3.fromRGB(50, 180, 255), 
     Green      = Color3.fromRGB(40, 230, 130),
     Text       = Color3.fromRGB(240, 240, 240),
-    TextDim    = Color3.fromRGB(150, 150, 150)
+    TextDim    = Color3.fromRGB(150, 150, 150),
+    Status     = Color3.fromRGB(200, 200, 200) -- New Status Color
 }
 
 local function addCorner(obj, radius)
@@ -143,7 +144,7 @@ end
 
 -- [C] MAIN UI COMPONENTS
 
--- 1. Floating Icon (The Open Button)
+-- 1. Floating Icon
 local OpenButton = Instance.new("ImageButton")
 OpenButton.Name = "OpenButton"
 OpenButton.Size = UDim2.new(0, 45, 0, 45)
@@ -153,7 +154,7 @@ OpenButton.Image = "rbxassetid://6035193498"
 OpenButton.ImageColor3 = Colors.Green
 OpenButton.Visible = false
 OpenButton.Parent = SIY_Screen
-addCorner(OpenButton, 100) -- Circle
+addCorner(OpenButton, 100) 
 addStroke(OpenButton, Colors.Border, 1)
 enableDrag(OpenButton)
 
@@ -161,21 +162,16 @@ enableDrag(OpenButton)
 local MainFrame = Instance.new("Frame")
 MainFrame.Name = "MainFrame"
 MainFrame.AnchorPoint = Vector2.new(0.5, 0) 
-
--- [[ FIX: Adjusted Mobile Width ]]
--- PC: 500px fixed width (Standard)
--- Mobile: 80% screen width (Leaves 10% margin on each side - "Just Right")
-local MainSize = IsMobile and UDim2.new(0.8, 0, 0, 44) or UDim2.new(0, 500, 0, 50)
-
+-- Adjusted Height for Status Bar (+15px)
+local MainSize = IsMobile and UDim2.new(0.8, 0, 0, 60) or UDim2.new(0, 500, 0, 65)
 MainFrame.Size = MainSize
-MainFrame.Position = UDim2.new(0.5, 0, 0.15, 0) -- 15% down from top
+MainFrame.Position = UDim2.new(0.5, 0, 0.15, 0)
 MainFrame.BackgroundColor3 = Colors.Background
 MainFrame.BorderSizePixel = 0
 MainFrame.Parent = SIY_Screen
 addCorner(MainFrame, 8)
 enableDrag(MainFrame)
 
--- Clean Border (Required for Logic Animation)
 local MainStroke = addStroke(MainFrame, Colors.Orange, 1)
 
 -- 3. Controls
@@ -184,9 +180,8 @@ local FontSize = IsMobile and 11 or 14
 
 -- Mode Toggle
 local ModeBtn = Instance.new("TextButton")
-ModeBtn.Size = UDim2.new(0, BtnWidth, 0.65, 0)
-ModeBtn.AnchorPoint = Vector2.new(0, 0.5)
-ModeBtn.Position = UDim2.new(0, 8, 0.5, 0)
+ModeBtn.Size = UDim2.new(0, BtnWidth, 0, 30) -- Fixed Height
+ModeBtn.Position = UDim2.new(0, 8, 0, 8)
 ModeBtn.BackgroundColor3 = Colors.Orange
 ModeBtn.Text = "CMD"
 ModeBtn.TextColor3 = Color3.new(0,0,0)
@@ -198,8 +193,8 @@ addCorner(ModeBtn, 6)
 -- Minimize
 local MinBtn = Instance.new("TextButton")
 MinBtn.Size = UDim2.new(0, 30, 0, 30)
-MinBtn.AnchorPoint = Vector2.new(1, 0.5)
-MinBtn.Position = UDim2.new(1, -8, 0.5, 0)
+MinBtn.AnchorPoint = Vector2.new(1, 0)
+MinBtn.Position = UDim2.new(1, -8, 0, 8)
 MinBtn.BackgroundColor3 = Colors.InputBg
 MinBtn.Text = "-"
 MinBtn.TextColor3 = Colors.TextDim
@@ -210,11 +205,10 @@ addCorner(MinBtn, 6)
 
 -- Input Area
 local InputContainer = Instance.new("Frame")
-InputContainer.AnchorPoint = Vector2.new(0, 0.5)
 local LeftPad = 8 + BtnWidth + 8
 local RightPad = 8 + 30 + 8
-InputContainer.Size = UDim2.new(1, -(LeftPad+RightPad), 0.65, 0)
-InputContainer.Position = UDim2.new(0, LeftPad, 0.5, 0)
+InputContainer.Size = UDim2.new(1, -(LeftPad+RightPad), 0, 30)
+InputContainer.Position = UDim2.new(0, LeftPad, 0, 8)
 InputContainer.BackgroundColor3 = Colors.InputBg
 InputContainer.Parent = MainFrame
 addCorner(InputContainer, 6)
@@ -233,9 +227,22 @@ InputBox.TextXAlignment = Enum.TextXAlignment.Left
 InputBox.ClearTextOnFocus = false
 InputBox.Parent = InputContainer
 
+-- [[ NEW: STATUS BAR ]]
+local StatusLabel = Instance.new("TextLabel")
+StatusLabel.Name = "Status"
+StatusLabel.Size = UDim2.new(1, -20, 0, 15)
+StatusLabel.Position = UDim2.new(0, 10, 0, 42) -- Below buttons
+StatusLabel.BackgroundTransparency = 1
+StatusLabel.Text = ">> Ready"
+StatusLabel.TextColor3 = Colors.TextDim
+StatusLabel.Font = Enum.Font.Code
+StatusLabel.TextSize = 12
+StatusLabel.TextXAlignment = Enum.TextXAlignment.Left
+StatusLabel.TextTransparency = 0.5
+StatusLabel.Parent = MainFrame
+
 -- 4. Minimal Tutorial
 local TutSize = IsMobile and UDim2.new(0.8, 0, 0, 200) or UDim2.new(0, 400, 0, 200)
-
 local TutorialFrame = Instance.new("Frame")
 TutorialFrame.Name = "Tutorial"
 TutorialFrame.AnchorPoint = Vector2.new(0.5, 0.5)
@@ -269,7 +276,6 @@ TutDesc.RichText = true
 TutDesc.TextWrapped = true
 TutDesc.Parent = TutorialFrame
 
--- Trademark (Small/Clean)
 local Trademark = Instance.new("TextLabel")
 Trademark.Size = UDim2.new(1, 0, 0, 15)
 Trademark.Position = UDim2.new(0, 0, 1, -10) 
@@ -294,19 +300,16 @@ addCorner(TutBtn, 6)
 TutBtn.MouseButton1Click:Connect(function()
     TweenService:Create(TutorialFrame, TweenInfo.new(0.2), {BackgroundTransparency=1}):Play()
     for _,c in pairs(TutorialFrame:GetDescendants()) do
-        if c:IsA("GuiObject") then
-             TweenService:Create(c, TweenInfo.new(0.2), {Transparency=1}):Play()
-        end
+        if c:IsA("GuiObject") then TweenService:Create(c, TweenInfo.new(0.2), {Transparency=1}):Play() end
     end
     task.wait(0.2)
     TutorialFrame.Visible = false
 end)
 
--- 5. LOGIC ENGINE (OPTIMIZED - FULL DICTIONARY INTEGRATION)
+-- 5. LOGIC ENGINE (OPTIMIZED - WITH FEEDBACK)
 local IS_CHAT_MODE = false
 
--- [A] FAST MAP: ZERO-LATENCY DICTIONARY
--- Maps patterns to IY commands. Optimized for "Starts With" logic.
+-- [A] FAST MAP
 local FastMap = {
     -- [[ 1. UTILITY & GUI ]]
     ["^console"] = "console", ["^logs"] = "logs", ["^chatlogs"] = "chatlogs",
@@ -322,21 +325,17 @@ local FastMap = {
     ["^savegame"] = "savegame", ["^saveinstance"] = "savegame",
 
     -- [[ 2. MOVEMENT ]]
-    -- Flying
     ["^fly"] = "fly", ["^fly (.+)"] = "fly %1",
     ["^unfly"] = "unfly", ["^nofly"] = "unfly", ["^stop fly"] = "unfly",
     ["^flyspeed (%d+)"] = "flyspeed %1",
     ["^vfly"] = "vehiclefly", ["^vehiclefly"] = "vehiclefly", ["^unvfly"] = "unvehiclefly",
     ["^cfly"] = "cframefly", ["^uncfly"] = "uncframefly",
-    -- Clipping
     ["^noclip"] = "noclip", ["^clip"] = "clip", ["^unnoclip"] = "unnoclip", ["^wall"] = "noclip",
     ["^vnoclip"] = "vehiclenoclip", ["^vclip"] = "vehicleclip",
-    -- Speed/Jump
     ["^speed (%d+)"] = "speed %1", ["^ws (%d+)"] = "speed %1", ["^fast"] = "speed 100",
     ["^jumppower (%d+)"] = "jumppower %1", ["^jp (%d+)"] = "jumppower %1", ["^jump (%d+)"] = "jumppower %1",
     ["^infjump"] = "infjump", ["^uninfjump"] = "uninfjump",
     ["^highjump"] = "jumppower 100",
-    -- Other
     ["^float"] = "float", ["^unfloat"] = "unfloat", ["^platform"] = "float",
     ["^swim"] = "swim", ["^unswim"] = "unswim",
     ["^tpwalk (%d+)"] = "tpwalk %1", ["^untpwalk"] = "untpwalk",
@@ -351,15 +350,12 @@ local FastMap = {
     ["^walltp"] = "walltp", ["^nowalltp"] = "nowalltp",
 
     -- [[ 4. VISUALS & CAMERA ]]
-    -- ESP
     ["^esp"] = "esp", ["^noesp"] = "noesp", ["^unesp"] = "noesp", ["^stop esp"] = "noesp",
     ["^chams"] = "chams", ["^nochams"] = "nochams",
     ["^xray"] = "xray", ["^noxray"] = "noxray",
-    -- Lighting
     ["^fullbright"] = "fullbright", ["^fb"] = "fullbright", ["^light"] = "fullbright",
     ["^nofullbright"] = "unloopfullbright", ["^day"] = "day", ["^night"] = "night",
     ["^nofog"] = "nofog", ["^shadows"] = "globalshadows", ["^noshadows"] = "noglobalshadows",
-    -- Camera
     ["^spectate (.+)"] = "spectate %1", ["^view (.+)"] = "view %1", ["^watch (.+)"] = "view %1",
     ["^unspectate"] = "unspectate", ["^unview"] = "unspectate",
     ["^freecam"] = "freecam", ["^fc"] = "freecam", ["^unfreecam"] = "unfreecam", ["^unfc"] = "unfreecam",
@@ -400,6 +396,14 @@ local FastMap = {
 }
 
 -- [B] UTILITIES
+local function updateStatus(text, color)
+    StatusLabel.Text = ">> " .. text
+    StatusLabel.TextColor3 = color or Colors.Status
+    StatusLabel.TextTransparency = 0
+    -- Fade out effect
+    TweenService:Create(StatusLabel, TweenInfo.new(3, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {TextTransparency = 0.6}):Play()
+end
+
 local function getChatPrompt()
     local displayName = (GameName ~= "Loading...") and GameName or "this game"
     return string.format([[
@@ -423,30 +427,33 @@ local function needsPlayerContext(text)
 end
 
 -- [C] BRIDGE EXECUTION
-local function executeBridge(text)
+local function executeBridge(text, source)
     if not IY_Interface then 
         warn("SIY: Bridge not connected.")
-        InputBox.PlaceholderText = "Error: Bridge Failed"
-        InputBox.PlaceholderColor3 = Colors.Red
+        updateStatus("Error: Bridge Failed", Colors.Red)
         return 
     end
     
     local cleanText = text:gsub("^%s*", ""):gsub("%s*$", "")
     
     if IS_CHAT_MODE then
-        -- Chat Mode: Send as notification
+        -- Chat Mode
         local safeText = cleanText:gsub("'", ""):gsub('"', '')
         IY_Interface.Exec("notify " .. safeText) 
+        updateStatus("[AI] Response Sent", Colors.Blue)
     else
-        -- CMD Mode: Execute directly
-        if cleanText:sub(1,1) == ";" then
-            cleanText = cleanText:sub(2)
-        end
+        -- CMD Mode
+        if cleanText:sub(1,1) == ";" then cleanText = cleanText:sub(2) end
+        
+        -- VISUAL FEEDBACK
+        local prefix = source and ("["..source.."] ") or ""
+        updateStatus(prefix .. "Executing: " .. cleanText, Colors.Green)
+        
         IY_Interface.Exec(cleanText) 
     end
 end
 
--- [D] TARGET VALIDATION (PREVENTS GHOST EXECUTION)
+-- [D] TARGET VALIDATION
 local function validateCommandTarget(cmdString)
     local args = cmdString:split(" ")
     if #args < 2 then return true, "" end 
@@ -454,18 +461,13 @@ local function validateCommandTarget(cmdString)
     local cmdName = args[1]:lower()
     local targetArg = args[2]
 
-    -- Critical commands that fail without valid players
     local PlayerTargetCommands = {
         "kill", "loopkill", "fling", "unfling", "goto", "bring", "to", "tp",
         "spectate", "view", "freeze", "bang", "attach"
     }
 
     if not table.find(PlayerTargetCommands, cmdName) then return true, "" end
-
-    -- Allow keywords
     if table.find({"me", "all", "others", "random"}, targetArg:lower()) then return true, "" end
-    
-    -- Check exact or fuzzy match
     if Players:FindFirstChild(targetArg) then return true, "" end
     for _, p in pairs(Players:GetPlayers()) do
         if p.Name:lower():sub(1, #targetArg) == targetArg:lower() then return true, "" end
@@ -476,10 +478,9 @@ end
 
 -- [E] VISUAL STATE
 local function resetVisuals()
-    local pulse = TweenService:Create(MainStroke, TweenInfo.new(0.3), {Transparency = 1}) -- Stop pulsing
+    local pulse = TweenService:Create(MainStroke, TweenInfo.new(0.3), {Transparency = 1})
     pulse:Play()
     InputBox.TextEditable = true
-    InputBox.Text = "" 
     InputBox.PlaceholderColor3 = Colors.TextDim
     InputBox.PlaceholderText = IS_CHAT_MODE and "Ask about game..." or (IsMobile and "Tap to type..." or "Enter command...")
 end
@@ -488,7 +489,6 @@ local function setThinkingState(retry)
     InputBox.TextEditable = false
     InputBox.PlaceholderText = retry and "Retrying..." or "Thinking..."
     InputBox.PlaceholderColor3 = retry and Colors.Orange or Colors.Green
-    -- Pulse animation
     local pulse = TweenService:Create(MainStroke, TweenInfo.new(0.6, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true), {Transparency = 0})
     pulse:Play()
 end
@@ -497,25 +497,21 @@ end
 function queryAI(promptText, retryContext, attemptCount)
     if promptText == "" then return end
     
-    -- 1. FAST PATH CHECK (Only in CMD Mode)
+    -- 1. FAST PATH CHECK
     if not IS_CHAT_MODE and not retryContext then
         local cleanPrompt = promptText:lower():gsub("^%s*", ""):gsub("%s*$", "")
         for pattern, cmd in pairs(FastMap) do
-            -- Check if input matches a regex pattern
             local matchStart, matchEnd, capture = string.find(cleanPrompt, pattern)
             if matchStart then
-                -- Construct command. If capture exists, replace %1
                 local finalCmd = cmd
-                if capture then
-                    finalCmd = finalCmd:gsub("%%1", capture)
-                end
+                if capture then finalCmd = finalCmd:gsub("%%1", capture) end
                 
-                -- Validate and Execute immediately
                 local isValid, err = validateCommandTarget(finalCmd)
                 if isValid then
-                    executeBridge(finalCmd)
+                    executeBridge(finalCmd, "FAST") -- Tag as FAST execution
                     resetVisuals()
-                    return -- EXIT EARLY (No API Call)
+                    InputBox.Text = "" -- Clear input on success
+                    return 
                 end
             end
         end
@@ -524,12 +520,12 @@ function queryAI(promptText, retryContext, attemptCount)
     -- 2. API FALLBACK
     attemptCount = attemptCount or 0
     if attemptCount > CONFIG.MaxRetries then 
-        InputBox.PlaceholderText = "Failed: Invalid Target."
-        InputBox.PlaceholderColor3 = Colors.Red
+        updateStatus("Failed: Invalid Target", Colors.Red)
         task.wait(2); resetVisuals(); return 
     end
 
     setThinkingState(attemptCount > 0)
+    updateStatus("Thinking...", Colors.Orange) -- Update status immediately
 
     local systemPayload = IS_CHAT_MODE and getChatPrompt() or CONFIG.CommandPrompt
     local userPayload = promptText
@@ -560,20 +556,22 @@ function queryAI(promptText, retryContext, attemptCount)
             
             if IS_CHAT_MODE then
                  executeBridge(aiOutput); resetVisuals()
+                 InputBox.Text = ""
             else
                 local cleanCmd = aiOutput:gsub("^%s*", ""):gsub("%s*$", "")
                 if cleanCmd:sub(1,1) == ";" then cleanCmd = cleanCmd:sub(2) end
                 
                 local isValid, errorMsg = validateCommandTarget(cleanCmd)
                 if isValid then 
-                    executeBridge(cleanCmd); resetVisuals()
+                    executeBridge(cleanCmd, "AI") -- Tag as AI execution
+                    resetVisuals()
+                    InputBox.Text = ""
                 else
                     queryAI(promptText, errorMsg, attemptCount + 1)
                 end
             end
         else
-            InputBox.PlaceholderText = "Net Error: " .. (response and response.StatusCode or "Unknown")
-            InputBox.PlaceholderColor3 = Colors.Red
+            updateStatus("Net Error: " .. (response and response.StatusCode or "Unknown"), Colors.Red)
             task.wait(2); resetVisuals()
         end
     end)
@@ -583,7 +581,7 @@ end
 InputBox.FocusLost:Connect(function(enter)
     if enter and InputBox.Text ~= "" then
         local text = InputBox.Text
-        InputBox.Text = "" 
+        -- Keep text visible while processing, clear only on success
         queryAI(text) 
     end
 end)
@@ -598,9 +596,11 @@ ModeBtn.MouseButton1Click:Connect(function()
         ModeBtn.Text = "CHAT"
         TweenService:Create(ModeBtn, TweenInfo.new(0.3), {BackgroundColor3 = Colors.Blue}):Play()
         InputBox.PlaceholderText = "Ask about " .. uiName .. "..."
+        updateStatus("Switched to Chat Mode", Colors.Blue)
     else
         ModeBtn.Text = "CMD"
         TweenService:Create(ModeBtn, TweenInfo.new(0.3), {BackgroundColor3 = Colors.Orange}):Play()
         InputBox.PlaceholderText = IsMobile and "Tap to type..." or "Enter command..."
+        updateStatus("Switched to Command Mode", Colors.Orange)
     end
 end)
