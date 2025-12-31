@@ -302,35 +302,112 @@ TutBtn.MouseButton1Click:Connect(function()
     TutorialFrame.Visible = false
 end)
 
--- 5. LOGIC ENGINE
+-- 5. LOGIC ENGINE (OPTIMIZED - FULL DICTIONARY INTEGRATION)
 local IS_CHAT_MODE = false
 
--- Draggable Logic
-local function makeDraggable(frame)
-    local dragging, dragStart, startPos
-    frame.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 then 
-            dragging=true; dragStart=input.Position; startPos=frame.Position 
-        end
-    end)
-    frame.InputChanged:Connect(function(input)
-        if input.UserInputType==Enum.UserInputType.MouseMovement and dragging then
-            local delta = input.Position - dragStart
-            TweenService:Create(frame, TweenInfo.new(0.05), {Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)}):Play()
-        end
-    end)
-    frame.InputEnded:Connect(function(input) if input.UserInputType==Enum.UserInputType.MouseButton1 then dragging=false end end)
-end
-makeDraggable(MainFrame); makeDraggable(OpenButton)
+-- [A] FAST MAP: ZERO-LATENCY DICTIONARY
+-- Maps patterns to IY commands. Optimized for "Starts With" logic.
+local FastMap = {
+    -- [[ 1. UTILITY & GUI ]]
+    ["^console"] = "console", ["^logs"] = "logs", ["^chatlogs"] = "chatlogs",
+    ["^explorer"] = "explorer", ["^dex"] = "explorer", ["^odex"] = "olddex",
+    ["^remotespy"] = "remotespy", ["^rspy"] = "remotespy",
+    ["^guiscale (%d+)"] = "guiscale %1",
+    ["^rejoin"] = "rejoin", ["^rj"] = "rejoin",
+    ["^serverhop"] = "serverhop", ["^shop"] = "serverhop",
+    ["^jobid"] = "jobid", ["^copyjobid"] = "jobid",
+    ["^volume (%d+)"] = "volume %1", ["^vol (%d+)"] = "volume %1",
+    ["^antilag"] = "antilag", ["^lowgfx"] = "antilag",
+    ["^fpscap (%d+)"] = "setfpscap %1", ["^maxfps (%d+)"] = "setfpscap %1",
+    ["^savegame"] = "savegame", ["^saveinstance"] = "savegame",
 
--- Logic Helpers
+    -- [[ 2. MOVEMENT ]]
+    -- Flying
+    ["^fly"] = "fly", ["^fly (.+)"] = "fly %1",
+    ["^unfly"] = "unfly", ["^nofly"] = "unfly", ["^stop fly"] = "unfly",
+    ["^flyspeed (%d+)"] = "flyspeed %1",
+    ["^vfly"] = "vehiclefly", ["^vehiclefly"] = "vehiclefly", ["^unvfly"] = "unvehiclefly",
+    ["^cfly"] = "cframefly", ["^uncfly"] = "uncframefly",
+    -- Clipping
+    ["^noclip"] = "noclip", ["^clip"] = "clip", ["^unnoclip"] = "unnoclip", ["^wall"] = "noclip",
+    ["^vnoclip"] = "vehiclenoclip", ["^vclip"] = "vehicleclip",
+    -- Speed/Jump
+    ["^speed (%d+)"] = "speed %1", ["^ws (%d+)"] = "speed %1", ["^fast"] = "speed 100",
+    ["^jumppower (%d+)"] = "jumppower %1", ["^jp (%d+)"] = "jumppower %1", ["^jump (%d+)"] = "jumppower %1",
+    ["^infjump"] = "infjump", ["^uninfjump"] = "uninfjump",
+    ["^highjump"] = "jumppower 100",
+    -- Other
+    ["^float"] = "float", ["^unfloat"] = "unfloat", ["^platform"] = "float",
+    ["^swim"] = "swim", ["^unswim"] = "unswim",
+    ["^tpwalk (%d+)"] = "tpwalk %1", ["^untpwalk"] = "untpwalk",
+    ["^sit"] = "sit", ["^unsit"] = "nosit",
+
+    -- [[ 3. TELEPORT ]]
+    ["^goto (.+)"] = "goto %1", ["^to (.+)"] = "goto %1",
+    ["^bring (.+)"] = "bring %1",
+    ["^tp (.+)"] = "tp %1", ["^tppos (.+)"] = "tppos %1",
+    ["^spawnpoint"] = "spawnpoint", ["^nospawnpoint"] = "nospawnpoint",
+    ["^flashback"] = "flashback", ["^diedtp"] = "flashback",
+    ["^walltp"] = "walltp", ["^nowalltp"] = "nowalltp",
+
+    -- [[ 4. VISUALS & CAMERA ]]
+    -- ESP
+    ["^esp"] = "esp", ["^noesp"] = "noesp", ["^unesp"] = "noesp", ["^stop esp"] = "noesp",
+    ["^chams"] = "chams", ["^nochams"] = "nochams",
+    ["^xray"] = "xray", ["^noxray"] = "noxray",
+    -- Lighting
+    ["^fullbright"] = "fullbright", ["^fb"] = "fullbright", ["^light"] = "fullbright",
+    ["^nofullbright"] = "unloopfullbright", ["^day"] = "day", ["^night"] = "night",
+    ["^nofog"] = "nofog", ["^shadows"] = "globalshadows", ["^noshadows"] = "noglobalshadows",
+    -- Camera
+    ["^spectate (.+)"] = "spectate %1", ["^view (.+)"] = "view %1", ["^watch (.+)"] = "view %1",
+    ["^unspectate"] = "unspectate", ["^unview"] = "unspectate",
+    ["^freecam"] = "freecam", ["^fc"] = "freecam", ["^unfreecam"] = "unfreecam", ["^unfc"] = "unfreecam",
+    ["^fcspeed (%d+)"] = "freecamspeed %1",
+    ["^fixcam"] = "fixcam", ["^maxzoom (%d+)"] = "maxzoom %1", ["^fov (%d+)"] = "fov %1",
+
+    -- [[ 5. PLAYER INTERACTIONS ]]
+    ["^kill (.+)"] = "kill %1", ["^loopkill (.+)"] = "loopkill %1", ["^unloopkill"] = "unloopkill",
+    ["^fling (.+)"] = "fling %1", ["^unfling"] = "unfling", ["^loopfling (.+)"] = "loopfling %1",
+    ["^invisfling"] = "invisfling", ["^walkfling"] = "walkfling",
+    ["^bang (.+)"] = "bang %1", ["^unbang"] = "unbang",
+    ["^attach (.+)"] = "attach %1", ["^unattach"] = "unattach",
+    ["^freeze (.+)"] = "freeze %1", ["^thaw (.+)"] = "thaw %1", ["^unfreeze (.+)"] = "thaw %1",
+    ["^fire"] = "fire", ["^unfire"] = "unfire", ["^smoke"] = "smoke", ["^unsmoke"] = "unsmoke",
+    ["^inspect (.+)"] = "inspect %1", ["^age (.+)"] = "age %1",
+
+    -- [[ 6. AVATAR & CHARACTER ]]
+    ["^reset"] = "reset", ["^respawn"] = "respawn", ["^re"] = "refresh",
+    ["^god"] = "god", ["^ungod"] = "ungod",
+    ["^invisible"] = "invisible", ["^invis"] = "invisible",
+    ["^visible"] = "visible", ["^vis"] = "visible",
+    ["^noarms"] = "noarms", ["^nolegs"] = "nolegs", ["^nolimbs"] = "nolimbs", ["^naked"] = "naked",
+    ["^blockhead"] = "blockhead", ["^blockhats"] = "blockhats",
+    ["^creeper"] = "creeper",
+    ["^drophats"] = "drophats", ["^nohats"] = "deletehats",
+    ["^spin"] = "spin", ["^unspin"] = "unspin",
+    ["^animation (.+)"] = "animation %1", ["^dance"] = "dance", ["^undance"] = "undance",
+
+    -- [[ 7. WORKSPACE & TOOLS ]]
+    ["^btools"] = "btools", ["^f3x"] = "f3x",
+    ["^delete (.+)"] = "delete %1", ["^remove (.+)"] = "delete %1",
+    ["^destroyheight (%d+)"] = "destroyheight %1",
+    ["^clickdetectors"] = "fireclickdetectors", ["^firecd"] = "fireclickdetectors",
+    ["^tools"] = "tools", ["^notools"] = "notools", ["^rtools"] = "notools",
+    ["^equiptools"] = "equiptools", ["^droptools"] = "droptools",
+    ["^reach (%d+)"] = "reach %1", ["^boxreach (%d+)"] = "boxreach %1", ["^noreach"] = "unreach",
+    ["^antivoid"] = "antivoid", ["^noantivoid"] = "unantivoid"
+}
+
+-- [B] UTILITIES
 local function getChatPrompt()
-    -- [[ FIX: ENSURE GAME NAME IS UPDATED ]]
     local displayName = (GameName ~= "Loading...") and GameName or "this game"
     return string.format([[
-        You are a helpful Infinite Yield Assistant for the player '%s'.
-        Playing: '%s'. RULES: Give advice specific to '%s' (max 20 words). No markdown.
-    ]], User.Name, displayName, displayName)
+        You are a helpful Infinite Yield Assistant.
+        Game: '%s'. User: '%s'. 
+        Task: Answer questions about the game mechanics or provide help.
+        Constraint: Keep answer under 25 words. Be concise.
+    ]], displayName, User.Name)
 end
 
 local function getPlayerList()
@@ -338,14 +415,14 @@ local function getPlayerList()
     return table.concat(names, ", ")
 end
 
-local TargetTriggers = {"kill", "fling", "goto", "tp", "spectate", "view", "watch", "bring", "to", "attach", "loopkill"}
+local TargetTriggers = {"kill", "fling", "goto", "tp", "spectate", "view", "watch", "bring", "to", "attach", "loopkill", "bang", "freeze"}
 local function needsPlayerContext(text)
     local lowerText = text:lower()
     for _, trigger in ipairs(TargetTriggers) do if string.find(lowerText, trigger) then return true end end
     return false
 end
 
--- [[ CRITICAL FIX: EXECUTION BRIDGE ]]
+-- [C] BRIDGE EXECUTION
 local function executeBridge(text)
     if not IY_Interface then 
         warn("SIY: Bridge not connected.")
@@ -357,107 +434,110 @@ local function executeBridge(text)
     local cleanText = text:gsub("^%s*", ""):gsub("%s*$", "")
     
     if IS_CHAT_MODE then
-        -- [[ CLEAN CHAT FIX: NO PREFIX ]]
+        -- Chat Mode: Send as notification
         local safeText = cleanText:gsub("'", ""):gsub('"', '')
-        -- Just send the AI text directly, no "Gemini " prefix
         IY_Interface.Exec("notify " .. safeText) 
     else
-        -- [[ CMD FIX: STRIP PREFIX ]]
+        -- CMD Mode: Execute directly
         if cleanText:sub(1,1) == ";" then
-            local rawCommand = cleanText:sub(2) 
-            IY_Interface.Exec(rawCommand) 
-        else
-            warn("AI Output Error: " .. cleanText)
-            IY_Interface.Exec("notify Error Invalid AI Syntax.")
+            cleanText = cleanText:sub(2)
         end
+        IY_Interface.Exec(cleanText) 
     end
 end
 
--- [[ LOGIC FIX: ROBUST TARGET VALIDATION ]]
+-- [D] TARGET VALIDATION (PREVENTS GHOST EXECUTION)
 local function validateCommandTarget(cmdString)
     local args = cmdString:split(" ")
-    if #args < 2 then return true, "" end -- No arguments? Safe to execute.
+    if #args < 2 then return true, "" end 
 
-    -- Isolate the command name (remove ";" and lowercase)
-    local cmdName = args[1]:sub(2):lower()
+    local cmdName = args[1]:lower()
     local targetArg = args[2]
 
-    -- LIST: Commands that strictly require a PLAYER target
-    -- We ONLY check the database if the command is in this list.
+    -- Critical commands that fail without valid players
     local PlayerTargetCommands = {
-        "kill", "loopkill", "unloopkill",
-        "fling", "unfling", "loopfling", "invisfling",
-        "goto", "bring", "to", "tp",
-        "spectate", "view", "watch",
-        "freeze", "thaw",
-        "bang", "attach", "handlekill",
-        "firetouchinterests"
+        "kill", "loopkill", "fling", "unfling", "goto", "bring", "to", "tp",
+        "spectate", "view", "freeze", "bang", "attach"
     }
 
-    -- 1. BYPASS: If command is NOT in the list (e.g. speed, time, notify), allow it.
-    if not table.find(PlayerTargetCommands, cmdName) then
-        return true, "" 
-    end
+    if not table.find(PlayerTargetCommands, cmdName) then return true, "" end
 
-    -- 2. VALIDATION: If it IS in the list, strictly check for a valid player.
-    -- Check special keywords first
-    if table.find({"me", "all", "others", "random"}, targetArg:lower()) then 
-        return true, "" 
-    end
+    -- Allow keywords
+    if table.find({"me", "all", "others", "random"}, targetArg:lower()) then return true, "" end
     
-    -- Check exact match
-    if Players:FindFirstChild(targetArg) then 
-        return true, "" 
-    end
-
-    -- Check fuzzy match (e.g. "bac" -> "BaconHair123")
+    -- Check exact or fuzzy match
+    if Players:FindFirstChild(targetArg) then return true, "" end
     for _, p in pairs(Players:GetPlayers()) do
-        if p.Name:lower():sub(1, #targetArg) == targetArg:lower() then 
-            return true, "" 
-        end
+        if p.Name:lower():sub(1, #targetArg) == targetArg:lower() then return true, "" end
     end
     
     return false, "Target '"..targetArg.."' not found."
 end
 
--- Logic: Visual Reset
+-- [E] VISUAL STATE
 local function resetVisuals()
-    local pulse = TweenService:Create(MainStroke, TweenInfo.new(0.3), {Transparency = 0})
+    local pulse = TweenService:Create(MainStroke, TweenInfo.new(0.3), {Transparency = 1}) -- Stop pulsing
     pulse:Play()
     InputBox.TextEditable = true
     InputBox.Text = "" 
     InputBox.PlaceholderColor3 = Colors.TextDim
-    -- [[ FIX: UI UPDATE ]]
-    local uiName = (GameName ~= "Loading...") and GameName or "game"
-    InputBox.PlaceholderText = IS_CHAT_MODE and ("Ask about " .. uiName .. "...") or "Enter command..."
+    InputBox.PlaceholderText = IS_CHAT_MODE and "Ask about game..." or (IsMobile and "Tap to type..." or "Enter command...")
 end
 
--- Logic: Recursive Query
-function queryAI(promptText, retryContext, attemptCount)
-    attemptCount = attemptCount or 0
-    
-    local statusText = (attemptCount > 0) and "Fixing..." or "Thinking..."
-    local statusColor = (attemptCount > 0) and Colors.Orange or Colors.Green
-    InputBox.PlaceholderText = statusText
-    InputBox.PlaceholderColor3 = statusColor
+local function setThinkingState(retry)
     InputBox.TextEditable = false
-    
-    local pulse = TweenService:Create(MainStroke, TweenInfo.new(0.6, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true), {Transparency = 0.5})
+    InputBox.PlaceholderText = retry and "Retrying..." or "Thinking..."
+    InputBox.PlaceholderColor3 = retry and Colors.Orange or Colors.Green
+    -- Pulse animation
+    local pulse = TweenService:Create(MainStroke, TweenInfo.new(0.6, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true), {Transparency = 0})
     pulse:Play()
+end
+
+-- [F] CORE QUERY LOGIC
+function queryAI(promptText, retryContext, attemptCount)
+    if promptText == "" then return end
     
+    -- 1. FAST PATH CHECK (Only in CMD Mode)
+    if not IS_CHAT_MODE and not retryContext then
+        local cleanPrompt = promptText:lower():gsub("^%s*", ""):gsub("%s*$", "")
+        for pattern, cmd in pairs(FastMap) do
+            -- Check if input matches a regex pattern
+            local matchStart, matchEnd, capture = string.find(cleanPrompt, pattern)
+            if matchStart then
+                -- Construct command. If capture exists, replace %1
+                local finalCmd = cmd
+                if capture then
+                    finalCmd = finalCmd:gsub("%%1", capture)
+                end
+                
+                -- Validate and Execute immediately
+                local isValid, err = validateCommandTarget(finalCmd)
+                if isValid then
+                    executeBridge(finalCmd)
+                    resetVisuals()
+                    return -- EXIT EARLY (No API Call)
+                end
+            end
+        end
+    end
+
+    -- 2. API FALLBACK
+    attemptCount = attemptCount or 0
     if attemptCount > CONFIG.MaxRetries then 
-        InputBox.PlaceholderText = "Failed: Target invalid."
+        InputBox.PlaceholderText = "Failed: Invalid Target."
         InputBox.PlaceholderColor3 = Colors.Red
         task.wait(2); resetVisuals(); return 
     end
+
+    setThinkingState(attemptCount > 0)
 
     local systemPayload = IS_CHAT_MODE and getChatPrompt() or CONFIG.CommandPrompt
     local userPayload = promptText
 
     if not IS_CHAT_MODE and needsPlayerContext(promptText) then
-        userPayload = userPayload .. "\n[SYSTEM DATA: Current Players: " .. getPlayerList() .. "]"
+        userPayload = userPayload .. "\n[CONTEXT: Players: " .. getPlayerList() .. "]"
     end
-    if retryContext then userPayload = userPayload .. "\n[FEEDBACK ERROR: " .. retryContext .. "]" end
+    if retryContext then userPayload = userPayload .. "\n[ERROR FIX: " .. retryContext .. "]" end
 
     local body = HttpService:JSONEncode({
         model = CONFIG.Model,
@@ -474,8 +554,6 @@ function queryAI(promptText, retryContext, attemptCount)
             })
         end)
 
-        pulse:Cancel() 
-
         if success and response.StatusCode == 200 then
             local data = HttpService:JSONDecode(response.Body)
             local aiOutput = data.choices[1].message.content
@@ -484,19 +562,17 @@ function queryAI(promptText, retryContext, attemptCount)
                  executeBridge(aiOutput); resetVisuals()
             else
                 local cleanCmd = aiOutput:gsub("^%s*", ""):gsub("%s*$", "")
-                if cleanCmd:sub(1,1) == ";" then
-                    local isValid, errorMsg = validateCommandTarget(cleanCmd)
-                    if isValid then 
-                        executeBridge(cleanCmd); resetVisuals()
-                    else
-                        queryAI(promptText, errorMsg, attemptCount + 1)
-                    end
+                if cleanCmd:sub(1,1) == ";" then cleanCmd = cleanCmd:sub(2) end
+                
+                local isValid, errorMsg = validateCommandTarget(cleanCmd)
+                if isValid then 
+                    executeBridge(cleanCmd); resetVisuals()
                 else
-                    executeBridge("notify Gemini Output Invalid"); resetVisuals()
+                    queryAI(promptText, errorMsg, attemptCount + 1)
                 end
             end
         else
-            InputBox.PlaceholderText = "Connection Error"
+            InputBox.PlaceholderText = "Net Error: " .. (response and response.StatusCode or "Unknown")
             InputBox.PlaceholderColor3 = Colors.Red
             task.wait(2); resetVisuals()
         end
@@ -521,12 +597,10 @@ ModeBtn.MouseButton1Click:Connect(function()
     if IS_CHAT_MODE then
         ModeBtn.Text = "CHAT"
         TweenService:Create(ModeBtn, TweenInfo.new(0.3), {BackgroundColor3 = Colors.Blue}):Play()
-        TweenService:Create(MainStroke, TweenInfo.new(0.3), {Color = Colors.Blue}):Play()
         InputBox.PlaceholderText = "Ask about " .. uiName .. "..."
     else
         ModeBtn.Text = "CMD"
         TweenService:Create(ModeBtn, TweenInfo.new(0.3), {BackgroundColor3 = Colors.Orange}):Play()
-        TweenService:Create(MainStroke, TweenInfo.new(0.3), {Color = Colors.Orange}):Play()
-        InputBox.PlaceholderText = "Enter command..."
+        InputBox.PlaceholderText = IsMobile and "Tap to type..." or "Enter command..."
     end
 end)
