@@ -80,82 +80,126 @@ task.spawn(function()
     IY_Interface = getgenv().PseudoBridge
 end)
 
--- 4. GUI CONSTRUCTION
+-- 4. GUI CONSTRUCTION (MOBILE SCALING FIX)
 if CoreGui:FindFirstChild("SmartInfiniteYieldGUI") then CoreGui.SmartInfiniteYieldGUI:Destroy() end
+
 local SIY_Screen = Instance.new("ScreenGui")
 SIY_Screen.Name = "SmartInfiniteYieldGUI"
 SIY_Screen.Parent = CoreGui 
 SIY_Screen.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+SIY_Screen.ResetOnSpawn = false
+
+-- [A] Services & Utils
+local UIS = game:GetService("UserInputService")
+local IsMobile = UIS.TouchEnabled and not UIS.MouseEnabled
 
 local Colors = {
-    Background = Color3.fromRGB(20, 20, 25),
-    InputBg    = Color3.fromRGB(30, 30, 35),
-    Orange     = Color3.fromRGB(255, 140, 0), -- CMD
-    Blue       = Color3.fromRGB(0, 190, 255), -- Chat
-    Green      = Color3.fromRGB(0, 255, 160), -- Success/Thinking
-    Red        = Color3.fromRGB(255, 80, 80), -- Error
+    Background = Color3.fromRGB(20, 20, 20),
+    InputBg    = Color3.fromRGB(30, 30, 30),
+    Border     = Color3.fromRGB(60, 60, 60),
+    Orange     = Color3.fromRGB(255, 145, 40), 
+    Blue       = Color3.fromRGB(50, 180, 255), 
+    Green      = Color3.fromRGB(40, 230, 130),
     Text       = Color3.fromRGB(240, 240, 240),
-    TextDim    = Color3.fromRGB(150, 150, 160)
+    TextDim    = Color3.fromRGB(150, 150, 150)
 }
 
 local function addCorner(obj, radius)
     local c = Instance.new("UICorner"); c.CornerRadius = UDim.new(0, radius); c.Parent = obj; return c
 end
 
--- Floating Icon
+local function addStroke(obj, color, thickness)
+    local s = Instance.new("UIStroke"); s.Color = color; s.Thickness = thickness; s.Parent = obj; return s
+end
+
+-- [B] UNIVERSAL DRAG SYSTEM
+local function enableDrag(frame)
+    local dragToggle, dragStart, startPos
+    local dragInput
+    
+    local function updateInput(input)
+        local delta = input.Position - dragStart
+        local position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+        TweenService:Create(frame, TweenInfo.new(0.08), {Position = position}):Play()
+    end
+    
+    frame.InputBegan:Connect(function(input)
+        if (input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch) then
+            dragToggle = true; dragStart = input.Position; startPos = frame.Position
+            input.Changed:Connect(function()
+                if input.UserInputState == Enum.UserInputState.End then dragToggle = false end
+            end)
+        end
+    end)
+    
+    frame.InputChanged:Connect(function(input)
+        if (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then dragInput = input end
+    end)
+    
+    UIS.InputChanged:Connect(function(input)
+        if input == dragInput and dragToggle then updateInput(input) end
+    end)
+end
+
+-- [C] MAIN UI COMPONENTS
+
+-- 1. Floating Icon (The Open Button)
 local OpenButton = Instance.new("ImageButton")
+OpenButton.Name = "OpenButton"
 OpenButton.Size = UDim2.new(0, 45, 0, 45)
-OpenButton.Position = UDim2.new(0, 20, 0.5, -22)
+OpenButton.Position = UDim2.new(0, 15, 0.4, 0)
 OpenButton.BackgroundColor3 = Colors.Background
-OpenButton.Image = "rbxassetid://6035193498"
+OpenButton.Image = "rbxassetid://6035193498" 
 OpenButton.ImageColor3 = Colors.Green
 OpenButton.Visible = false
 OpenButton.Parent = SIY_Screen
-addCorner(OpenButton, 12)
+addCorner(OpenButton, 100) -- Circle
+addStroke(OpenButton, Colors.Border, 1)
+enableDrag(OpenButton)
 
--- Main Bar
+-- 2. Main Container
 local MainFrame = Instance.new("Frame")
 MainFrame.Name = "MainFrame"
-MainFrame.Size = UDim2.new(0, 500, 0, 55) 
-MainFrame.Position = UDim2.new(0.5, -250, 0.15, 0)
+MainFrame.AnchorPoint = Vector2.new(0.5, 0) 
+
+-- [[ FIX: Adjusted Mobile Width ]]
+-- PC: 500px fixed width (Standard)
+-- Mobile: 80% screen width (Leaves 10% margin on each side - "Just Right")
+local MainSize = IsMobile and UDim2.new(0.8, 0, 0, 44) or UDim2.new(0, 500, 0, 50)
+
+MainFrame.Size = MainSize
+MainFrame.Position = UDim2.new(0.5, 0, 0.15, 0) -- 15% down from top
 MainFrame.BackgroundColor3 = Colors.Background
 MainFrame.BorderSizePixel = 0
 MainFrame.Parent = SIY_Screen
-addCorner(MainFrame, 10)
+addCorner(MainFrame, 8)
+enableDrag(MainFrame)
 
--- Glow/Stroke (Animated)
-local MainStroke = Instance.new("UIStroke")
-MainStroke.Color = Colors.Orange 
-MainStroke.Thickness = 1.5
-MainStroke.Parent = MainFrame
+-- Clean Border (Required for Logic Animation)
+local MainStroke = addStroke(MainFrame, Colors.Orange, 1)
 
--- Shadow
-local Shadow = Instance.new("ImageLabel")
-Shadow.AnchorPoint = Vector2.new(0.5, 0.5)
-Shadow.Position = UDim2.new(0.5, 0, 0.5, 2)
-Shadow.Size = UDim2.new(1, 15, 1, 15)
-Shadow.BackgroundTransparency = 1
-Shadow.Image = "rbxassetid://6015897843"
-Shadow.ImageColor3 = Color3.new(0,0,0)
-Shadow.ImageTransparency = 0.5 
-Shadow.ZIndex = -1
-Shadow.Parent = MainFrame
+-- 3. Controls
+local BtnWidth = IsMobile and 55 or 80
+local FontSize = IsMobile and 11 or 14
 
--- Controls
+-- Mode Toggle
 local ModeBtn = Instance.new("TextButton")
-ModeBtn.Size = UDim2.new(0, 80, 0, 32)
-ModeBtn.Position = UDim2.new(0, 12, 0.5, -16)
+ModeBtn.Size = UDim2.new(0, BtnWidth, 0.65, 0)
+ModeBtn.AnchorPoint = Vector2.new(0, 0.5)
+ModeBtn.Position = UDim2.new(0, 8, 0.5, 0)
 ModeBtn.BackgroundColor3 = Colors.Orange
 ModeBtn.Text = "CMD"
 ModeBtn.TextColor3 = Color3.new(0,0,0)
 ModeBtn.Font = Enum.Font.GothamBold
-ModeBtn.TextSize = 13
+ModeBtn.TextSize = FontSize
 ModeBtn.Parent = MainFrame
 addCorner(ModeBtn, 6)
 
+-- Minimize
 local MinBtn = Instance.new("TextButton")
-MinBtn.Size = UDim2.new(0, 32, 0, 32)
-MinBtn.Position = UDim2.new(1, -44, 0.5, -16)
+MinBtn.Size = UDim2.new(0, 30, 0, 30)
+MinBtn.AnchorPoint = Vector2.new(1, 0.5)
+MinBtn.Position = UDim2.new(1, -8, 0.5, 0)
 MinBtn.BackgroundColor3 = Colors.InputBg
 MinBtn.Text = "-"
 MinBtn.TextColor3 = Colors.TextDim
@@ -164,20 +208,23 @@ MinBtn.TextSize = 20
 MinBtn.Parent = MainFrame
 addCorner(MinBtn, 6)
 
--- Input Field
+-- Input Area
 local InputContainer = Instance.new("Frame")
-InputContainer.Size = UDim2.new(1, -150, 0, 32)
-InputContainer.Position = UDim2.new(0, 102, 0.5, -16)
+InputContainer.AnchorPoint = Vector2.new(0, 0.5)
+local LeftPad = 8 + BtnWidth + 8
+local RightPad = 8 + 30 + 8
+InputContainer.Size = UDim2.new(1, -(LeftPad+RightPad), 0.65, 0)
+InputContainer.Position = UDim2.new(0, LeftPad, 0.5, 0)
 InputContainer.BackgroundColor3 = Colors.InputBg
 InputContainer.Parent = MainFrame
 addCorner(InputContainer, 6)
 
 local InputBox = Instance.new("TextBox")
-InputBox.Size = UDim2.new(1, -20, 1, 0)
-InputBox.Position = UDim2.new(0, 10, 0, 0)
+InputBox.Size = UDim2.new(1, -12, 1, 0)
+InputBox.Position = UDim2.new(0, 6, 0, 0)
 InputBox.BackgroundTransparency = 1
 InputBox.Text = ""
-InputBox.PlaceholderText = "Enter command..."
+InputBox.PlaceholderText = IsMobile and "Tap to type..." or "Enter command..."
 InputBox.TextColor3 = Colors.Text
 InputBox.PlaceholderColor3 = Colors.TextDim
 InputBox.Font = Enum.Font.GothamMedium
@@ -186,37 +233,35 @@ InputBox.TextXAlignment = Enum.TextXAlignment.Left
 InputBox.ClearTextOnFocus = false
 InputBox.Parent = InputContainer
 
--- [[ COMPONENT: TUTORIAL & TRADEMARK ]]
+-- 4. Minimal Tutorial
+local TutSize = IsMobile and UDim2.new(0.8, 0, 0, 200) or UDim2.new(0, 400, 0, 200)
+
 local TutorialFrame = Instance.new("Frame")
 TutorialFrame.Name = "Tutorial"
-TutorialFrame.Size = UDim2.new(0, 420, 0, 240)
-TutorialFrame.Position = UDim2.new(0.5, -210, 0.5, -120)
+TutorialFrame.AnchorPoint = Vector2.new(0.5, 0.5)
+TutorialFrame.Size = TutSize
+TutorialFrame.Position = UDim2.new(0.5, 0, 0.5, 0)
 TutorialFrame.BackgroundColor3 = Colors.Background
+TutorialFrame.ZIndex = 10 
 TutorialFrame.Parent = SIY_Screen
-TutorialFrame.Visible = true 
-addCorner(TutorialFrame, 16)
-
-local TutStroke = Instance.new("UIStroke")
-TutStroke.Color = Colors.Green
-TutStroke.Thickness = 1
-TutStroke.Transparency = 0.5
-TutStroke.Parent = TutorialFrame
+addCorner(TutorialFrame, 12)
+addStroke(TutorialFrame, Colors.Border, 1)
 
 local TutTitle = Instance.new("TextLabel")
-TutTitle.Size = UDim2.new(1, 0, 0, 40)
-TutTitle.Position = UDim2.new(0, 0, 0, 15)
+TutTitle.Size = UDim2.new(1, 0, 0, 30)
+TutTitle.Position = UDim2.new(0, 0, 0, 10)
 TutTitle.BackgroundTransparency = 1
-TutTitle.Text = "Welcome to Smart IY"
+TutTitle.Text = "Smart IY"
 TutTitle.TextColor3 = Colors.Text
 TutTitle.Font = Enum.Font.GothamBold
-TutTitle.TextSize = 20
+TutTitle.TextSize = 18
 TutTitle.Parent = TutorialFrame
 
 local TutDesc = Instance.new("TextLabel")
-TutDesc.Size = UDim2.new(1, -40, 0, 110)
-TutDesc.Position = UDim2.new(0, 20, 0, 55)
+TutDesc.Size = UDim2.new(1, -30, 1, -80)
+TutDesc.Position = UDim2.new(0, 15, 0, 40)
 TutDesc.BackgroundTransparency = 1
-TutDesc.Text = "This AI Assistant allows natural language control.\n\n<font color='#ff8c00'><b>CMD MODE</b></font> : Translates requests to commands.\n<i>'Fly me' -> ';fly'</i>\n\n<font color='#00beff'><b>CHAT MODE</b></font> : Ask the AI for game help.\n<i>'How do I win?' -> Notification</i>"
+TutDesc.Text = "<b>CMD MODE:</b> Translates logic to IY commands.\n<i>(e.g., 'Fly me' -> ';fly')</i>\n\n<b>CHAT MODE:</b> Ask questions about the game.\n<i>(e.g., 'How do I play?')</i>"
 TutDesc.TextColor3 = Colors.TextDim
 TutDesc.Font = Enum.Font.Gotham
 TutDesc.TextSize = 14
@@ -224,39 +269,38 @@ TutDesc.RichText = true
 TutDesc.TextWrapped = true
 TutDesc.Parent = TutorialFrame
 
--- [[ TRADEMARK ]]
+-- Trademark (Small/Clean)
 local Trademark = Instance.new("TextLabel")
-Trademark.Size = UDim2.new(1, 0, 0, 20)
-Trademark.Position = UDim2.new(0, 0, 1, -15) 
+Trademark.Size = UDim2.new(1, 0, 0, 15)
+Trademark.Position = UDim2.new(0, 0, 1, -10) 
 Trademark.BackgroundTransparency = 1
-Trademark.Text = "Created by VolQ5"
-Trademark.TextColor3 = Color3.fromRGB(100, 100, 100)
+Trademark.Text = "VolQ5"
+Trademark.TextColor3 = Color3.fromRGB(80, 80, 80)
 Trademark.Font = Enum.Font.Gotham
-Trademark.TextSize = 10
+Trademark.TextSize = 9
 Trademark.Parent = TutorialFrame
 
 local TutBtn = Instance.new("TextButton")
-TutBtn.Size = UDim2.new(0, 120, 0, 36)
-TutBtn.Position = UDim2.new(0.5, -60, 1, -55)
+TutBtn.Size = UDim2.new(0, 100, 0, 32)
+TutBtn.Position = UDim2.new(0.5, -50, 1, -45)
 TutBtn.BackgroundColor3 = Colors.Green
-TutBtn.Text = "Launch"
+TutBtn.Text = "Start"
 TutBtn.TextColor3 = Color3.new(0,0,0)
 TutBtn.Font = Enum.Font.GothamBold
-TutBtn.TextSize = 14
+TutBtn.TextSize = 13
 TutBtn.Parent = TutorialFrame
-addCorner(TutBtn, 8)
+addCorner(TutBtn, 6)
 
 TutBtn.MouseButton1Click:Connect(function()
-    TweenService:Create(TutorialFrame, TweenInfo.new(0.3), {BackgroundTransparency=1}):Play()
+    TweenService:Create(TutorialFrame, TweenInfo.new(0.2), {BackgroundTransparency=1}):Play()
     for _,c in pairs(TutorialFrame:GetDescendants()) do
-        if c:IsA("TextLabel") or c:IsA("TextButton") then
-            TweenService:Create(c, TweenInfo.new(0.3), {TextTransparency=1, BackgroundTransparency=1}):Play()
+        if c:IsA("GuiObject") then
+             TweenService:Create(c, TweenInfo.new(0.2), {Transparency=1}):Play()
         end
     end
-    task.wait(0.3)
+    task.wait(0.2)
     TutorialFrame.Visible = false
 end)
-
 
 -- 5. LOGIC ENGINE
 local IS_CHAT_MODE = false
