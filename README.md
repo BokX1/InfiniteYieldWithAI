@@ -1,4 +1,4 @@
-# SmartInfiniteYield (SIY) - V1.1 Stable+CloudFlare
+# SmartInfiniteYield (SIY) - V1.1 Final
 
 **Original Idea by [VolQ5](https://github.com/BokX1/RbxLuauLLM) | Powered by Pollinations.AI (LLM Model)**
 
