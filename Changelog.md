@@ -12,12 +12,13 @@ All notable changes to the **SmartInfiniteYield** project will be documented in 
 - **Command Preview Bar:** Displays AI-generated command preview in status bar before execution for user verification.
 - **Mobile Quick Actions Grid:** Added one-tap command grid for mobile users with 9 common AI prompts (Fly, Speed, ESP, Noclip, God, Teleport, Kill, Reset, Anti-Lag).
 - **Cache Management Commands:** Added `clearcache` to wipe all learned commands and `cacheinfo` to view cache statistics.
+- **Interactive Tutorial System:** Comprehensive 8-step onboarding experience that teaches all features before unlocking the main GUI.
 
 ### Improved
 - **Bridge System:** Replaced polling-based bridge detection with event-driven architecture for faster startup.
 - **Cache Optimization:** Automatic cache management with LRU-style cleanup when max entries reached.
 - **Target Resolution:** Enhanced player targeting with prefix matching, contains matching, and fuzzy matching fallback.
-- **UI Polish:** Updated tutorial modal with v1.2.1 feature highlights.
+- **Tutorial Overhaul:** Replaced single-screen tutorial with multi-step walkthrough covering: Welcome, What It Does, Two Modes, How To Use, Smart Features, Cache Management, Controls & Keybinds, and Ready screen.
 
 ### Technical
 - **New Dependencies:** Added RunService for animation handling.

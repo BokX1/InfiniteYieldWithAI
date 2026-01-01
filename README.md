@@ -190,6 +190,7 @@ Version 1.2.1 introduced an event-based bridge using BindableEvents, replacing t
 | **Processing Glow** | Animated visual indicator during AI processing |
 | **Command Preview** | See commands before execution |
 | **Quick Actions** | Mobile-optimized one-tap command grid |
+| **Interactive Tutorial** | 8-step onboarding that teaches all features before unlocking GUI |
 
 ### Code Quality Improvements
 
@@ -227,7 +228,7 @@ See [Changelog.md](Changelog.md) for the complete version history.
 
 ### Recent Updates
 
-**V1.2.1** - Event-based bridge, intelligent caching with management commands, fuzzy targeting, visual feedback, mobile quick actions, code optimization
+**V1.2.1** - Event-based bridge, intelligent caching with management commands, fuzzy targeting, visual feedback, mobile quick actions, interactive 8-step tutorial, code optimization
 
 **V1.2.0** - Split-context strategy, predictive dropdown, smart keybinds, complete command database
 

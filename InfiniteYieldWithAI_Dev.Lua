@@ -832,9 +832,67 @@ QuickActionsToggle.MouseButton1Click:Connect(function()
 end)
 
 --// ============================================
---// 11. TUTORIAL MODAL
+--// 11. TUTORIAL SYSTEM (Multi-Step Onboarding)
 --// ============================================
-local TutSize = IsMobile and UDim2.new(0.85, 0, 0, 240) or UDim2.new(0, 420, 0, 250)
+local TutorialCompleted = false
+local CurrentStep = 1
+
+-- Tutorial content for each step
+local TutorialSteps = {
+    {
+        title = "Welcome to Smart IY",
+        icon = "👋",
+        content = "<b>Smart Infinite Yield</b> is an AI-powered admin script that understands <font color='#40e682'>natural language</font>.\n\nInstead of memorizing commands, just tell it what you want in plain English!\n\n<font color='#969696'>Example: Type \"make me fly\" instead of \"fly\"</font>",
+        button = "Next →"
+    },
+    {
+        title = "What It Does",
+        icon = "🧠",
+        content = "<b>Smart IY translates your words into commands:</b>\n\n<font color='#ff9128'>\"Kill the guy in red\"</font> → <font color='#40e682'>;kill PlayerName</font>\n\n<font color='#ff9128'>\"Make me super fast\"</font> → <font color='#40e682'>;speed 100</font>\n\n<font color='#ff9128'>\"Teleport to spawn\"</font> → <font color='#40e682'>;goto spawn</font>\n\nIt even figures out <b>which player</b> you mean!",
+        button = "Next →"
+    },
+    {
+        title = "Two Modes",
+        icon = "🔄",
+        content = "<b><font color='#ff9128'>CMD Mode (Orange)</font></b>\nExecutes commands. Say what you want done.\n<font color='#969696'>\"Fly me\" → Executes ;fly</font>\n\n<b><font color='#32b4ff'>CHAT Mode (Blue)</font></b>\nAsk questions, get advice. No execution.\n<font color='#969696'>\"How do I win this game?\" → AI gives tips</font>\n\nClick the <b>mode button</b> to switch!",
+        button = "Next →"
+    },
+    {
+        title = "How To Use",
+        icon = "⌨️",
+        content = "<b>Step 1:</b> Type your request in the input box\n<font color='#969696'>\"give me god mode\"</font>\n\n<b>Step 2:</b> Press <font color='#40e682'>Enter</font> or click <font color='#40e682'>Send</font>\n\n<b>Step 3:</b> Watch the status bar for feedback\n<font color='#40e682'>[FAST]</font> = Instant local execution\n<font color='#b464ff'>[AI]</font> = AI processed your request\n<font color='#ff5050'>[ERROR]</font> = Something went wrong",
+        button = "Next →"
+    },
+    {
+        title = "Smart Features",
+        icon = "✨",
+        content = "<b><font color='#b464ff'>Intelligent Caching</font></b>\nSmart IY <b>learns</b> your phrases! After using \"make me fast\" once, it executes instantly next time.\n\n<b><font color='#b464ff'>Fuzzy Targeting</font></b>\nType partial names: <font color='#ff9128'>\"kill valk\"</font> finds \"Valkorym\"\n\n<b><font color='#b464ff'>Predictions</font></b>\nAs you type, suggestions appear below the input box.",
+        button = "Next →"
+    },
+    {
+        title = "Cache Management",
+        icon = "🗑️",
+        content = "<b>If the AI learns something wrong:</b>\n\n<font color='#40e682'>clearcache</font>\nWipes all learned commands. Fresh start!\n\n<font color='#40e682'>cacheinfo</font>\nShows how many commands are cached.\n<font color='#969696'>\"Cache: 15/100 commands stored\"</font>\n\n<font color='#ff9128'>Tip:</font> Use clearcache if commands behave unexpectedly.",
+        button = "Next →"
+    },
+    {
+        title = "Controls & Keybinds",
+        icon = "🎮",
+        content = "<b><font color='#40e682'>Right Shift</font></b> - Toggle menu visibility\n\n<b><font color='#40e682'>bind [key] [cmd]</font></b> - Create keybinds\n<font color='#969696'>\"bind f fly\" → F toggles fly on/off</font>\n\n<b><font color='#40e682'>Mobile Users:</font></b>\nTap the <font color='#ff9128'>⚡</font> button for Quick Actions - one-tap commands without typing!\n\n<b><font color='#40e682'>Minimize:</font></b> Click <b>−</b> to collapse",
+        button = "Next →"
+    },
+    {
+        title = "You're Ready!",
+        icon = "🚀",
+        content = "<b>You now know everything to get started!</b>\n\n<font color='#b464ff'>Quick Reference:</font>\n• Type naturally - AI understands you\n• <font color='#ff9128'>CMD</font> = Execute | <font color='#32b4ff'>CHAT</font> = Ask\n• <font color='#40e682'>Right Shift</font> = Toggle menu\n• <font color='#40e682'>clearcache</font> = Reset learned commands\n\n<font color='#969696'>Made with ❤️ by VolQ5</font>",
+        button = "Let's Go!"
+    }
+}
+
+local TotalSteps = #TutorialSteps
+
+-- Tutorial Frame
+local TutSize = IsMobile and UDim2.new(0.9, 0, 0, 320) or UDim2.new(0, 450, 0, 340)
 
 local TutorialFrame = createInstance("Frame", {
     Name = "Tutorial",
@@ -842,70 +900,222 @@ local TutorialFrame = createInstance("Frame", {
     Size = TutSize,
     Position = UDim2.new(0.5, 0, 0.5, 0),
     BackgroundColor3 = Colors.Background,
-    ZIndex = 10,
+    ZIndex = 100,
     Parent = SIY_Screen
 })
 addCorner(TutorialFrame, 12)
-addStroke(TutorialFrame, Colors.Border, 1)
+addStroke(TutorialFrame, Colors.Orange, 2)
 
-createInstance("TextLabel", {
-    Size = UDim2.new(1, 0, 0, 30),
-    Position = UDim2.new(0, 0, 0, 10),
-    BackgroundTransparency = 1,
-    Text = "Smart IY v1.2.1 Latest",
-    TextColor3 = Colors.Text,
-    Font = Enum.Font.GothamBold,
-    TextSize = 18,
+-- Progress Bar Background
+local ProgressBg = createInstance("Frame", {
+    Size = UDim2.new(1, -40, 0, 4),
+    Position = UDim2.new(0, 20, 0, 12),
+    BackgroundColor3 = Colors.InputBg,
+    ZIndex = 101,
     Parent = TutorialFrame
 })
+addCorner(ProgressBg, 2)
 
-createInstance("TextLabel", {
-    Size = UDim2.new(1, -30, 1, -90),
-    Position = UDim2.new(0, 15, 0, 40),
+-- Progress Bar Fill
+local ProgressFill = createInstance("Frame", {
+    Size = UDim2.new(1 / TotalSteps, 0, 1, 0),
+    BackgroundColor3 = Colors.Orange,
+    ZIndex = 102,
+    Parent = ProgressBg
+})
+addCorner(ProgressFill, 2)
+
+-- Step Counter
+local StepCounter = createInstance("TextLabel", {
+    Size = UDim2.new(1, 0, 0, 20),
+    Position = UDim2.new(0, 0, 0, 20),
     BackgroundTransparency = 1,
-    Text = "<b>CONTROLS:</b>\n• Toggle Menu: <font color='#40e682'><b>Right Shift</b></font>\n• Autocomplete: <font color='#40e682'><b>Click Suggestion</b></font>\n\n<b>MODES:</b>\n• <b>CMD:</b> 'Fly me' -> ';fly'\n• <b>CHAT:</b> 'How do I win?' -> AI Advice\n\n<b>NEW IN V1.2.1:</b>\n• <font color='#b464ff'>Smart Caching</font> - Learns your phrases\n• <font color='#b464ff'>Fuzzy Targeting</font> - 'kill valk' -> Valkorym\n• <font color='#b464ff'>Quick Actions</font> - One-tap commands (Mobile)",
+    Text = "Step 1 of " .. TotalSteps,
     TextColor3 = Colors.TextDim,
     Font = Enum.Font.Gotham,
-    TextSize = 13,
+    TextSize = 11,
+    ZIndex = 101,
+    Parent = TutorialFrame
+})
+
+-- Icon
+local TutorialIcon = createInstance("TextLabel", {
+    Size = UDim2.new(1, 0, 0, 40),
+    Position = UDim2.new(0, 0, 0, 45),
+    BackgroundTransparency = 1,
+    Text = TutorialSteps[1].icon,
+    TextColor3 = Colors.Text,
+    Font = Enum.Font.GothamBold,
+    TextSize = 32,
+    ZIndex = 101,
+    Parent = TutorialFrame
+})
+
+-- Title
+local TutorialTitle = createInstance("TextLabel", {
+    Size = UDim2.new(1, 0, 0, 30),
+    Position = UDim2.new(0, 0, 0, 85),
+    BackgroundTransparency = 1,
+    Text = TutorialSteps[1].title,
+    TextColor3 = Colors.Text,
+    Font = Enum.Font.GothamBold,
+    TextSize = 20,
+    ZIndex = 101,
+    Parent = TutorialFrame
+})
+
+-- Content
+local TutorialContent = createInstance("TextLabel", {
+    Size = UDim2.new(1, -40, 0, 150),
+    Position = UDim2.new(0, 20, 0, 120),
+    BackgroundTransparency = 1,
+    Text = TutorialSteps[1].content,
+    TextColor3 = Colors.TextDim,
+    Font = Enum.Font.Gotham,
+    TextSize = IsMobile and 12 or 13,
     RichText = true,
     TextWrapped = true,
+    TextXAlignment = Enum.TextXAlignment.Left,
     TextYAlignment = Enum.TextYAlignment.Top,
+    ZIndex = 101,
     Parent = TutorialFrame
 })
 
-createInstance("TextLabel", {
-    Size = UDim2.new(1, 0, 0, 15),
-    Position = UDim2.new(0, 0, 1, -10),
-    BackgroundTransparency = 1,
-    Text = "VolQ5",
-    TextColor3 = Color3.fromRGB(80, 80, 80),
-    Font = Enum.Font.Gotham,
-    TextSize = 9,
-    Parent = TutorialFrame
-})
-
-local TutBtn = createInstance("TextButton", {
-    Size = UDim2.new(0, 100, 0, 32),
-    Position = UDim2.new(0.5, -50, 1, -50),
-    BackgroundColor3 = Colors.Green,
-    Text = "Start",
-    TextColor3 = Color3.new(0, 0, 0),
+-- Back Button
+local BackBtn = createInstance("TextButton", {
+    Size = UDim2.new(0, 80, 0, 36),
+    Position = UDim2.new(0, 20, 1, -55),
+    BackgroundColor3 = Colors.InputBg,
+    Text = "← Back",
+    TextColor3 = Colors.TextDim,
     Font = Enum.Font.GothamBold,
     TextSize = 13,
+    Visible = false,
+    ZIndex = 101,
     Parent = TutorialFrame
 })
-addCorner(TutBtn, 8)
+addCorner(BackBtn, 8)
+addStroke(BackBtn, Colors.Border, 1)
 
-TutBtn.MouseButton1Click:Connect(function()
-    TweenService:Create(TutorialFrame, TweenInfo.new(0.2), {BackgroundTransparency = 1}):Play()
-    for _, child in pairs(TutorialFrame:GetDescendants()) do
+-- Next/Start Button
+local NextBtn = createInstance("TextButton", {
+    Size = UDim2.new(0, 120, 0, 36),
+    Position = UDim2.new(1, -140, 1, -55),
+    BackgroundColor3 = Colors.Orange,
+    Text = TutorialSteps[1].button,
+    TextColor3 = Color3.new(0, 0, 0),
+    Font = Enum.Font.GothamBold,
+    TextSize = 14,
+    ZIndex = 101,
+    Parent = TutorialFrame
+})
+addCorner(NextBtn, 8)
+
+-- Skip Button
+local SkipBtn = createInstance("TextButton", {
+    Size = UDim2.new(0, 60, 0, 25),
+    Position = UDim2.new(1, -70, 0, 8),
+    BackgroundTransparency = 1,
+    Text = "Skip",
+    TextColor3 = Colors.TextDim,
+    Font = Enum.Font.Gotham,
+    TextSize = 11,
+    ZIndex = 101,
+    Parent = TutorialFrame
+})
+
+-- Function to update tutorial step
+local function updateTutorialStep(step)
+    CurrentStep = step
+    local data = TutorialSteps[step]
+    
+    -- Update progress
+    TweenService:Create(ProgressFill, TweenInfo.new(0.3), {
+        Size = UDim2.new(step / TotalSteps, 0, 1, 0)
+    }):Play()
+    
+    StepCounter.Text = "Step " .. step .. " of " .. TotalSteps
+    
+    -- Fade out current content
+    TweenService:Create(TutorialIcon, TweenInfo.new(0.15), {TextTransparency = 1}):Play()
+    TweenService:Create(TutorialTitle, TweenInfo.new(0.15), {TextTransparency = 1}):Play()
+    TweenService:Create(TutorialContent, TweenInfo.new(0.15), {TextTransparency = 1}):Play()
+    
+    task.wait(0.15)
+    
+    -- Update content
+    TutorialIcon.Text = data.icon
+    TutorialTitle.Text = data.title
+    TutorialContent.Text = data.content
+    NextBtn.Text = data.button
+    
+    -- Show/hide back button
+    BackBtn.Visible = step > 1
+    
+    -- Change button color on last step
+    if step == TotalSteps then
+        NextBtn.BackgroundColor3 = Colors.Green
+        NextBtn.Size = UDim2.new(0, 140, 0, 36)
+        NextBtn.Position = UDim2.new(1, -160, 1, -55)
+    else
+        NextBtn.BackgroundColor3 = Colors.Orange
+        NextBtn.Size = UDim2.new(0, 120, 0, 36)
+        NextBtn.Position = UDim2.new(1, -140, 1, -55)
+    end
+    
+    -- Fade in new content
+    TweenService:Create(TutorialIcon, TweenInfo.new(0.15), {TextTransparency = 0}):Play()
+    TweenService:Create(TutorialTitle, TweenInfo.new(0.15), {TextTransparency = 0}):Play()
+    TweenService:Create(TutorialContent, TweenInfo.new(0.15), {TextTransparency = 0}):Play()
+end
+
+-- Function to close tutorial and unlock GUI
+local function completeTutorial()
+    TutorialCompleted = true
+    
+    -- Fade out tutorial
+    TweenService:Create(TutorialFrame, TweenInfo.new(0.3), {BackgroundTransparency = 1}):Play()
+    for _, child in ipairs(TutorialFrame:GetDescendants()) do
         if child:IsA("GuiObject") then
-            TweenService:Create(child, TweenInfo.new(0.2), {Transparency = 1}):Play()
+            local prop = child:IsA("TextLabel") or child:IsA("TextButton") and "TextTransparency" or "BackgroundTransparency"
+            pcall(function()
+                TweenService:Create(child, TweenInfo.new(0.3), {BackgroundTransparency = 1, TextTransparency = 1}):Play()
+            end)
         end
     end
-    task.wait(0.2)
+    
+    task.wait(0.3)
     TutorialFrame.Visible = false
+    
+    -- Unlock and show main GUI with animation
+    MainFrame.Visible = true
+    MainFrame.Position = UDim2.new(0.5, 0, -0.2, 0)
+    TweenService:Create(MainFrame, TweenInfo.new(0.4, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+        Position = UDim2.new(0.5, 0, 0.15, 0)
+    }):Play()
+end
+
+-- Button connections
+NextBtn.MouseButton1Click:Connect(function()
+    if CurrentStep < TotalSteps then
+        updateTutorialStep(CurrentStep + 1)
+    else
+        completeTutorial()
+    end
 end)
+
+BackBtn.MouseButton1Click:Connect(function()
+    if CurrentStep > 1 then
+        updateTutorialStep(CurrentStep - 1)
+    end
+end)
+
+SkipBtn.MouseButton1Click:Connect(function()
+    completeTutorial()
+end)
+
+-- Initially hide main GUI until tutorial is complete
+MainFrame.Visible = false
 
 --// ============================================
 --// 12. LOGIC ENGINE - DATA TABLES
