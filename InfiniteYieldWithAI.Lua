@@ -14,23 +14,213 @@ local CONFIG = {
     Model = "openai",
     MaxRetries = 2, 
     
+    -- [CACHE OPTIMIZATION: ~3500 Tokens] 
+    -- This prompt includes the FULL Infinite Yield command database and advanced logic rules.
     CommandPrompt = [[
-        Task: Translate text to Infinite Yield syntax.
+        [SYSTEM MANIFESTO: SMART INFINITE YIELD]
+        ROLE: You are a Roblox Command Compiler. Convert Natural Language -> Infinite Yield Syntax.
+        
+        ### SECTION 1: LOGIC KERNEL (CRITICAL) ###
+        1. INVERSION & NEGATION (The "Stop" Rule):
+           - If user says "stop", "don't", "quit", "remove", or "end":
+             > Find the base command and prefix it with 'un' or 'no'.
+             > Examples: "stop flying" -> ;unfly | "remove esp" -> ;noesp | "don't noclip" -> ;clip
+        
+        2. STATE RESETS (The "Normal" Rule):
+           - "slow down", "walk normal", "reset speed" -> ;speed 16
+           - "normal jump", "reset jump" -> ;jumppower 50
+           - "fix camera", "reset view" -> ;fixcam
+           - "unfreeze", "thaw" -> ;unfreeze
+        
+        3. CHAINING:
+           - Separate multiple actions with semicolons (;). 
+           - Example: "fly and kill him" -> ;fly ;kill [target]
+           
+        4. TARGETING:
+           - "me" -> Output "me" (e.g., ;kill me)
+           - "random" -> Output "random" (e.g., ;goto random)
+           - "all" / "everyone" -> INVALID. Ignore or ask for clarification.
 
-        ### RULES ###
-        1. STOP/REMOVE: Critical. Find 'un'/'no' variant (e.g. stop fly -> ;unfly).
-        2. INFER: Fast->;speed 100. Privacy->;serverhop. Lag->;nocals. Crash->;crash.
-        3. SYNTAX: Stats->add [num]. Actions->add [player]. "Everyone"->"all".
+        ### SECTION 2: COMPLETE COMMAND DATABASE ###
+        
+        [UTILITY]
+        ;discord               : Invite to support server.
+        ;guiscale [0.4-2]      : Changes GUI size.
+        ;console / ;oldconsole : Loads developer console.
+        ;explorer / ;olddex    : Opens DEX explorer.
+        ;remotespy / ;rspy     : Opens Remote Spy V3.
+        ;audiologger           : Opens audio logger.
+        ;antiidle              : Prevents AFK kick.
+        ;datalimit [num]       : Set outgoing KBPS limit.
+        ;replicationlag [num]  : Set incoming replication lag.
+        ;creatorid             : Notifies creator ID.
+        ;noprompts             : Prevents purchase prompts.
+        ;showprompts           : Allows purchase prompts.
+        ;enable [type]         : Toggles coregui (inventory/playerlist/chat).
+        ;disable [type]        : Hides coregui items.
+        ;showguis / ;hideguis  : Toggles PlayerGui visibility.
+        ;guidelete             : Enables backspace to delete GUIs.
+        ;hideiy / ;showiy      : Toggles Infinite Yield UI.
+        ;keepiy                : Auto-execute IY on teleport.
+        ;savegame              : Saves the game (saveinstance).
+        ;clientantikick        : Prevents localscript kicks.
+        ;clientantiteleport    : Prevents localscript teleports.
+        ;volume [0-10]         : Adjusts game volume.
+        ;antilag               : Lowers graphics to boost FPS.
+        ;setfpscap [num]       : Sets FPS limit.
+        ;notify [text]         : Sends a notification.
 
-        ### COMMANDS ###
-        ;fly/unfly ;noclip/clip ;vfly/unvfly ;cfly/uncfly ;float/unfloat ;swim/unswim ;tpwalk/untpwalk
-        ;esp/noesp ;chams/nochams ;xray/unxray ;spectate/unspectate ;freecam/unfreecam ;fullbright/unloopfullbright
-        ;kill ;loopkill ;fling/unfling ;invisfling ;walkfling ;loopoof/unloopoof ;god ;invisible/visible
-        ;speed ;jumppower ;sit/unnosit ;infjump/uninfjump ;autojump/unautojump ;stun/unstun ;platform
-        ;goto ;bring ;to ;spawnpoint ;flashback ;serverhop ;rejoin ;jobid ;gametp ;tppos
-        ;btools ;f3x ;delete ;partpath ;rterrain ;destroyheight ;tools ;equiptools ;grabtools
-        ;crash ;lagswitch ;hkill ;cni ;touchinterests ;firecd ;cleanhats ;ip ;getip
-        ;spam/unspam ;pmspam/unpmspam ;logs ;chatlogs ;console ;explorer ;remotespy
+        [MOVEMENT]
+        ;noclip                : Walk through walls.
+        ;unnoclip / ;clip      : Enable collision.
+        ;fly [speed]           : Toggle flight.
+        ;unfly                 : Disable flight.
+        ;flyspeed [num]        : Set flight speed.
+        ;vehiclefly [speed]    : Flight for vehicles.
+        ;unvehiclefly          : Disable vehicle flight.
+        ;cframefly [speed]     : CFrame-based flight (Bypass).
+        ;uncframefly           : Disable CFrame flight.
+        ;vehiclenoclip         : Disable vehicle collision.
+        ;float / ;unfloat      : Spawns/removes platform under player.
+        ;swim / ;unswim        : Toggle swimming in air.
+        ;tpwalk [num]          : Teleport-based walking (Bypass).
+        ;untpwalk              : Disable tpwalk.
+        ;wallwalk              : Walk on walls.
+
+        [TELEPORT & WAYPOINTS]
+        ;setwaypoint [name]    : Save position.
+        ;waypoint [name]       : TP to waypoint.
+        ;waypoints             : List waypoints.
+        ;clearwaypoints        : Delete all waypoints.
+        ;goto [plr]            : TP to player.
+        ;tweengoto [plr]       : Smooth TP to player.
+        ;vehiclegoto [plr]     : Car TP to player.
+        ;loopgoto [plr]        : Constant TP to player.
+        ;unloopgoto            : Stop loop TP.
+        ;clientbring [plr]     : Bring player (Client-side).
+        ;loopbring [plr]       : Loop bring player.
+        ;spawnpoint            : Set custom spawn.
+        ;nospawnpoint          : Remove custom spawn.
+        ;flashback             : TP to last death point.
+        ;walltp                : TP forward through wall.
+        ;teleporttool          : Click to teleport tool.
+
+        [VISUALS]
+        ;esp                   : Player ESP (Box).
+        ;noesp                 : Remove ESP.
+        ;espteam               : Team colored ESP.
+        ;chams                 : Player Chams (Solid).
+        ;nochams               : Remove Chams.
+        ;xray / ;noxray        : Toggle wall transparency.
+        ;spectate [plr]        : View player.
+        ;unspectate            : Stop viewing.
+        ;freecam               : Detach camera.
+        ;unfreecam             : Reset camera.
+        ;firstp / ;thirdp      : Force camera perspective.
+        ;maxzoom [num]         : Set max zoom distance.
+        ;fov [num]             : Set Field of View.
+        ;fixcam                : Fix camera glitches.
+        ;fullbright            : Max brightness.
+        ;nofullbright          : Restore brightness.
+        ;day / ;night          : Set time of day.
+        ;nofog                 : Remove fog.
+        ;globalshadows         : Enable shadows.
+        ;noglobalshadows       : Disable shadows.
+
+        [PLAYER]
+        ;age [plr]             : Account age.
+        ;userid [plr]          : Player ID.
+        ;copyname [plr]        : Copy username.
+        ;bang [plr] [speed]    : Rude animation.
+        ;unbang                : Stop animation.
+        ;friend [plr]          : Send friend request.
+        ;unfriend [plr]        : Remove friend.
+        ;headsit [plr]         : Sit on player's head.
+        ;walkto [plr]          : Follow player.
+        ;unwalkto              : Stop following.
+        ;fling                 : Spin fling (Touch to kill).
+        ;unfling               : Stop fling.
+        ;invisfling            : Invisible fling.
+        ;kill [plr]            : Kill player (Tool/Collision).
+        ;loopkill [plr]        : Loop kill player.
+        ;unloopkill            : Stop loop kill.
+        ;loopoof               : Spam death sound.
+        ;unloopoof             : Stop sound spam.
+        ;reset / ;respawn      : Respawn character.
+        ;god                   : God mode (Client).
+        ;invisible / ;visible  : Toggle character visibility.
+        ;speed [num]           : Set WalkSpeed.
+        ;jumppower [num]       : Set JumpPower.
+        ;sit / ;jump           : Force sit/jump.
+        ;infjump               : Infinite jump.
+        ;uninfjump             : Disable infinite jump.
+        ;noclickdetectorlimits : Remove click range limit.
+        ;fireclickdetectors    : Activate all buttons.
+
+        [CHAT & LOGS]
+        ;logs                  : Open chat logs.
+        ;chatlogs              : Print logs to console.
+        ;chat [text]           : Force chat message.
+        ;spam [text]           : Spam chat.
+        ;unspam                : Stop spam.
+        ;whisper [plr] [msg]   : Private message.
+        ;pmspam [plr] [msg]    : Spam PMs.
+        ;unpmspam              : Stop PM spam.
+
+        [WORKSPACE]
+        ;btools / ;f3x         : Give building tools.
+        ;delete [name]         : Delete part (Client).
+        ;partpath              : Copy part path.
+        ;lockworkspace         : Lock all parts.
+        ;unlockworkspace       : Unlock all parts.
+        ;gotopart [name]       : TP to part.
+        ;bringpart [name]      : Bring part to you.
+        ;removeterrain         : Delete terrain.
+        ;antivoid              : Prevent falling in void.
+
+        [ANIMATION]
+        ;animation [id]        : Play animation ID.
+        ;dance / ;undance      : Toggle dance.
+        ;spasm / ;unspasm      : Toggle spasm.
+        ;noanim / ;reanim      : Disable/Enable animations.
+        ;copyanimation [plr]   : Copy player animation.
+
+        [TOOLS]
+        ;autoclick [delay]     : Auto mouse clicker.
+        ;unautoclick           : Stop clicker.
+        ;tools                 : Get tools from ReplicatedStorage.
+        ;notools               : Remove tools.
+        ;grabtools             : Pick up all dropped tools.
+        ;equiptools            : Equip all items.
+        ;droptools             : Drop all items.
+        ;reach [num]           : Extend tool reach.
+        ;unreach               : Reset reach.
+
+        [SERVER]
+        ;serverinfo            : Show server details.
+        ;jobid                 : Copy JobId.
+        ;rejoin                : Rejoin server.
+        ;serverhop             : Join different server.
+        ;gametp [id]           : Join different game.
+        ;exit                  : Close Roblox.
+
+        ### SECTION 3: FEW-SHOT TRAINING ###
+        User: "Stop flying immediately"
+        AI: ;unfly
+
+        User: "Make me walk slow"
+        AI: ;speed 16
+
+        User: "I want to kill him and leave"
+        AI: ;kill [player] ;serverhop
+
+        User: "Remove the lag"
+        AI: ;antilag ;noesp ;nochams
+
+        User: "Don't let me fall in the void"
+        AI: ;antivoid
+
+        [END OF STATIC CONTEXT]
     ]],
 }
 
@@ -275,7 +465,7 @@ local TutTitle = Instance.new("TextLabel")
 TutTitle.Size = UDim2.new(1, 0, 0, 30)
 TutTitle.Position = UDim2.new(0, 0, 0, 10)
 TutTitle.BackgroundTransparency = 1
-TutTitle.Text = "Smart IY v1.2 STABLE"
+TutTitle.Text = "Smart IY v1.2 Latest"
 TutTitle.TextColor3 = Colors.Text
 TutTitle.Font = Enum.Font.GothamBold
 TutTitle.TextSize = 18
@@ -372,10 +562,13 @@ local ToggleMap = {
 
 -- [B] FAST MAP (COMPLETE IY DICTIONARY)
 local FastMap = {
-    -- [[ 0. SYSTEM ]]
+    -- [[ 0. SYSTEM & ALIASES (NEW) ]]
     ["^help$"] = "help", ["^cmds$"] = "help", ["^commands$"] = "help",
-    ["^bind (%w+) (.+)"] = "bind %1 %2",
-    ["^unbind (%w+)"] = "unbind %1",
+    ["^bind (%w+) (.+)"] = "bind %1 %2", ["^unbind (%w+)"] = "unbind %1",
+    ["^addalias (.+) (.+)"] = "addalias %1 %2", ["^removealias (.+)"] = "removealias %1", ["^clraliases$"] = "clraliases",
+    ["^addplugin (.+)"] = "addplugin %1", ["^removeplugin (.+)"] = "removeplugin %1", 
+    ["^reloadplugin (.+)"] = "reloadplugin %1", ["^addallplugins$"] = "addallplugins",
+    ["^breakloops$"] = "breakloops", ["^removecmd (.+)"] = "removecmd %1",
 
     -- [[ 1. UTILITY ]]
     ["^discord$"] = "discord", ["^guiscale (%d+)"] = "guiscale %1",
@@ -396,15 +589,24 @@ local FastMap = {
     ["^record$"] = "record", ["^screenshot$"] = "screenshot", ["^togglefullscreen$"] = "togglefullscreen",
     ["^notify (.+)"] = "notify %1", ["^lastcommand$"] = "lastcommand", ["^setfpscap (%d+)"] = "setfpscap %1",
 
-    -- [[ 2. MOVEMENT ]]
+    -- [[ 2. MOVEMENT (STRICT NUMBERS FIXED) ]]
     ["^noclip$"] = "noclip", ["^unnoclip$"] = "unnoclip", ["^clip$"] = "clip",
-    ["^fly$"] = "fly", ["^fly (.+)"] = "fly %1", ["^unfly$"] = "unfly", ["^flyspeed (%d+)"] = "flyspeed %1",
-    ["^vfly$"] = "vehiclefly", ["^vfly (.+)"] = "vehiclefly %1", ["^unvfly$"] = "unvehiclefly", ["^vehicleflyspeed (%d+)"] = "vehicleflyspeed %1",
-    ["^cfly$"] = "cframefly", ["^cfly (.+)"] = "cframefly %1", ["^uncfly$"] = "uncframefly", ["^cframeflyspeed (%d+)"] = "cframeflyspeed %1",
+    
+    -- CHANGE: (.+) -> (%d+) ensures fly only accepts numbers. 
+    -- If text is typed (e.g. "fly goto"), it fails this check and goes to AI.
+    ["^fly$"] = "fly", ["^fly (%d+)$"] = "fly %1", ["^unfly$"] = "unfly", 
+    ["^flyspeed (%d+)$"] = "flyspeed %1",
+    
+    ["^vfly$"] = "vehiclefly", ["^vfly (%d+)$"] = "vehiclefly %1", ["^unvfly$"] = "unvehiclefly", 
+    ["^vehicleflyspeed (%d+)$"] = "vehicleflyspeed %1",
+    
+    ["^cfly$"] = "cframefly", ["^cfly (%d+)$"] = "cframefly %1", ["^uncfly$"] = "uncframefly", 
+    ["^cframeflyspeed (%d+)$"] = "cframeflyspeed %1",
+    
     ["^qefly$"] = "qefly", ["^vehiclenoclip$"] = "vehiclenoclip", ["^vehicleclip$"] = "vehicleclip",
     ["^float$"] = "float", ["^unfloat$"] = "unfloat",
     ["^swim$"] = "swim", ["^unswim$"] = "unswim", ["^toggleswim$"] = "toggleswim",
-    ["^tpwalk (%d+)"] = "tpwalk %1", ["^untpwalk$"] = "untpwalk", ["^wallwalk$"] = "wallwalk",
+    ["^tpwalk (%d+)$"] = "tpwalk %1", ["^untpwalk$"] = "untpwalk", ["^wallwalk$"] = "wallwalk",
 
     -- [[ 3. TELEPORT ]]
     ["^setwaypoint (.+)"] = "setwaypoint %1", ["^waypoints$"] = "waypoints", ["^showwaypoints$"] = "showwaypoints", ["^hidewaypoints$"] = "hidewaypoints",
@@ -418,6 +620,7 @@ local FastMap = {
 
     -- [[ 4. VISUALS ]]
     ["^esp$"] = "esp", ["^noesp$"] = "noesp", ["^espteam$"] = "espteam", ["^esptransparency (%d+)"] = "esptransparency %1",
+    ["^partesp (.+)"] = "partesp %1", ["^unpartesp (.+)"] = "unpartesp %1", -- [ADDED]
     ["^chams$"] = "chams", ["^nochams$"] = "nochams", ["^xray$"] = "xray", ["^noxray$"] = "noxray",
     ["^locate (.+)"] = "locate %1", ["^unlocate$"] = "unlocate",
     ["^spectate (.+)"] = "spectate %1", ["^view (.+)"] = "view %1", ["^unspectate$"] = "unspectate",
@@ -443,8 +646,8 @@ local FastMap = {
     ["^hitbox (.+)"] = "hitbox %1", ["^headsize (.+)"] = "headsize %1",
     ["^reset$"] = "reset", ["^respawn$"] = "respawn", ["^refresh$"] = "refresh", ["^god$"] = "god", ["^permadeath$"] = "permadeath",
     ["^invisible$"] = "invisible", ["^visible$"] = "visible", ["^toolinvisible$"] = "toolinvisible",
-    ["^speed (%d+)"] = "speed %1", ["^ws (%d+)"] = "speed %1", ["^loopspeed (%d+)"] = "loopspeed %1", ["^unloopspeed$"] = "unloopspeed",
-    ["^jumppower (%d+)"] = "jumppower %1", ["^jp (%d+)"] = "jumppower %1", ["^loopjumppower (%d+)"] = "loopjumppower %1", ["^unloopjumppower$"] = "unloopjumppower",
+    ["^speed (%d+)$"] = "speed %1", ["^ws (%d+)$"] = "speed %1", ["^loopspeed (%d+)$"] = "loopspeed %1", ["^unloopspeed$"] = "unloopspeed",
+    ["^jumppower (%d+)$"] = "jumppower %1", ["^jp (%d+)$"] = "jumppower %1", ["^loopjumppower (%d+)$"] = "loopjumppower %1", ["^unloopjumppower$"] = "unloopjumppower",
     ["^sit$"] = "sit", ["^lay$"] = "lay", ["^jump$"] = "jump", ["^infjump$"] = "infjump", ["^uninfjump$"] = "uninfjump",
     ["^flyjump$"] = "flyjump", ["^unflyjump$"] = "unflyjump", ["^autojump$"] = "autojump", ["^unautojump$"] = "unautojump",
     ["^stun$"] = "stun", ["^unstun$"] = "unstun", ["^team (.+)"] = "team %1",
@@ -476,7 +679,8 @@ local FastMap = {
     ["^autoclick$"] = "autoclick", ["^unautoclick$"] = "unautoclick", ["^mousesensitivity$"] = "mousesensitivity",
     ["^tools$"] = "tools", ["^notools$"] = "notools", ["^grabtools$"] = "grabtools", ["^ungrabtools$"] = "ungrabtools",
     ["^equiptools$"] = "equiptools", ["^unequiptools$"] = "unequiptools", ["^reach (%d+)"] = "reach %1", ["^unreach$"] = "unreach",
-    
+    ["^dupetools (%d+)"] = "dupetools %1", ["^droppabletools$"] = "droppabletools", ["^droptools$"] = "droptools", -- [ADDED]
+
     -- [[ 10. SERVER ]]
     ["^serverinfo$"] = "serverinfo", ["^jobid$"] = "jobid", ["^rejoin$"] = "rejoin", ["^autorejoin$"] = "autorejoin",
     ["^serverhop$"] = "serverhop", ["^gametp (.+)"] = "gametp %1"
@@ -512,7 +716,39 @@ local function needsPlayerContext(text)
     return false
 end
 
--- [D] BRIDGE EXECUTION
+-- [D] ADVANCED TARGET RESOLVER
+local function resolveTarget(cmdString)
+    -- 1. Handle "all" / "everyone" rejection (Safety)
+    if cmdString:match("%sall$") or cmdString:match("%severyone$") then
+        return nil, "Target 'all' is invalid. Please specify a player."
+    end
+
+    -- 2. Handle "me" -> LocalPlayer Name
+    if cmdString:match("%sme$") or cmdString:match("%sme%s") then
+        local myName = User.Name
+        cmdString = cmdString:gsub("%sme$", " " .. myName):gsub("%sme%s", " " .. myName .. " ")
+    end
+
+    -- 3. Handle "random" -> Random Player Name
+    if cmdString:match("%srandom$") or cmdString:match("%srandom%s") then
+        local otherPlayers = {}
+        for _, p in pairs(Players:GetPlayers()) do
+            if p ~= User then table.insert(otherPlayers, p.Name) end
+        end
+        
+        if #otherPlayers > 0 then
+            local randomName = otherPlayers[math.random(1, #otherPlayers)]
+            cmdString = cmdString:gsub("%srandom$", " " .. randomName):gsub("%srandom%s", " " .. randomName .. " ")
+            updateStatus("Targeting Random: " .. randomName, Colors.Orange)
+        else
+            return nil, "No other players to target."
+        end
+    end
+
+    return cmdString, nil
+end
+
+-- [E] BRIDGE EXECUTION (CHAIN-AWARE)
 local function executeBridge(text, source)
     if not IY_Interface then 
         warn("SIY: Bridge not connected.")
@@ -523,24 +759,27 @@ local function executeBridge(text, source)
     local cleanText = text:gsub("^%s*", ""):gsub("%s*$", "")
     
     if IS_CHAT_MODE then
+        -- Chat mode: Just notify the text
         local safeText = cleanText:gsub("'", ""):gsub('"', '')
         IY_Interface.Exec("notify " .. safeText) 
         updateStatus("[AI] Response Sent", Colors.Blue)
     else
+        -- CMD Mode: Handle Chains & Binds
+        
+        -- 1. Remove initial semicolon if present
         if cleanText:sub(1,1) == ";" then cleanText = cleanText:sub(2) end
         
-        -- [[ HELP INTERCEPT ]]
+        -- 2. INTERCEPT: Help Command
         if cleanText == "help" then
             IY_Interface.Exec("notify Check Status Bar for help.")
-            updateStatus("CMD: ;bind [key] [cmd], ;fly, RightShift=Toggle", Colors.Green)
+            updateStatus("CMD: ;bind [key] [cmd], RightShift=Toggle", Colors.Green)
             return
         end
 
-        -- [[ SMART BIND LOGIC ]]
+        -- 3. INTERCEPT: Binds
         local bindKey, bindCmd = cleanText:match("^bind (%w+) (.+)")
         if bindKey and bindCmd then
             local keyLower = bindKey:lower()
-            -- Check for Toggle Pair
             local opposite = ToggleMap[bindCmd]
             if opposite then
                 BindSystem[keyLower] = {Current = bindCmd, Next = opposite}
@@ -551,40 +790,47 @@ local function executeBridge(text, source)
             end
             return
         end
-        local unbindKey = cleanText:match("^unbind (%w+)")
-        if unbindKey then
+        
+        if cleanText:match("^unbind (%w+)") then
+            local unbindKey = cleanText:match("^unbind (%w+)")
             BindSystem[unbindKey:lower()] = nil
             updateStatus("Unbound '"..unbindKey.."'", Colors.Green)
             return
         end
         
-        local prefix = source and ("["..source.."] ") or ""
-        updateStatus(prefix .. "Executing: " .. cleanText, Colors.Green)
-        IY_Interface.Exec(cleanText) 
+        -- 4. CHAIN SPLITTER & EXECUTION
+        -- Infinite Yield doesn't support ";cmd1 ;cmd2", so we split manually
+        local commands = cleanText:split(";")
+        
+        task.spawn(function()
+            for _, rawCmd in ipairs(commands) do
+                -- Clean whitespace
+                local cmd = rawCmd:gsub("^%s*", ""):gsub("%s*$", "")
+                if cmd ~= "" then
+                    -- 5. RESOLVE TARGETS ("me", "random", "all")
+                    local finalCmd, err = resolveTarget(cmd)
+                    
+                    if finalCmd then
+                        local prefix = source and ("["..source.."] ") or ""
+                        
+                        -- Update status
+                        if #commands > 1 then
+                            updateStatus("Chain: " .. finalCmd, Colors.Green)
+                        else
+                            updateStatus(prefix .. "Exec: " .. finalCmd, Colors.Green)
+                        end
+                        
+                        IY_Interface.Exec(finalCmd)
+                        
+                        -- Small delay between chain links
+                        if #commands > 1 then task.wait(0.1) end 
+                    else
+                        updateStatus("Error: " .. (err or "Invalid Cmd"), Colors.Red)
+                    end
+                end
+            end
+        end)
     end
-end
-
--- [E] TARGET VALIDATION
-local function validateCommandTarget(cmdString)
-    local args = cmdString:split(" ")
-    if #args < 2 then return true, "" end 
-
-    local cmdName = args[1]:lower()
-    local targetArg = args[2]
-
-    local PlayerTargetCommands = {
-        "kill", "loopkill", "fling", "unfling", "goto", "bring", "to", "tp",
-        "spectate", "view", "freeze", "bang", "attach"
-    }
-
-    if not table.find(PlayerTargetCommands, cmdName) then return true, "" end
-    if table.find({"me", "all", "others", "random"}, targetArg:lower()) then return true, "" end
-    if Players:FindFirstChild(targetArg) then return true, "" end
-    for _, p in pairs(Players:GetPlayers()) do
-        if p.Name:lower():sub(1, #targetArg) == targetArg:lower() then return true, "" end
-    end
-    
-    return false, "Target '"..targetArg.."' not found."
 end
 
 -- [F] VISUAL STATE
@@ -604,22 +850,36 @@ local function setThinkingState(retry)
     pulse:Play()
 end
 
--- [G] CORE QUERY LOGIC (STRICT PURITY + IDENTITY FIX)
+-- [G] CORE QUERY LOGIC
 function queryAI(promptText, retryContext, attemptCount)
     if promptText == "" then return end
     
-    -- [[ 1. FAST LOCAL CHECK (PRESERVED) ]]
+    -- [[ 1. MANUAL CHAIN & FAST CHECK ]]
     if not IS_CHAT_MODE and not retryContext then
+        -- A. Token Saver: If input contains ';', execute immediately (Skip AI)
+        if promptText:find(";") then
+            executeBridge(promptText, "MANUAL")
+            resetVisuals()
+            InputBox.Text = ""
+            return
+        end
+
         local cleanPrompt = promptText:lower():gsub("^%s*", ""):gsub("%s*$", ""):gsub("^;", "")
-        for pattern, cmd in pairs(FastMap) do
-            local matchStart, matchEnd, capture, capture2 = string.find(cleanPrompt, pattern)
-            if matchStart then
-                local finalCmd = cmd
-                if capture then finalCmd = finalCmd:gsub("%%1", capture) end
-                if capture2 then finalCmd = finalCmd:gsub("%%2", capture2) end
-                
-                local isValid, err = validateCommandTarget(finalCmd)
-                if isValid then
+
+        -- [[ B. CHAIN BREAKER ]] 
+        -- If natural chaining (" and ", " & ") is detected, FORCE AI.
+        -- This prevents FastMap patterns like '^fly (.+)' from eating the second command.
+        local isChain = cleanPrompt:find(" and ") or cleanPrompt:find(" & ") or cleanPrompt:find(" then ")
+        
+        if not isChain then
+            -- C. Fast Map: Only run if NO chain words are present
+            for pattern, cmd in pairs(FastMap) do
+                local matchStart, matchEnd, capture, capture2 = string.find(cleanPrompt, pattern)
+                if matchStart then
+                    local finalCmd = cmd
+                    if capture then finalCmd = finalCmd:gsub("%%1", capture) end
+                    if capture2 then finalCmd = finalCmd:gsub("%%2", capture2) end
+                    
                     executeBridge(finalCmd, "FAST")
                     resetVisuals()
                     InputBox.Text = "" 
@@ -629,71 +889,59 @@ function queryAI(promptText, retryContext, attemptCount)
         end
     end
 
-    -- [[ 2. RETRY LIMITER ]]
-    attemptCount = attemptCount or 0
-    if attemptCount > CONFIG.MaxRetries then 
-        updateStatus("Failed: Invalid Target", Colors.Red)
-        task.wait(2); resetVisuals(); return 
-    end
-
-    setThinkingState(attemptCount > 0)
+    -- [[ 2. AI EXECUTION ]]
+    setThinkingState(false)
     updateStatus("Thinking...", Colors.Orange)
 
-    -- [[ 3. SPLIT CONTEXT CONSTRUCTION ]]
+    -- Dynamic Context Construction
     local staticSystem = CONFIG.CommandPrompt
     local dynamicContext = ""
     
     if IS_CHAT_MODE then
         local displayName = (GameName ~= "Loading...") and GameName or "this game"
         
-        -- [CHAT FIX] Force Identity & Ban Syntax
+        -- [[ IMPROVED CHAT CONTEXT ]]
         dynamicContext = string.format([[
             [SYSTEM OVERRIDE: CHAT MODE]
-            IGNORE the "Translate" task.
-            ROLE: Helpful Game Assistant.
-            CONTEXT: User='%s', Game='%s'.
-            RULES:
-            1. If asked "whoami", say "You are %s".
-            2. If asked "whereami", say "You are in %s".
-            3. MIRROR user's tone (slang/formal).
-            4. OUTPUT TEXT ONLY. NO COMMANDS.
-            5. Keep it short (under 25 words).
-        ]], User.Name, displayName, User.Name, displayName)
+            IGNORE "Translation" rules.
+            ROLE: Smart Infinite Yield Assistant (Roblox Exploit AI).
+            CURRENT GAME: '%s'. USER: '%s'.
+            
+            GUIDELINES:
+            1. IDENTITY: If asked "who am I", answer "You are %s". If asked "where am I", answer "You are in %s".
+            2. TONE: Concise, helpful, and tech-savvy. Mirror the user's slang if they use it.
+            3. OUTPUT: Plain text only. NO COMMAND SYNTAX (e.g. do not output ';fly'). 
+            4. LENGTH: Strict limit of 25 words. Be snappy.
+        ]], displayName, User.Name, User.Name, displayName)
         
     else
-        -- [CMD FIX] Force Strict Syntax & Ban Chat
+        -- CMD Mode: Strict Context
         dynamicContext = [[
-            MODE: STRICT EXECUTION.
-            RULES:
-            1. Output ONLY the command string.
-            2. NO conversational filler (e.g., "Here is...", "Sure!").
-            3. NO Markdown (e.g., `code blocks`).
-            4. If the user says "make me fast", output "speed 100" (NOT "speed 100 me").
-            5. If command not found, output nothing.
+            MODE: STRICT COMPILATION.
+            REMINDER: 
+            1. No Markdown. No filler.
+            2. If "stop" is used, verify if it needs an "un" prefix (e.g. stop fly -> ;unfly).
+            3. If multiple actions, join with ; (e.g. ;fly ;speed 100).
         ]]
         
+        -- Inject Player List for context (helps with partial name matching)
         if needsPlayerContext(promptText) then
-             dynamicContext = dynamicContext .. " Players: [" .. getPlayerList() .. "]."
-        end
-        
-        if retryContext then
-            dynamicContext = dynamicContext .. " FIX ERROR: " .. retryContext
+             dynamicContext = dynamicContext .. " Players in server: [" .. getPlayerList() .. "]."
         end
     end
 
-    -- [[ 4. PAYLOAD CONSTRUCTION ]]
+    -- Payload Construction
     local body = HttpService:JSONEncode({
         model = CONFIG.Model, 
         messages = { 
-            { role = "system", content = staticSystem },   -- CACHED
-            { role = "system", content = dynamicContext }, -- STRICT RULES
-            { role = "user", content = promptText }        -- INPUT
+            { role = "system", content = staticSystem },   -- Cached Database
+            { role = "system", content = dynamicContext }, -- Runtime Rules
+            { role = "user", content = promptText }        -- User Input
         },
-        -- Low temp for CMD to stop hallucinations, High for CHAT for personality
         temperature = IS_CHAT_MODE and 0.85 or 0.1 
     })
 
-    -- [[ 5. ASYNC REQUEST ]]
+    -- Async Request
     task.spawn(function()
         local success, response = pcall(function()
             return httpRequest({
@@ -710,35 +958,26 @@ function queryAI(promptText, retryContext, attemptCount)
                 aiOutput = data.choices[1].message.content
             end
             
-            -- [SANITIZATION LAYER]
-            aiOutput = aiOutput:gsub("`", ""):gsub("Here is the command:", ""):gsub("^%s*", ""):gsub("%s*$", "")
+            -- Sanitization
+            aiOutput = aiOutput:gsub("`", ""):gsub("^%s*", ""):gsub("%s*$", "")
 
             if IS_CHAT_MODE then
-                 -- Clean newlines so 'notify' doesn't break
                  local safeChat = aiOutput:gsub("\n", " "):gsub('"', "'")
-                 executeBridge(safeChat); resetVisuals()
+                 executeBridge(safeChat)
+                 resetVisuals()
                  InputBox.Text = ""
             else
-                -- CMD Mode: Remove leading ";" if AI added it
-                local cleanCmd = aiOutput
-                if cleanCmd:sub(1,1) == ";" then cleanCmd = cleanCmd:sub(2) end
-                
-                -- Check for empty/hallucinated outputs
-                if cleanCmd == "" or cleanCmd:lower():sub(1,4) == "sure" then
+                -- CMD Mode: Pass raw string to Bridge
+                if aiOutput == "" or aiOutput:lower():sub(1,4) == "sure" then
                      updateStatus("AI Uncertain", Colors.Orange)
                      task.wait(1)
                      resetVisuals()
                      return
                 end
 
-                local isValid, errorMsg = validateCommandTarget(cleanCmd)
-                if isValid then 
-                    executeBridge(cleanCmd, "AI")
-                    resetVisuals()
-                    InputBox.Text = ""
-                else
-                    queryAI(promptText, errorMsg, attemptCount + 1)
-                end
+                executeBridge(aiOutput, "AI")
+                resetVisuals()
+                InputBox.Text = ""
             end
         else
             warn("SIY Net Error:", response and response.StatusCode or "Unknown")
