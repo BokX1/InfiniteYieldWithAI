@@ -532,8 +532,37 @@ local OpenButton = createInstance("ImageButton", {
     Parent = SIY_Screen
 })
 addCorner(OpenButton, 100)
-addStroke(OpenButton, Colors.Border, 1)
+local OpenButtonStroke = addStroke(OpenButton, Colors.Green, 2)
 enableDrag(OpenButton)
+
+-- Pulse animation for open button
+local openButtonPulse = nil
+local function startOpenButtonPulse()
+    if openButtonPulse then return end
+    openButtonPulse = task.spawn(function()
+        while OpenButton.Visible do
+            TweenService:Create(OpenButtonStroke, TweenInfo.new(0.8, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), {
+                Transparency = 0.7
+            }):Play()
+            task.wait(0.8)
+            TweenService:Create(OpenButtonStroke, TweenInfo.new(0.8, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), {
+                Transparency = 0
+            }):Play()
+            task.wait(0.8)
+        end
+    end)
+end
+
+OpenButton:GetPropertyChangedSignal("Visible"):Connect(function()
+    if OpenButton.Visible then
+        startOpenButtonPulse()
+    else
+        if openButtonPulse then
+            task.cancel(openButtonPulse)
+            openButtonPulse = nil
+        end
+    end
+end)
 
 -- Main Container
 local MainSize = IsMobile and UDim2.new(0.9, 0, 0, 60) or UDim2.new(0, 500, 0, 65)
@@ -630,6 +659,20 @@ local HelpBtn = createInstance("TextButton", {
 })
 addCorner(HelpBtn, 6)
 
+-- Help button hover effect
+HelpBtn.MouseEnter:Connect(function()
+    TweenService:Create(HelpBtn, TweenInfo.new(0.15), {
+        BackgroundColor3 = Colors.Blue,
+        TextColor3 = Color3.new(1, 1, 1)
+    }):Play()
+end)
+HelpBtn.MouseLeave:Connect(function()
+    TweenService:Create(HelpBtn, TweenInfo.new(0.15), {
+        BackgroundColor3 = Colors.InputBg,
+        TextColor3 = Colors.Blue
+    }):Play()
+end)
+
 local MinBtn = createInstance("TextButton", {
     Size = UDim2.new(0, 30, 0, 30),
     AnchorPoint = Vector2.new(1, 0),
@@ -642,6 +685,20 @@ local MinBtn = createInstance("TextButton", {
     Parent = MainFrame
 })
 addCorner(MinBtn, 6)
+
+-- Minimize button hover effect
+MinBtn.MouseEnter:Connect(function()
+    TweenService:Create(MinBtn, TweenInfo.new(0.15), {
+        BackgroundColor3 = Colors.Orange,
+        TextColor3 = Color3.new(0, 0, 0)
+    }):Play()
+end)
+MinBtn.MouseLeave:Connect(function()
+    TweenService:Create(MinBtn, TweenInfo.new(0.15), {
+        BackgroundColor3 = Colors.InputBg,
+        TextColor3 = Colors.TextDim
+    }):Play()
+end)
 
 --// Input Area
 local LeftPad = 8 + BtnWidth + 8
@@ -661,7 +718,7 @@ local InputBox = createInstance("TextBox", {
     Position = UDim2.new(0, 6, 0, 0),
     BackgroundTransparency = 1,
     Text = "",
-    PlaceholderText = IsMobile and "Tap to type..." or "Enter command...",
+    PlaceholderText = IsMobile and "What do you want to do?" or "Tell me what to do...",
     TextColor3 = Colors.Text,
     PlaceholderColor3 = Colors.TextDim,
     Font = Enum.Font.GothamMedium,
@@ -803,6 +860,32 @@ for i, action in ipairs(QuickActions) do
         Parent = QuickActionsFrame
     })
     addCorner(btn, 4)
+    
+    -- Hover effect
+    btn.MouseEnter:Connect(function()
+        TweenService:Create(btn, TweenInfo.new(0.1), {
+            BackgroundTransparency = 0.3,
+            TextColor3 = Color3.new(1, 1, 1)
+        }):Play()
+    end)
+    btn.MouseLeave:Connect(function()
+        TweenService:Create(btn, TweenInfo.new(0.1), {
+            BackgroundTransparency = 0.7,
+            TextColor3 = Colors.Text
+        }):Play()
+    end)
+    
+    -- Press effect with scale animation
+    btn.MouseButton1Down:Connect(function()
+        TweenService:Create(btn, TweenInfo.new(0.05), {
+            BackgroundTransparency = 0
+        }):Play()
+    end)
+    btn.MouseButton1Up:Connect(function()
+        TweenService:Create(btn, TweenInfo.new(0.1), {
+            BackgroundTransparency = 0.3
+        }):Play()
+    end)
     
     btn.MouseButton1Click:Connect(function()
         InputBox.Text = action.prompt
@@ -1106,6 +1189,14 @@ local function completeTutorial()
     TweenService:Create(MainFrame, TweenInfo.new(0.4, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
         Position = UDim2.new(0.5, 0, 0.15, 0)
     }):Play()
+    
+    -- Welcome message after tutorial
+    task.delay(0.5, function()
+        StatusLabel.Text = ">> Welcome! Type anything to get started"
+        StatusLabel.TextColor3 = Colors.Green
+        StatusLabel.TextTransparency = 0
+        TweenService:Create(StatusLabel, TweenInfo.new(4, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {TextTransparency = 0.6}):Play()
+    end)
 end
 
 -- Button connections
@@ -1347,10 +1438,91 @@ local Priority = {
 local TargetTriggers = {"kill", "fling", "goto", "tp", "spectate", "view", "watch", "bring", "to", "attach", "loopkill", "bang", "freeze"}
 
 --// ============================================
---// 13. LOGIC ENGINE - FUNCTIONS
+--// 13. FUN MESSAGES & PERSONALITY
 --// ============================================
-local function updateStatus(text, color)
-    StatusLabel.Text = ">> " .. text
+local FunMessages = {
+    Ready = {
+        "Ready to roll!",
+        "Awaiting orders...",
+        "What's the play?",
+        "Standing by...",
+        "At your service!",
+        "Ready when you are!",
+        "Locked and loaded!",
+        "What shall we do?",
+        "Your wish is my command",
+        "Let's make magic happen"
+    },
+    Thinking = {
+        "Thinking...",
+        "Processing...",
+        "Consulting the AI...",
+        "Working on it...",
+        "Brain loading...",
+        "Computing...",
+        "Analyzing request...",
+        "One moment..."
+    },
+    Success = {
+        "Done!",
+        "Executed!",
+        "Got it!",
+        "Success!",
+        "Nailed it!",
+        "Easy peasy!",
+        "Mission complete!",
+        "There you go!"
+    },
+    CacheHit = {
+        "Instant! Remembered this one",
+        "From memory - lightning fast!",
+        "Cache hit! No AI needed",
+        "Already knew that one!",
+        "Instant recall!",
+        "Memory served!"
+    },
+    FastExec = {
+        "Instant execution!",
+        "Lightning fast!",
+        "No AI needed!",
+        "Direct hit!",
+        "Speed demon!"
+    },
+    Error = {
+        "Oops! Something went wrong",
+        "Hmm, that didn't work",
+        "Error encountered",
+        "Let's try that again",
+        "Hit a snag there"
+    },
+    Tips = {
+        "Tip: Use 'clearcache' to reset learned commands",
+        "Tip: Right Shift toggles the menu",
+        "Tip: Try 'bind f fly' for quick toggles",
+        "Tip: Partial names work! 'goto jo' finds John",
+        "Tip: Switch to CHAT mode for game advice",
+        "Tip: Type naturally - I understand you!",
+        "Tip: Quick Actions (⚡) for one-tap commands"
+    }
+}
+
+local function getRandomMessage(category)
+    local messages = FunMessages[category]
+    if messages then
+        return messages[math.random(1, #messages)]
+    end
+    return category
+end
+
+--// ============================================
+--// 14. LOGIC ENGINE - FUNCTIONS
+--// ============================================
+local function updateStatus(text, color, useRandom)
+    local displayText = text
+    if useRandom and FunMessages[text] then
+        displayText = getRandomMessage(text)
+    end
+    StatusLabel.Text = ">> " .. displayText
     StatusLabel.TextColor3 = color or Colors.Status
     StatusLabel.TextTransparency = 0
     TweenService:Create(StatusLabel, TweenInfo.new(3, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {TextTransparency = 0.6}):Play()
@@ -1587,13 +1759,20 @@ end
 --// ============================================
 --// 15. VISUAL STATE MANAGEMENT
 --// ============================================
-local function resetVisuals()
+local function resetVisuals(showTip)
     stopGlowAnimation()
     TweenService:Create(MainStroke, TweenInfo.new(0.3), {Transparency = 1}):Play()
     InputBox.TextEditable = true
     InputBox.PlaceholderColor3 = Colors.TextDim
-    InputBox.PlaceholderText = IS_CHAT_MODE and "Ask about game..." or (IsMobile and "Tap to type..." or "Enter command...")
+    InputBox.PlaceholderText = IS_CHAT_MODE and "Ask me anything..." or (IsMobile and "What do you want to do?" or "Tell me what to do...")
     hidePreview()
+    
+    -- Show random tip or ready message occasionally
+    if showTip and math.random(1, 4) == 1 then
+        task.delay(0.5, function()
+            updateStatus("Tips", Colors.TextDim, true)
+        end)
+    end
 end
 
 local function setThinkingState(retry)
@@ -1625,10 +1804,10 @@ local function queryAI(promptText, retryContext, attemptCount)
         -- Cache lookup
         local cached = getCachedCommand(cleanPrompt)
         if cached then
-            updateStatus("Cache Hit!", Colors.Purple)
+            updateStatus("CacheHit", Colors.Purple, true)
             showPreview(cached.command)
             executeBridge(cached.command, "CACHE")
-            resetVisuals()
+            resetVisuals(true)
             InputBox.Text = ""
             return
         end
@@ -1647,7 +1826,7 @@ local function queryAI(promptText, retryContext, attemptCount)
                     
                     showPreview(finalCmd)
                     executeBridge(finalCmd, "FAST")
-                    resetVisuals()
+                    resetVisuals(true)
                     InputBox.Text = ""
                     return
                 end
@@ -1657,7 +1836,7 @@ local function queryAI(promptText, retryContext, attemptCount)
 
     -- AI Path
     setThinkingState(false)
-    updateStatus("Thinking...", Colors.Orange)
+    updateStatus("Thinking", Colors.Orange, true)
 
     local messagesPayload = {}
     
@@ -1726,12 +1905,12 @@ LENGTH: Under 25 words.
                 task.wait(0.3)
                 
                 executeBridge(aiOutput, "AI")
-                resetVisuals()
+                resetVisuals(true)
                 InputBox.Text = ""
             end
         else
             warn("SIY Net Error:", response and response.StatusCode or "Unknown")
-            updateStatus("Net Error: " .. (response and response.StatusCode or "Unknown"), Colors.Red)
+            updateStatus("Error", Colors.Red, true)
             task.wait(2)
             resetVisuals()
         end
@@ -1880,17 +2059,28 @@ ModeBtn.MouseButton1Click:Connect(function()
     IS_CHAT_MODE = not IS_CHAT_MODE
     local uiName = (GameName ~= "Loading...") and GameName or "game"
     
+    -- Fun bounce animation on mode switch
+    local originalSize = ModeBtn.Size
+    TweenService:Create(ModeBtn, TweenInfo.new(0.1, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+        Size = UDim2.new(0, originalSize.X.Offset + 10, 0, originalSize.Y.Offset + 4)
+    }):Play()
+    task.delay(0.1, function()
+        TweenService:Create(ModeBtn, TweenInfo.new(0.15, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+            Size = originalSize
+        }):Play()
+    end)
+    
     if IS_CHAT_MODE then
         ModeBtn.Text = "CHAT"
         TweenService:Create(ModeBtn, TweenInfo.new(0.3), {BackgroundColor3 = Colors.Blue}):Play()
         InputBox.PlaceholderText = "Ask about " .. uiName .. "..."
-        updateStatus("Switched to Chat Mode", Colors.Blue)
+        updateStatus("Chat Mode - Ask me anything!", Colors.Blue)
         SuggestionFrame.Visible = false
     else
         ModeBtn.Text = "CMD"
         TweenService:Create(ModeBtn, TweenInfo.new(0.3), {BackgroundColor3 = Colors.Orange}):Play()
-        InputBox.PlaceholderText = IsMobile and "Tap to type..." or "Enter command..."
-        updateStatus("Switched to Command Mode", Colors.Orange)
+        InputBox.PlaceholderText = IsMobile and "What do you want to do?" or "Tell me what to do..."
+        updateStatus("Command Mode - Let's do this!", Colors.Orange)
     end
 end)
 
@@ -1917,5 +2107,5 @@ end)
 
 -- Bridge Ready Notification
 BridgeReady.Event:Connect(function()
-    updateStatus("Bridge Connected!", Colors.Green)
+    updateStatus("Connected! Ready to roll", Colors.Green)
 end)
