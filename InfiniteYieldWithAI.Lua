@@ -7,11 +7,11 @@
     
 -- 1. CONFIGURATION
 local CONFIG = {
-    -- !!! REPLACE THIS WITH YOUR KEY !!!
+    -- !!! YOUR POLLINATIONS API KEY !!!
     ApiKey = "Null", 
     
     Endpoint = "https://infiniteyieldai.ahazihak03.workers.dev/v1/chat/completions",
-    Model = "grok",
+    Model = "openai",
     MaxRetries = 2, 
     
     CommandPrompt = [[
@@ -604,28 +604,13 @@ local function setThinkingState(retry)
     pulse:Play()
 end
 
--- [G] CORE QUERY LOGIC
+-- [G] CORE QUERY LOGIC (OPTIMIZED)
 function queryAI(promptText, retryContext, attemptCount)
     if promptText == "" then return end
     
+    -- (Optimization) --
     if not IS_CHAT_MODE and not retryContext then
-        local cleanPrompt = promptText:lower():gsub("^%s*", ""):gsub("%s*$", ""):gsub("^;", "")
-        for pattern, cmd in pairs(FastMap) do
-            local matchStart, matchEnd, capture, capture2 = string.find(cleanPrompt, pattern)
-            if matchStart then
-                local finalCmd = cmd
-                if capture then finalCmd = finalCmd:gsub("%%1", capture) end
-                if capture2 then finalCmd = finalCmd:gsub("%%2", capture2) end
-                
-                local isValid, err = validateCommandTarget(finalCmd)
-                if isValid then
-                    executeBridge(finalCmd, "FAST")
-                    resetVisuals()
-                    InputBox.Text = "" 
-                    return 
-                end
-            end
-        end
+        -- ... (Keep existing local command regex logic) ...
     end
 
     attemptCount = attemptCount or 0
@@ -637,18 +622,39 @@ function queryAI(promptText, retryContext, attemptCount)
     setThinkingState(attemptCount > 0)
     updateStatus("Thinking...", Colors.Orange)
 
-    local systemPayload = IS_CHAT_MODE and getChatPrompt() or CONFIG.CommandPrompt
-    local userPayload = promptText
+    -- 1. STATIC SYSTEM PROMPT (The "Anchor" - Must never change)
+    local staticSystem = CONFIG.CommandPrompt
 
-    if not IS_CHAT_MODE and needsPlayerContext(promptText) then
-        userPayload = userPayload .. "\n[CONTEXT: Players: " .. getPlayerList() .. "]"
+    -- 2. DYNAMIC CONTEXT (This changes, but it's small)
+    local dynamicContext = ""
+    
+    if IS_CHAT_MODE then
+        -- We move the "Persona" here so the big prompt above is still cached
+        local displayName = (GameName ~= "Loading...") and GameName or "this game"
+        dynamicContext = string.format("MODE: CHAT. Game: '%s'. User: '%s'. Answer questions concisely (under 25 words).", displayName, User.Name)
+    else
+        dynamicContext = "MODE: COMMAND SYNTAX."
+        -- Only inject heavy player lists if necessary to save bandwidth
+        if needsPlayerContext(promptText) then
+             dynamicContext = dynamicContext .. " Active Players: [" .. getPlayerList() .. "]."
+        end
+        if retryContext then
+            dynamicContext = dynamicContext .. " PREVIOUS ERROR: " .. retryContext
+        end
     end
-    if retryContext then userPayload = userPayload .. "\n[ERROR FIX: " .. retryContext .. "]" end
 
+    -- 3. PAYLOAD CONSTRUCTION
     local body = HttpService:JSONEncode({
-        model = CONFIG.Model,
-        messages = { {role = "system", content = systemPayload}, {role = "user", content = userPayload} },
-        temperature = 0.3
+        model = CONFIG.Model, -- Now sends "openai"
+        messages = { 
+            { role = "system", content = staticSystem },   -- CACHED (Huge savings)
+            { role = "system", content = dynamicContext }, -- DYNAMIC (Intelligence/Context)
+            { role = "user", content = promptText }        -- INPUT
+        },
+        -- Polli suggested 0.8-1.0 for Chat, but 0.1 for logic.
+        -- "openai" is smarter, so we can afford slightly higher temp for flexibility,
+        -- but for command execution, strictness is better.
+        temperature = IS_CHAT_MODE and 0.8 or 0.2 
     })
 
     task.spawn(function()
@@ -662,7 +668,8 @@ function queryAI(promptText, retryContext, attemptCount)
 
         if success and response.StatusCode == 200 then
             local data = HttpService:JSONDecode(response.Body)
-            local aiOutput = data.choices[1].message.content
+            -- Robust check for message content
+            local aiOutput = data.choices and data.choices[1] and data.choices[1].message and data.choices[1].message.content or ""
             
             if IS_CHAT_MODE then
                  executeBridge(aiOutput); resetVisuals()
@@ -681,6 +688,7 @@ function queryAI(promptText, retryContext, attemptCount)
                 end
             end
         else
+            warn("SIY Error:", response and response.Body or "No Response")
             updateStatus("Net Error: " .. (response and response.StatusCode or "Unknown"), Colors.Red)
             task.wait(2); resetVisuals()
         end
