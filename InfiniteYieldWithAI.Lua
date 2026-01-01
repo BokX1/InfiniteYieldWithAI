@@ -1,7 +1,7 @@
 --[[ 
     SMART INFINITE YIELD - V1.2 STABLE
     - Architecture: Context Awareness
-    - Logic: VolQ5 & Pollinations.AI (Grok Model)
+    - Logic: VolQ5 & Pollinations.AI (LLM Model)
     - Status: Stable 
 ]]
     
@@ -608,11 +608,30 @@ end
 function queryAI(promptText, retryContext, attemptCount)
     if promptText == "" then return end
     
-    -- (Optimization) --
+    -- [[ 1. FAST LOCAL CHECK (PRESERVED) ]]
+    -- Critical for speed: Checks local regex map before sending on AI
     if not IS_CHAT_MODE and not retryContext then
-        -- ... (Keep existing local command regex logic) ...
+        local cleanPrompt = promptText:lower():gsub("^%s*", ""):gsub("%s*$", ""):gsub("^;", "")
+        for pattern, cmd in pairs(FastMap) do
+            local matchStart, matchEnd, capture, capture2 = string.find(cleanPrompt, pattern)
+            if matchStart then
+                local finalCmd = cmd
+                -- Integer Checks (e.g., speed %1 -> speed 50)
+                if capture then finalCmd = finalCmd:gsub("%%1", capture) end
+                if capture2 then finalCmd = finalCmd:gsub("%%2", capture2) end
+                
+                local isValid, err = validateCommandTarget(finalCmd)
+                if isValid then
+                    executeBridge(finalCmd, "FAST")
+                    resetVisuals()
+                    InputBox.Text = "" 
+                    return 
+                end
+            end
+        end
     end
 
+    -- [[ 2. RETRY LIMITER (PRESERVED) ]]
     attemptCount = attemptCount or 0
     if attemptCount > CONFIG.MaxRetries then 
         updateStatus("Failed: Invalid Target", Colors.Red)
@@ -622,41 +641,52 @@ function queryAI(promptText, retryContext, attemptCount)
     setThinkingState(attemptCount > 0)
     updateStatus("Thinking...", Colors.Orange)
 
-    -- 1. STATIC SYSTEM PROMPT (The "Anchor" - Must never change)
+    -- [[ 3. SPLIT CONTEXT CONSTRUCTION (NEW ARCHITECTURE) ]]
+    -- Message 1: STATIC. The heavy documentation. 
+    -- This MUST match CONFIG.CommandPrompt exactly to trigger the Cache Discount.
     local staticSystem = CONFIG.CommandPrompt
 
-    -- 2. DYNAMIC CONTEXT (This changes, but it's small)
+    -- Message 2: DYNAMIC. The context and style instructions.
     local dynamicContext = ""
     
     if IS_CHAT_MODE then
-        -- We move the "Persona" here so the big prompt above is still cached
         local displayName = (GameName ~= "Loading...") and GameName or "this game"
-        dynamicContext = string.format("MODE: CHAT. Game: '%s'. User: '%s'. Answer questions concisely (under 25 words).", displayName, User.Name)
+        
+        -- [STYLE INJECTION] Tone Mirroring Implementation
+        dynamicContext = string.format([[
+            MODE: CHAT. Game: '%s'. User: '%s'. 
+            RULE: Analyze the user's tone (Gen Z slang, formal, rude, technical, etc.) and MIRROR it exactly in your response.
+            Constraint: Keep answer under 25 words.
+        ]], displayName, User.Name)
+        
     else
+        -- COMMAND MODE (Strict Logic)
         dynamicContext = "MODE: COMMAND SYNTAX."
-        -- Only inject heavy player lists if necessary to save bandwidth
+        
+        -- Bandwidth Optimization: Only inject player list if the command targets a player
         if needsPlayerContext(promptText) then
              dynamicContext = dynamicContext .. " Active Players: [" .. getPlayerList() .. "]."
         end
+        
+        -- Error Correction: Feeds previous failure back to AI for correction
         if retryContext then
             dynamicContext = dynamicContext .. " PREVIOUS ERROR: " .. retryContext
         end
     end
 
-    -- 3. PAYLOAD CONSTRUCTION
+    -- [[ 4. PAYLOAD CONSTRUCTION ]]
     local body = HttpService:JSONEncode({
-        model = CONFIG.Model, -- Now sends "openai"
+        model = CONFIG.Model, -- Sends "openai"
         messages = { 
-            { role = "system", content = staticSystem },   -- CACHED (Huge savings)
-            { role = "system", content = dynamicContext }, -- DYNAMIC (Intelligence/Context)
-            { role = "user", content = promptText }        -- INPUT
+            { role = "system", content = staticSystem },   -- CACHE ANCHOR (90% Savings)
+            { role = "system", content = dynamicContext }, -- DYNAMIC CONTEXT (Style/State)
+            { role = "user", content = promptText }        -- USER INPUT
         },
-        -- Polli suggested 0.8-1.0 for Chat, but 0.1 for logic.
-        -- "openai" is smarter, so we can afford slightly higher temp for flexibility,
-        -- but for command execution, strictness is better.
+        -- Temperature: 0.8 for Chat (Personality), 0.2 for Commands (Accuracy)
         temperature = IS_CHAT_MODE and 0.8 or 0.2 
     })
 
+    -- [[ 5. ASYNC REQUEST & HANDLING (PRESERVED) ]]
     task.spawn(function()
         local success, response = pcall(function()
             return httpRequest({
@@ -668,13 +698,19 @@ function queryAI(promptText, retryContext, attemptCount)
 
         if success and response.StatusCode == 200 then
             local data = HttpService:JSONDecode(response.Body)
-            -- Robust check for message content
-            local aiOutput = data.choices and data.choices[1] and data.choices[1].message and data.choices[1].message.content or ""
+            
+            -- Safety: Handle rare cases where 'choices' might be nil
+            local aiOutput = ""
+            if data.choices and data.choices[1] and data.choices[1].message then
+                aiOutput = data.choices[1].message.content
+            end
             
             if IS_CHAT_MODE then
+                 -- Chat Mode: Just display the text
                  executeBridge(aiOutput); resetVisuals()
                  InputBox.Text = ""
             else
+                -- Command Mode: Validate syntax and targets
                 local cleanCmd = aiOutput:gsub("^%s*", ""):gsub("%s*$", "")
                 if cleanCmd:sub(1,1) == ";" then cleanCmd = cleanCmd:sub(2) end
                 
@@ -684,11 +720,13 @@ function queryAI(promptText, retryContext, attemptCount)
                     resetVisuals()
                     InputBox.Text = ""
                 else
+                    -- Recursion: Auto-retry with error context (up to MaxRetries)
                     queryAI(promptText, errorMsg, attemptCount + 1)
                 end
             end
         else
-            warn("SIY Error:", response and response.Body or "No Response")
+            -- Error Reporting
+            warn("SIY Net Error:", response and response.StatusCode or "Unknown")
             updateStatus("Net Error: " .. (response and response.StatusCode or "Unknown"), Colors.Red)
             task.wait(2); resetVisuals()
         end
