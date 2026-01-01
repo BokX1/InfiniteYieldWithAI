@@ -1,5 +1,5 @@
 --[[ 
-    SMART INFINITE YIELD - V1.2 BETA
+    SMART INFINITE YIELD - V1.2 STABLE
     - Architecture: Context Awareness
     - Logic: VolQ5 & Pollinations.AI (Grok Model)
     - Status: Stable 
@@ -80,7 +80,7 @@ task.spawn(function()
     IY_Interface = getgenv().PseudoBridge
 end)
 
--- 4. GUI CONSTRUCTION (UPDATED TUTORIAL)
+-- 4. GUI CONSTRUCTION (WITH GOOGLE-STYLE DROPDOWN)
 if CoreGui:FindFirstChild("SmartInfiniteYieldGUI") then CoreGui.SmartInfiniteYieldGUI:Destroy() end
 
 local SIY_Screen = Instance.new("ScreenGui")
@@ -96,6 +96,7 @@ local IsMobile = UIS.TouchEnabled and not UIS.MouseEnabled
 local Colors = {
     Background = Color3.fromRGB(20, 20, 20),
     InputBg    = Color3.fromRGB(30, 30, 30),
+    DropdownBg = Color3.fromRGB(25, 25, 25), -- Slightly distinct
     Border     = Color3.fromRGB(60, 60, 60),
     Orange     = Color3.fromRGB(255, 145, 40), 
     Blue       = Color3.fromRGB(50, 180, 255), 
@@ -208,6 +209,7 @@ local RightPad = 8 + 30 + 8
 InputContainer.Size = UDim2.new(1, -(LeftPad+RightPad), 0, 30)
 InputContainer.Position = UDim2.new(0, LeftPad, 0, 8)
 InputContainer.BackgroundColor3 = Colors.InputBg
+InputContainer.ZIndex = 2 -- [[ FIX: Prioritize Input over Status ]]
 InputContainer.Parent = MainFrame
 addCorner(InputContainer, 6)
 
@@ -224,6 +226,23 @@ InputBox.TextSize = 14
 InputBox.TextXAlignment = Enum.TextXAlignment.Left
 InputBox.ClearTextOnFocus = false
 InputBox.Parent = InputContainer
+
+-- [[ NEW: SEARCH SUGGESTION DROPDOWN ]]
+local SuggestionFrame = Instance.new("Frame")
+SuggestionFrame.Name = "Dropdown"
+SuggestionFrame.Size = UDim2.new(1, 0, 0, 0) -- Height handled dynamically
+SuggestionFrame.Position = UDim2.new(0, 0, 1, 5) -- Hangs below input
+SuggestionFrame.BackgroundColor3 = Colors.DropdownBg
+SuggestionFrame.BorderSizePixel = 0
+SuggestionFrame.Visible = false
+SuggestionFrame.ZIndex = 5
+SuggestionFrame.Parent = InputContainer
+addCorner(SuggestionFrame, 6)
+addStroke(SuggestionFrame, Colors.Border, 1)
+
+local ListLayout = Instance.new("UIListLayout")
+ListLayout.SortOrder = Enum.SortOrder.LayoutOrder
+ListLayout.Parent = SuggestionFrame
 
 -- Status Bar
 local StatusLabel = Instance.new("TextLabel")
@@ -256,7 +275,7 @@ local TutTitle = Instance.new("TextLabel")
 TutTitle.Size = UDim2.new(1, 0, 0, 30)
 TutTitle.Position = UDim2.new(0, 0, 0, 10)
 TutTitle.BackgroundTransparency = 1
-TutTitle.Text = "Smart IY v1.2"
+TutTitle.Text = "Smart IY v1.2 STABLE"
 TutTitle.TextColor3 = Colors.Text
 TutTitle.Font = Enum.Font.GothamBold
 TutTitle.TextSize = 18
@@ -266,8 +285,7 @@ local TutDesc = Instance.new("TextLabel")
 TutDesc.Size = UDim2.new(1, -30, 1, -80)
 TutDesc.Position = UDim2.new(0, 15, 0, 40)
 TutDesc.BackgroundTransparency = 1
--- [[ UPDATED TEXT: MENTION RIGHT SHIFT ]]
-TutDesc.Text = "<b>CONTROLS:</b>\n• Toggle Menu: <font color='#40e682'><b>Right Shift</b></font>\n\n<b>MODES:</b>\n• <b>CMD:</b> 'Fly me' -> ';fly'\n• <b>CHAT:</b> 'How do I win?' -> AI Advice"
+TutDesc.Text = "<b>CONTROLS:</b>\n• Toggle Menu: <font color='#40e682'><b>Right Shift</b></font>\n• Autocomplete: <font color='#40e682'><b>Click Suggestion</b></font>\n\n<b>MODES:</b>\n• <b>CMD:</b> 'Fly me' -> ';fly'\n• <b>CHAT:</b> 'How do I win?' -> AI Advice"
 TutDesc.TextColor3 = Colors.TextDim
 TutDesc.Font = Enum.Font.Gotham
 TutDesc.TextSize = 14
@@ -670,10 +688,153 @@ function queryAI(promptText, retryContext, attemptCount)
 end
 
 -- 6. EVENTS & HANDLERS
+
+-- [[ SEARCH PRIORITY SYSTEM ]]
+local Priority = {
+    -- High Tier (Most Used) - 100pts
+    ["fly"]=100, ["unfly"]=100, ["noclip"]=100, ["clip"]=100,
+    ["speed"]=95, ["ws"]=95, ["jumppower"]=95, ["jp"]=95,
+    ["goto"]=90, ["tp"]=90, ["bring"]=90,
+    
+    -- Mid Tier (Combat/Visuals) - 80pts
+    ["kill"]=80, ["fling"]=80, ["loopkill"]=80,
+    ["esp"]=75, ["noesp"]=75, ["xray"]=75, ["spectate"]=75,
+    ["btools"]=70, ["f3x"]=70, ["dex"]=70,
+    
+    -- Low Tier (Utils) - 50pts
+    ["rejoin"]=50, ["serverhop"]=50, ["console"]=50, ["reset"]=50
+}
+
+local SuggestionList = {}
+
+-- Build Dictionary
+local function buildSuggestions()
+    local tempMap = {}
+    for pattern, _ in pairs(FastMap) do
+        local cmdName = pattern:match("%^([%w_]+)")
+        if cmdName then
+            local cleanName = cmdName
+            if pattern:find("%%d%+%)") then
+                cleanName = cmdName .. " [num]"
+            elseif pattern:find("%%. %+%)") or pattern:find("%%.%)") then
+                cleanName = cmdName .. " [arg]"
+            end
+            
+            -- Store clean name
+            if not tempMap[cmdName] or #cleanName > #tempMap[cmdName] then
+                tempMap[cmdName] = cleanName
+            end
+        end
+    end
+    -- Convert to list
+    for cmdKey, displayStr in pairs(tempMap) do
+        table.insert(SuggestionList, {
+            Key = cmdKey, 
+            Display = displayStr, 
+            Score = Priority[cmdKey] or 0 
+        })
+    end
+end
+buildSuggestions()
+
+-- [[ DYNAMIC DROPDOWN RENDERER ]]
+local function updateDropdown(text)
+    -- Clear old buttons
+    for _, child in pairs(SuggestionFrame:GetChildren()) do
+        if child:IsA("TextButton") then child:Destroy() end
+    end
+    
+    if text == "" or IS_CHAT_MODE then 
+        SuggestionFrame.Visible = false 
+        StatusLabel.Visible = true -- [[ FIX: Show Status ]]
+        return 
+    end
+    
+    -- Find matches
+    local matches = {}
+    for _, item in ipairs(SuggestionList) do
+        if item.Key:sub(1, #text):lower() == text:lower() then
+            table.insert(matches, item)
+        end
+    end
+    
+    if #matches == 0 then
+        SuggestionFrame.Visible = false
+        StatusLabel.Visible = true -- [[ FIX: Show Status ]]
+        return
+    end
+    
+    -- Sort Matches: Priority > Shortest Length > Alphabetical
+    table.sort(matches, function(a, b)
+        if a.Score ~= b.Score then return a.Score > b.Score end
+        if #a.Key ~= #b.Key then return #a.Key < #b.Key end
+        return a.Key < b.Key
+    end)
+    
+    -- Cap at 5 results
+    local resultCount = math.min(#matches, 5)
+    
+    -- Create Buttons
+    for i = 1, resultCount do
+        local data = matches[i]
+        local btn = Instance.new("TextButton")
+        btn.Name = "Match"
+        btn.Size = UDim2.new(1, 0, 0, 25)
+        btn.BackgroundColor3 = Colors.DropdownBg
+        btn.BorderSizePixel = 0
+        btn.Text = "  " .. data.Display
+        btn.TextColor3 = Colors.TextDim
+        btn.Font = Enum.Font.Gotham
+        btn.TextSize = 13
+        btn.TextXAlignment = Enum.TextXAlignment.Left
+        btn.ZIndex = 10 -- [[ FIX: Ensure Buttons are on top ]]
+        btn.Parent = SuggestionFrame
+        
+        -- Hover Effect
+        btn.MouseEnter:Connect(function() 
+            btn.BackgroundColor3 = Colors.InputBg 
+            btn.TextColor3 = Colors.Text
+        end)
+        btn.MouseLeave:Connect(function() 
+            btn.BackgroundColor3 = Colors.DropdownBg 
+            btn.TextColor3 = Colors.TextDim
+        end)
+        
+        -- Click Logic
+        btn.MouseButton1Click:Connect(function()
+            local cmdOnly = data.Display:match("^([%w_]+)")
+            InputBox.Text = cmdOnly .. " "
+            InputBox:CaptureFocus()
+            SuggestionFrame.Visible = false
+            StatusLabel.Visible = true -- [[ FIX: Show Status after click ]]
+        end)
+    end
+    
+    -- Resize Frame & Show
+    SuggestionFrame.Size = UDim2.new(1, 0, 0, resultCount * 25)
+    SuggestionFrame.Visible = true
+    StatusLabel.Visible = false -- [[ FIX: Hide Status while searching ]]
+end
+
+-- Input Listener
+InputBox:GetPropertyChangedSignal("Text"):Connect(function()
+    updateDropdown(InputBox.Text)
+end)
+
 InputBox.FocusLost:Connect(function(enter)
-    if enter and InputBox.Text ~= "" then
-        local text = InputBox.Text
-        queryAI(text) 
+    -- Hide dropdown on submit, but keep if just clicking away? 
+    -- Better to hide to prevent obstruction.
+    if enter then
+        if InputBox.Text ~= "" then
+            local text = InputBox.Text
+            queryAI(text) 
+        end
+        SuggestionFrame.Visible = false
+    else
+        -- Small delay to allow clicking a button before it vanishes
+        task.delay(0.2, function()
+            if not InputBox:IsFocused() then SuggestionFrame.Visible = false end
+        end)
     end
 end)
 
@@ -688,6 +849,7 @@ ModeBtn.MouseButton1Click:Connect(function()
         TweenService:Create(ModeBtn, TweenInfo.new(0.3), {BackgroundColor3 = Colors.Blue}):Play()
         InputBox.PlaceholderText = "Ask about " .. uiName .. "..."
         updateStatus("Switched to Chat Mode", Colors.Blue)
+        SuggestionFrame.Visible = false -- Hide suggestions in chat
     else
         ModeBtn.Text = "CMD"
         TweenService:Create(ModeBtn, TweenInfo.new(0.3), {BackgroundColor3 = Colors.Orange}):Play()
@@ -696,29 +858,26 @@ ModeBtn.MouseButton1Click:Connect(function()
     end
 end)
 
--- [[ UPDATED KEYBIND LISTENER ]]
+-- [[ UPDATED INPUT & KEYBIND LISTENER ]]
 UIS.InputBegan:Connect(function(input, gpe)
     if gpe then return end
     
-    -- Master Toggle
+    -- 1. Master Toggle
     if input.KeyCode == Enum.KeyCode.RightShift then
         MainFrame.Visible = not MainFrame.Visible
         OpenButton.Visible = not MainFrame.Visible
     end
     
-    -- Custom Binds (with Toggle Logic)
+    -- 2. Custom Binds
     local keyName = input.KeyCode.Name:lower()
     if BindSystem[keyName] then
         local bindData = BindSystem[keyName]
         local cmdToRun = bindData.Current
-        
         executeBridge(cmdToRun, "BIND")
         
-        -- Swap logic: If a 'Next' command exists, cycle to it.
         if bindData.Next then
             bindData.Current = bindData.Next
-            bindData.Next = cmdToRun -- Swap current so it toggles back next time
+            bindData.Next = cmdToRun 
         end
     end
 end)
-
