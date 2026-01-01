@@ -856,7 +856,7 @@ function queryAI(promptText, retryContext, attemptCount)
     
     -- [[ 1. MANUAL CHAIN & FAST CHECK ]]
     if not IS_CHAT_MODE and not retryContext then
-        -- A. Token Saver: If input contains ';', execute immediately (Skip AI)
+        -- A. Token Saver: If input contains ';', execute immediately
         if promptText:find(";") then
             executeBridge(promptText, "MANUAL")
             resetVisuals()
@@ -866,13 +866,11 @@ function queryAI(promptText, retryContext, attemptCount)
 
         local cleanPrompt = promptText:lower():gsub("^%s*", ""):gsub("%s*$", ""):gsub("^;", "")
 
-        -- [[ B. CHAIN BREAKER ]] 
-        -- If natural chaining (" and ", " & ") is detected, FORCE AI.
-        -- This prevents FastMap patterns like '^fly (.+)' from eating the second command.
+        -- [[ B. CHAIN BREAKER ]]
         local isChain = cleanPrompt:find(" and ") or cleanPrompt:find(" & ") or cleanPrompt:find(" then ")
         
         if not isChain then
-            -- C. Fast Map: Only run if NO chain words are present
+            -- C. Fast Map
             for pattern, cmd in pairs(FastMap) do
                 local matchStart, matchEnd, capture, capture2 = string.find(cleanPrompt, pattern)
                 if matchStart then
@@ -896,48 +894,45 @@ function queryAI(promptText, retryContext, attemptCount)
     -- Dynamic Context Construction
     local staticSystem = CONFIG.CommandPrompt
     local dynamicContext = ""
+    local messagesPayload = {} 
     
     if IS_CHAT_MODE then
         local displayName = (GameName ~= "Loading...") and GameName or "this game"
         
-        -- [[ IMPROVED CHAT CONTEXT ]]
+        -- [[ CHAT CONTEXT ]]
         dynamicContext = string.format([[
-            [SYSTEM OVERRIDE: CHAT MODE]
-            IGNORE "Translation" rules.
-            ROLE: Smart Infinite Yield Assistant (Roblox Exploit AI).
+            ROLE: Friendly Roblox Assistant.
             CURRENT GAME: '%s'. USER: '%s'.
-            
-            GUIDELINES:
-            1. IDENTITY: If asked "who am I", answer "You are %s". If asked "where am I", answer "You are in %s".
-            2. TONE: Concise, helpful, and tech-savvy. Mirror the user's slang if they use it.
-            3. OUTPUT: Plain text only. NO COMMAND SYNTAX (e.g. do not output ';fly'). 
-            4. LENGTH: Strict limit of 25 words. Be snappy.
-        ]], displayName, User.Name, User.Name, displayName)
+            INSTRUCTION: Respond to the user's text naturally.
+            FORBIDDEN: DO NOT start your response with ";chat" or ";". Just speak.
+            LENGTH: Under 25 words.
+        ]], displayName, User.Name)
+        
+        -- IF CHAT MODE NO CMD DATABASE
+        table.insert(messagesPayload, { role = "system", content = dynamicContext })
         
     else
-        -- CMD Mode: Strict Context
+        -- [[ CMD CONTEXT ]]
         dynamicContext = [[
             MODE: STRICT COMPILATION.
-            REMINDER: 
-            1. No Markdown. No filler.
-            2. If "stop" is used, verify if it needs an "un" prefix (e.g. stop fly -> ;unfly).
-            3. If multiple actions, join with ; (e.g. ;fly ;speed 100).
+            REMINDER: Output ONLY Infinite Yield commands (e.g. ;fly).
         ]]
-        
-        -- Inject Player List for context (helps with partial name matching)
         if needsPlayerContext(promptText) then
-             dynamicContext = dynamicContext .. " Players in server: [" .. getPlayerList() .. "]."
+             dynamicContext = dynamicContext .. " Players: [" .. getPlayerList() .. "]."
         end
+        
+        -- IF CMD MODE GO DATABASE
+        table.insert(messagesPayload, { role = "system", content = staticSystem })
+        table.insert(messagesPayload, { role = "system", content = dynamicContext })
     end
+
+    -- Add User Input
+    table.insert(messagesPayload, { role = "user", content = promptText })
 
     -- Payload Construction
     local body = HttpService:JSONEncode({
         model = CONFIG.Model, 
-        messages = { 
-            { role = "system", content = staticSystem },   -- Cached Database
-            { role = "system", content = dynamicContext }, -- Runtime Rules
-            { role = "user", content = promptText }        -- User Input
-        },
+        messages = messagesPayload, -- Use our filtered list
         temperature = IS_CHAT_MODE and 0.85 or 0.1 
     })
 
@@ -958,16 +953,19 @@ function queryAI(promptText, retryContext, attemptCount)
                 aiOutput = data.choices[1].message.content
             end
             
-            -- Sanitization
+            -- Basic Sanitization
             aiOutput = aiOutput:gsub("`", ""):gsub("^%s*", ""):gsub("%s*$", "")
 
             if IS_CHAT_MODE then
-                 local safeChat = aiOutput:gsub("\n", " "):gsub('"', "'")
+                 -- Force strip command prefixes if the AI hallucinates them
+                 -- Removes ";chat " or leading ";" or quotes
+                 local safeChat = aiOutput:gsub("^;chat%s+", ""):gsub("^;", ""):gsub('"', ""):gsub("\n", " ")
+                 
                  executeBridge(safeChat)
                  resetVisuals()
                  InputBox.Text = ""
             else
-                -- CMD Mode: Pass raw string to Bridge
+                -- CMD Mode logic
                 if aiOutput == "" or aiOutput:lower():sub(1,4) == "sure" then
                      updateStatus("AI Uncertain", Colors.Orange)
                      task.wait(1)
