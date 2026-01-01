@@ -80,7 +80,7 @@ task.spawn(function()
     IY_Interface = getgenv().PseudoBridge
 end)
 
--- 4. GUI CONSTRUCTION (WITH SMART STATUS BAR)
+-- 4. GUI CONSTRUCTION (UPDATED TUTORIAL)
 if CoreGui:FindFirstChild("SmartInfiniteYieldGUI") then CoreGui.SmartInfiniteYieldGUI:Destroy() end
 
 local SIY_Screen = Instance.new("ScreenGui")
@@ -102,7 +102,7 @@ local Colors = {
     Green      = Color3.fromRGB(40, 230, 130),
     Text       = Color3.fromRGB(240, 240, 240),
     TextDim    = Color3.fromRGB(150, 150, 150),
-    Status     = Color3.fromRGB(200, 200, 200) -- New Status Color
+    Status     = Color3.fromRGB(200, 200, 200)
 }
 
 local function addCorner(obj, radius)
@@ -143,7 +143,6 @@ local function enableDrag(frame)
 end
 
 -- [C] MAIN UI COMPONENTS
-
 -- 1. Floating Icon
 local OpenButton = Instance.new("ImageButton")
 OpenButton.Name = "OpenButton"
@@ -162,7 +161,6 @@ enableDrag(OpenButton)
 local MainFrame = Instance.new("Frame")
 MainFrame.Name = "MainFrame"
 MainFrame.AnchorPoint = Vector2.new(0.5, 0) 
--- Adjusted Height for Status Bar (+15px)
 local MainSize = IsMobile and UDim2.new(0.8, 0, 0, 60) or UDim2.new(0, 500, 0, 65)
 MainFrame.Size = MainSize
 MainFrame.Position = UDim2.new(0.5, 0, 0.15, 0)
@@ -180,7 +178,7 @@ local FontSize = IsMobile and 11 or 14
 
 -- Mode Toggle
 local ModeBtn = Instance.new("TextButton")
-ModeBtn.Size = UDim2.new(0, BtnWidth, 0, 30) -- Fixed Height
+ModeBtn.Size = UDim2.new(0, BtnWidth, 0, 30)
 ModeBtn.Position = UDim2.new(0, 8, 0, 8)
 ModeBtn.BackgroundColor3 = Colors.Orange
 ModeBtn.Text = "CMD"
@@ -227,11 +225,11 @@ InputBox.TextXAlignment = Enum.TextXAlignment.Left
 InputBox.ClearTextOnFocus = false
 InputBox.Parent = InputContainer
 
--- [[ NEW: STATUS BAR ]]
+-- Status Bar
 local StatusLabel = Instance.new("TextLabel")
 StatusLabel.Name = "Status"
 StatusLabel.Size = UDim2.new(1, -20, 0, 15)
-StatusLabel.Position = UDim2.new(0, 10, 0, 42) -- Below buttons
+StatusLabel.Position = UDim2.new(0, 10, 0, 42)
 StatusLabel.BackgroundTransparency = 1
 StatusLabel.Text = ">> Ready"
 StatusLabel.TextColor3 = Colors.TextDim
@@ -241,8 +239,8 @@ StatusLabel.TextXAlignment = Enum.TextXAlignment.Left
 StatusLabel.TextTransparency = 0.5
 StatusLabel.Parent = MainFrame
 
--- 4. Minimal Tutorial
-local TutSize = IsMobile and UDim2.new(0.8, 0, 0, 200) or UDim2.new(0, 400, 0, 200)
+-- 4. Tutorial Modal (UPDATED)
+local TutSize = IsMobile and UDim2.new(0.8, 0, 0, 200) or UDim2.new(0, 400, 0, 220)
 local TutorialFrame = Instance.new("Frame")
 TutorialFrame.Name = "Tutorial"
 TutorialFrame.AnchorPoint = Vector2.new(0.5, 0.5)
@@ -258,7 +256,7 @@ local TutTitle = Instance.new("TextLabel")
 TutTitle.Size = UDim2.new(1, 0, 0, 30)
 TutTitle.Position = UDim2.new(0, 0, 0, 10)
 TutTitle.BackgroundTransparency = 1
-TutTitle.Text = "Smart IY"
+TutTitle.Text = "Smart IY v1.2"
 TutTitle.TextColor3 = Colors.Text
 TutTitle.Font = Enum.Font.GothamBold
 TutTitle.TextSize = 18
@@ -268,7 +266,8 @@ local TutDesc = Instance.new("TextLabel")
 TutDesc.Size = UDim2.new(1, -30, 1, -80)
 TutDesc.Position = UDim2.new(0, 15, 0, 40)
 TutDesc.BackgroundTransparency = 1
-TutDesc.Text = "<b>CMD MODE:</b> Translates logic to IY commands.\n<i>(e.g., 'Fly me' -> ';fly')</i>\n\n<b>CHAT MODE:</b> Ask questions about the game.\n<i>(e.g., 'How do I play?')</i>"
+-- [[ UPDATED TEXT: MENTION RIGHT SHIFT ]]
+TutDesc.Text = "<b>CONTROLS:</b>\n• Toggle Menu: <font color='#40e682'><b>Right Shift</b></font>\n\n<b>MODES:</b>\n• <b>CMD:</b> 'Fly me' -> ';fly'\n• <b>CHAT:</b> 'How do I win?' -> AI Advice"
 TutDesc.TextColor3 = Colors.TextDim
 TutDesc.Font = Enum.Font.Gotham
 TutDesc.TextSize = 14
@@ -295,7 +294,7 @@ TutBtn.TextColor3 = Color3.new(0,0,0)
 TutBtn.Font = Enum.Font.GothamBold
 TutBtn.TextSize = 13
 TutBtn.Parent = TutorialFrame
-addCorner(TutBtn, 6)
+addCorner(TutBtn, 8)
 
 TutBtn.MouseButton1Click:Connect(function()
     TweenService:Create(TutorialFrame, TweenInfo.new(0.2), {BackgroundTransparency=1}):Play()
@@ -306,106 +305,170 @@ TutBtn.MouseButton1Click:Connect(function()
     TutorialFrame.Visible = false
 end)
 
--- 5. LOGIC ENGINE (OPTIMIZED - SEMICOLON SUPPORT ADDED)
+-- 5. LOGIC ENGINE (COMPLETE FAST MAP & TOGGLES)
 local IS_CHAT_MODE = false
+local BindSystem = {} -- Format: {Key = {Current="fly", Next="unfly"}}
 
--- [A] FAST MAP
-local FastMap = {
-    -- [[ 1. UTILITY & GUI ]]
-    ["^console$"] = "console", ["^logs$"] = "logs", ["^chatlogs$"] = "chatlogs",
-    ["^explorer$"] = "explorer", ["^dex$"] = "explorer", ["^odex$"] = "olddex",
-    ["^remotespy$"] = "remotespy", ["^rspy$"] = "remotespy",
-    ["^guiscale (%d+)"] = "guiscale %1",
-    ["^rejoin$"] = "rejoin", ["^rj$"] = "rejoin",
-    ["^serverhop$"] = "serverhop", ["^shop$"] = "serverhop",
-    ["^jobid$"] = "jobid", ["^copyjobid$"] = "jobid",
-    ["^volume (%d+)"] = "volume %1", ["^vol (%d+)"] = "volume %1",
-    ["^antilag$"] = "antilag", ["^lowgfx$"] = "antilag",
-    ["^fpscap (%d+)"] = "setfpscap %1", ["^maxfps (%d+)"] = "setfpscap %1",
-    ["^savegame$"] = "savegame", ["^saveinstance$"] = "savegame",
-
-    -- [[ 2. MOVEMENT (UPDATED FOR SPEED ARGS) ]]
-    ["^fly$"] = "fly", ["^fly (.+)"] = "fly %1",
-    ["^unfly$"] = "unfly", ["^nofly$"] = "unfly", ["^stop fly"] = "unfly",
-    ["^flyspeed (%d+)"] = "flyspeed %1",
-    ["^vfly$"] = "vehiclefly", ["^vfly (.+)"] = "vehiclefly %1", 
-    ["^vehiclefly$"] = "vehiclefly", ["^vehiclefly (.+)"] = "vehiclefly %1",
-    ["^unvfly$"] = "unvehiclefly",
-    ["^cfly$"] = "cframefly", ["^cfly (.+)"] = "cframefly %1",
-    ["^cframefly$"] = "cframefly", ["^cframefly (.+)"] = "cframefly %1",
-    ["^uncfly$"] = "uncframefly",
-    ["^noclip$"] = "noclip", ["^clip$"] = "clip", ["^unnoclip$"] = "unnoclip", ["^wall$"] = "noclip",
-    ["^vnoclip$"] = "vehiclenoclip", ["^vclip$"] = "vehicleclip",
-    ["^speed (%d+)"] = "speed %1", ["^ws (%d+)"] = "speed %1", ["^fast$"] = "speed 100",
-    ["^jumppower (%d+)"] = "jumppower %1", ["^jp (%d+)"] = "jumppower %1", ["^jump (%d+)"] = "jumppower %1",
-    ["^infjump$"] = "infjump", ["^uninfjump$"] = "uninfjump",
-    ["^highjump$"] = "jumppower 100",
-    ["^float$"] = "float", ["^unfloat$"] = "unfloat", ["^platform$"] = "float",
-    ["^swim$"] = "swim", ["^unswim$"] = "unswim",
-    ["^tpwalk (%d+)"] = "tpwalk %1", ["^untpwalk$"] = "untpwalk",
-    ["^sit$"] = "sit", ["^unsit$"] = "nosit",
-
-    -- [[ 3. TELEPORT ]]
-    ["^goto (.+)"] = "goto %1", ["^to (.+)"] = "goto %1",
-    ["^bring (.+)"] = "bring %1",
-    ["^tp (.+)"] = "tp %1", ["^tppos (.+)"] = "tppos %1",
-    ["^spawnpoint$"] = "spawnpoint", ["^nospawnpoint$"] = "nospawnpoint",
-    ["^flashback$"] = "flashback", ["^diedtp$"] = "flashback",
-    ["^walltp$"] = "walltp", ["^nowalltp$"] = "nowalltp",
-
-    -- [[ 4. VISUALS & CAMERA ]]
-    ["^esp$"] = "esp", ["^noesp$"] = "noesp", ["^unesp$"] = "noesp", ["^stop esp"] = "noesp",
-    ["^chams$"] = "chams", ["^nochams$"] = "nochams",
-    ["^xray$"] = "xray", ["^noxray$"] = "noxray",
-    ["^fullbright$"] = "fullbright", ["^fb$"] = "fullbright", ["^light$"] = "fullbright",
-    ["^nofullbright$"] = "unloopfullbright", ["^day$"] = "day", ["^night$"] = "night",
-    ["^nofog$"] = "nofog", ["^shadows$"] = "globalshadows", ["^noshadows$"] = "noglobalshadows",
-    ["^spectate (.+)"] = "spectate %1", ["^view (.+)"] = "view %1", ["^watch (.+)"] = "view %1",
-    ["^unspectate$"] = "unspectate", ["^unview$"] = "unspectate",
-    ["^freecam$"] = "freecam", ["^fc$"] = "freecam", ["^unfreecam$"] = "unfreecam", ["^unfc$"] = "unfreecam",
-    ["^fcspeed (%d+)"] = "freecamspeed %1",
-    ["^fixcam$"] = "fixcam", ["^maxzoom (%d+)"] = "maxzoom %1", ["^fov (%d+)"] = "fov %1",
-
-    -- [[ 5. PLAYER INTERACTIONS ]]
-    ["^kill (.+)"] = "kill %1", ["^loopkill (.+)"] = "loopkill %1", ["^unloopkill$"] = "unloopkill",
-    ["^fling$"] = "fling", ["^fling (.+)"] = "fling %1",
-    ["^unfling$"] = "unfling", ["^loopfling (.+)"] = "loopfling %1",
-    ["^invisfling$"] = "invisfling", ["^walkfling$"] = "walkfling",
-    ["^bang (.+)"] = "bang %1", ["^unbang$"] = "unbang",
-    ["^attach (.+)"] = "attach %1", ["^unattach$"] = "unattach",
-    ["^freeze (.+)"] = "freeze %1", ["^thaw (.+)"] = "thaw %1", ["^unfreeze (.+)"] = "thaw %1",
-    ["^fire$"] = "fire", ["^unfire$"] = "unfire", ["^smoke$"] = "smoke", ["^unsmoke$"] = "unsmoke",
-    ["^inspect (.+)"] = "inspect %1", ["^age (.+)"] = "age %1",
-
-    -- [[ 6. AVATAR & CHARACTER ]]
-    ["^reset$"] = "reset", ["^respawn$"] = "respawn", ["^re$"] = "refresh",
-    ["^god$"] = "god", ["^ungod$"] = "ungod",
-    ["^invisible$"] = "invisible", ["^invis$"] = "invisible",
-    ["^visible$"] = "visible", ["^vis$"] = "visible",
-    ["^noarms$"] = "noarms", ["^nolegs$"] = "nolegs", ["^nolimbs$"] = "nolimbs", ["^naked$"] = "naked",
-    ["^blockhead$"] = "blockhead", ["^blockhats$"] = "blockhats",
-    ["^creeper$"] = "creeper",
-    ["^drophats$"] = "drophats", ["^nohats$"] = "deletehats",
-    ["^spin$"] = "spin", ["^unspin$"] = "unspin",
-    ["^animation (.+)"] = "animation %1", ["^dance$"] = "dance", ["^undance$"] = "undance",
-
-    -- [[ 7. WORKSPACE & TOOLS ]]
-    ["^btools$"] = "btools", ["^f3x$"] = "f3x",
-    ["^delete (.+)"] = "delete %1", ["^remove (.+)"] = "delete %1",
-    ["^destroyheight (%d+)"] = "destroyheight %1",
-    ["^clickdetectors$"] = "fireclickdetectors", ["^firecd$"] = "fireclickdetectors",
-    ["^tools$"] = "tools", ["^notools$"] = "notools", ["^rtools$"] = "notools",
-    ["^equiptools$"] = "equiptools", ["^droptools$"] = "droptools",
-    ["^reach (%d+)"] = "reach %1", ["^boxreach (%d+)"] = "boxreach %1", ["^noreach$"] = "unreach",
-    ["^antivoid$"] = "antivoid", ["^noantivoid$"] = "unantivoid"
+-- [A] TOGGLE DICTIONARY (Automatic Inverses)
+local ToggleMap = {
+    -- Movement
+    ["fly"] = "unfly",       ["unfly"] = "fly",
+    ["noclip"] = "clip",     ["clip"] = "noclip", ["noclip"] = "unnoclip", ["unnoclip"] = "noclip",
+    ["float"] = "unfloat",   ["unfloat"] = "float",
+    ["swim"] = "unswim",     ["unswim"] = "swim",
+    ["sit"] = "unsit",       ["unsit"] = "sit",
+    ["platform"] = "unplatform", ["unplatform"] = "platform",
+    ["vehiclefly"] = "unvehiclefly", ["unvehiclefly"] = "vehiclefly",
+    ["cframefly"] = "uncframefly", ["uncframefly"] = "cframefly",
+    ["spam"] = "unspam",     ["unspam"] = "spam",
+    ["pmspam"] = "unpmspam", ["unpmspam"] = "pmspam",
+    
+    -- Visuals
+    ["esp"] = "noesp",       ["noesp"] = "esp",
+    ["chams"] = "nochams",   ["nochams"] = "chams",
+    ["xray"] = "noxray",     ["noxray"] = "xray",
+    ["fullbright"] = "nofullbright", ["nofullbright"] = "fullbright",
+    ["shadows"] = "noshadows", ["noshadows"] = "shadows",
+    ["fog"] = "nofog",       ["nofog"] = "fog",
+    ["light"] = "nolight",   ["nolight"] = "light",
+    
+    -- Camera
+    ["spectate"] = "unspectate", ["unspectate"] = "spectate",
+    ["freecam"] = "unfreecam",   ["unfreecam"] = "freecam",
+    ["fc"] = "unfc",             ["unfc"] = "fc",
+    ["shiftlock"] = "unshiftlock",
+    
+    -- Character & Actions
+    ["god"] = "ungod",       ["ungod"] = "god",
+    ["invisible"] = "visible", ["visible"] = "invisible",
+    ["invis"] = "vis",       ["vis"] = "invis",
+    ["mute"] = "unmute",     ["unmute"] = "mute",
+    ["dance"] = "undance",   ["undance"] = "dance",
+    ["spin"] = "unspin",     ["unspin"] = "spin",
+    ["tools"] = "notools",   ["notools"] = "tools",
+    ["grabtools"] = "ungrabtools", ["ungrabtools"] = "grabtools",
+    ["autoclick"] = "unautoclick", ["unautoclick"] = "autoclick",
+    ["reach"] = "unreach",   ["unreach"] = "reach",
+    ["anim"] = "noanim",     ["noanim"] = "anim"
 }
 
--- [B] UTILITIES
+-- [B] FAST MAP (COMPLETE IY DICTIONARY)
+local FastMap = {
+    -- [[ 0. SYSTEM ]]
+    ["^help$"] = "help", ["^cmds$"] = "help", ["^commands$"] = "help",
+    ["^bind (%w+) (.+)"] = "bind %1 %2",
+    ["^unbind (%w+)"] = "unbind %1",
+
+    -- [[ 1. UTILITY ]]
+    ["^discord$"] = "discord", ["^guiscale (%d+)"] = "guiscale %1",
+    ["^console$"] = "console", ["^oldconsole$"] = "oldconsole",
+    ["^explorer$"] = "explorer", ["^dex$"] = "explorer", ["^olddex$"] = "olddex",
+    ["^remotespy$"] = "remotespy", ["^rspy$"] = "remotespy", ["^audiologger$"] = "audiologger",
+    ["^antiidle$"] = "antiidle", ["^datalimit (%d+)"] = "datalimit %1", ["^replicationlag (%d+)"] = "replicationlag %1",
+    ["^creatorid$"] = "creatorid", ["^copycreatorid$"] = "copycreatorid", ["^setcreatorid$"] = "setcreatorid",
+    ["^noprompts$"] = "noprompts", ["^showprompts$"] = "showprompts",
+    ["^enable (.+)"] = "enable %1", ["^disable (.+)"] = "disable %1",
+    ["^showguis$"] = "showguis", ["^unshowguis$"] = "unshowguis", ["^hideguis$"] = "hideguis", ["^unhideguis$"] = "unhideguis",
+    ["^guidelete$"] = "guidelete", ["^unguidelete$"] = "unguidelete",
+    ["^hideiy$"] = "hideiy", ["^showiy$"] = "showiy", ["^keepiy$"] = "keepiy", ["^unkeepiy$"] = "unkeepiy", ["^togglekeepiy$"] = "togglekeepiy",
+    ["^savegame$"] = "savegame", ["^clearerror$"] = "clearerror",
+    ["^clientantikick$"] = "clientantikick", ["^clientantiteleport$"] = "clientantiteleport",
+    ["^allowrejoin$"] = "allowrejoin", ["^cancelteleport$"] = "cancelteleport",
+    ["^volume (%d+)"] = "volume %1", ["^antilag$"] = "antilag",
+    ["^record$"] = "record", ["^screenshot$"] = "screenshot", ["^togglefullscreen$"] = "togglefullscreen",
+    ["^notify (.+)"] = "notify %1", ["^lastcommand$"] = "lastcommand", ["^setfpscap (%d+)"] = "setfpscap %1",
+
+    -- [[ 2. MOVEMENT ]]
+    ["^noclip$"] = "noclip", ["^unnoclip$"] = "unnoclip", ["^clip$"] = "clip",
+    ["^fly$"] = "fly", ["^fly (.+)"] = "fly %1", ["^unfly$"] = "unfly", ["^flyspeed (%d+)"] = "flyspeed %1",
+    ["^vfly$"] = "vehiclefly", ["^vfly (.+)"] = "vehiclefly %1", ["^unvfly$"] = "unvehiclefly", ["^vehicleflyspeed (%d+)"] = "vehicleflyspeed %1",
+    ["^cfly$"] = "cframefly", ["^cfly (.+)"] = "cframefly %1", ["^uncfly$"] = "uncframefly", ["^cframeflyspeed (%d+)"] = "cframeflyspeed %1",
+    ["^qefly$"] = "qefly", ["^vehiclenoclip$"] = "vehiclenoclip", ["^vehicleclip$"] = "vehicleclip",
+    ["^float$"] = "float", ["^unfloat$"] = "unfloat",
+    ["^swim$"] = "swim", ["^unswim$"] = "unswim", ["^toggleswim$"] = "toggleswim",
+    ["^tpwalk (%d+)"] = "tpwalk %1", ["^untpwalk$"] = "untpwalk", ["^wallwalk$"] = "wallwalk",
+
+    -- [[ 3. TELEPORT ]]
+    ["^setwaypoint (.+)"] = "setwaypoint %1", ["^waypoints$"] = "waypoints", ["^showwaypoints$"] = "showwaypoints", ["^hidewaypoints$"] = "hidewaypoints",
+    ["^waypoint (.+)"] = "waypoint %1", ["^tweenwaypoint (.+)"] = "tweenwaypoint %1", ["^walktowaypoint (.+)"] = "walktowaypoint %1",
+    ["^deletewaypoint (.+)"] = "deletewaypoint %1", ["^clearwaypoints$"] = "clearwaypoints",
+    ["^goto (.+)"] = "goto %1", ["^tweengoto (.+)"] = "tweengoto %1", ["^tweenspeed (%d+)"] = "tweenspeed %1",
+    ["^vehiclegoto (.+)"] = "vehiclegoto %1", ["^loopgoto (.+)"] = "loopgoto %1", ["^unloopgoto$"] = "unloopgoto",
+    ["^clientbring (.+)"] = "clientbring %1", ["^loopbring (.+)"] = "loopbring %1", ["^unloopbring$"] = "unloopbring",
+    ["^spawnpoint$"] = "spawnpoint", ["^nospawnpoint$"] = "nospawnpoint", ["^flashback$"] = "flashback",
+    ["^walltp$"] = "walltp", ["^nowalltp$"] = "nowalltp", ["^teleporttool$"] = "teleporttool",
+
+    -- [[ 4. VISUALS ]]
+    ["^esp$"] = "esp", ["^noesp$"] = "noesp", ["^espteam$"] = "espteam", ["^esptransparency (%d+)"] = "esptransparency %1",
+    ["^chams$"] = "chams", ["^nochams$"] = "nochams", ["^xray$"] = "xray", ["^noxray$"] = "noxray",
+    ["^locate (.+)"] = "locate %1", ["^unlocate$"] = "unlocate",
+    ["^spectate (.+)"] = "spectate %1", ["^view (.+)"] = "view %1", ["^unspectate$"] = "unspectate",
+    ["^freecam$"] = "freecam", ["^unfreecam$"] = "unfreecam", ["^freecamspeed (%d+)"] = "freecamspeed %1",
+    ["^firstp$"] = "firstp", ["^thirdp$"] = "thirdp", ["^noclipcam$"] = "noclipcam",
+    ["^maxzoom (%d+)"] = "maxzoom %1", ["^minzoom (%d+)"] = "minzoom %1", ["^fov (%d+)"] = "fov %1", ["^fixcam$"] = "fixcam",
+    ["^lookat (.+)"] = "lookat %1",
+    ["^fullbright$"] = "fullbright", ["^loopfullbright$"] = "loopfullbright", ["^unloopfullbright$"] = "unloopfullbright",
+    ["^day$"] = "day", ["^night$"] = "night", ["^nofog$"] = "nofog", ["^globalshadows$"] = "globalshadows", ["^noglobalshadows$"] = "noglobalshadows",
+    ["^light$"] = "light", ["^nolight$"] = "nolight", ["^hovername$"] = "hovername", ["^unhovername$"] = "unhovername",
+
+    -- [[ 5. PLAYER ]]
+    ["^inspect (.+)"] = "inspect %1", ["^age (.+)"] = "age %1", ["^chatage (.+)"] = "chatage %1", ["^joindate (.+)"] = "joindate %1",
+    ["^copyname (.+)"] = "copyname %1", ["^userid (.+)"] = "userid %1", ["^copyuserid (.+)"] = "copyuserid %1",
+    ["^bang (.+)"] = "bang %1", ["^unbang$"] = "unbang", ["^carpet (.+)"] = "carpet %1", ["^uncarpet$"] = "uncarpet",
+    ["^friend (.+)"] = "friend %1", ["^unfriend (.+)"] = "unfriend %1", ["^headsit (.+)"] = "headsit %1",
+    ["^walkto (.+)"] = "walkto %1", ["^unwalkto$"] = "unwalkto", ["^orbit (.+)"] = "orbit %1", ["^unorbit$"] = "unorbit",
+    ["^stareat (.+)"] = "stareat %1", ["^unstareat$"] = "unstareat",
+    ["^fling$"] = "fling", ["^unfling$"] = "unfling", ["^flyfling$"] = "flyfling", ["^unflyfling$"] = "unflyfling",
+    ["^walkfling$"] = "walkfling", ["^unwalkfling$"] = "unwalkfling", ["^invisfling$"] = "invisfling",
+    ["^kill (.+)"] = "kill %1", ["^loopkill (.+)"] = "loopkill %1", ["^unloopkill$"] = "unloopkill",
+    ["^loopoof$"] = "loopoof", ["^unloopoof$"] = "unloopoof",
+    ["^hitbox (.+)"] = "hitbox %1", ["^headsize (.+)"] = "headsize %1",
+    ["^reset$"] = "reset", ["^respawn$"] = "respawn", ["^refresh$"] = "refresh", ["^god$"] = "god", ["^permadeath$"] = "permadeath",
+    ["^invisible$"] = "invisible", ["^visible$"] = "visible", ["^toolinvisible$"] = "toolinvisible",
+    ["^speed (%d+)"] = "speed %1", ["^ws (%d+)"] = "speed %1", ["^loopspeed (%d+)"] = "loopspeed %1", ["^unloopspeed$"] = "unloopspeed",
+    ["^jumppower (%d+)"] = "jumppower %1", ["^jp (%d+)"] = "jumppower %1", ["^loopjumppower (%d+)"] = "loopjumppower %1", ["^unloopjumppower$"] = "unloopjumppower",
+    ["^sit$"] = "sit", ["^lay$"] = "lay", ["^jump$"] = "jump", ["^infjump$"] = "infjump", ["^uninfjump$"] = "uninfjump",
+    ["^flyjump$"] = "flyjump", ["^unflyjump$"] = "unflyjump", ["^autojump$"] = "autojump", ["^unautojump$"] = "unautojump",
+    ["^stun$"] = "stun", ["^unstun$"] = "unstun", ["^team (.+)"] = "team %1",
+    ["^nobgui$"] = "nobgui", ["^noarms$"] = "noarms", ["^nolegs$"] = "nolegs", ["^nolimbs$"] = "nolimbs", ["^naked$"] = "naked", ["^noface$"] = "noface",
+    ["^blockhead$"] = "blockhead", ["^blockhats$"] = "blockhats", ["^creeper$"] = "creeper",
+    ["^drophats$"] = "drophats", ["^deletehats$"] = "deletehats", ["^hatspin$"] = "hatspin", ["^unhatspin$"] = "unhatspin", ["^clearhats$"] = "clearhats",
+    ["^spin$"] = "spin", ["^unspin$"] = "unspin", ["^split$"] = "split", ["^trip$"] = "trip", ["^jerk$"] = "jerk",
+
+    -- [[ 6. CHAT ]]
+    ["^logs$"] = "logs", ["^chatlogs$"] = "chatlogs", ["^chat (.+)"] = "chat %1",
+    ["^spam (.+)"] = "spam %1", ["^unspam$"] = "unspam",
+    ["^whisper (.+)"] = "whisper %1", ["^pmspam (.+)"] = "pmspam %1", ["^unpmspam$"] = "unpmspam",
+    ["^bubblechat$"] = "bubblechat", ["^unbubblechat$"] = "unbubblechat",
+
+    -- [[ 7. WORKSPACE ]]
+    ["^btools$"] = "btools", ["^f3x$"] = "f3x", ["^delete (.+)"] = "delete %1",
+    ["^lockworkspace$"] = "lockworkspace", ["^unlockworkspace$"] = "unlockworkspace",
+    ["^gotopart (.+)"] = "gotopart %1", ["^bringpart (.+)"] = "bringpart %1",
+    ["^fireclickdetectors$"] = "fireclickdetectors", ["^firetouchinterests$"] = "firetouchinterests",
+    ["^removeterrain$"] = "removeterrain", ["^destroyheight (%d+)"] = "destroyheight %1",
+    ["^antivoid$"] = "antivoid", ["^unantivoid$"] = "unantivoid",
+
+    -- [[ 8. ANIMATION ]]
+    ["^animation (.+)"] = "animation %1", ["^emote (.+)"] = "emote %1", ["^dance$"] = "dance", ["^undance$"] = "undance",
+    ["^spasm$"] = "spasm", ["^unspasm$"] = "unspasm", ["^noanim$"] = "noanim", ["^reanim$"] = "reanim",
+    ["^stopanimations$"] = "stopanimations",
+
+    -- [[ 9. MOUSE & TOOLS ]]
+    ["^autoclick$"] = "autoclick", ["^unautoclick$"] = "unautoclick", ["^mousesensitivity$"] = "mousesensitivity",
+    ["^tools$"] = "tools", ["^notools$"] = "notools", ["^grabtools$"] = "grabtools", ["^ungrabtools$"] = "ungrabtools",
+    ["^equiptools$"] = "equiptools", ["^unequiptools$"] = "unequiptools", ["^reach (%d+)"] = "reach %1", ["^unreach$"] = "unreach",
+    
+    -- [[ 10. SERVER ]]
+    ["^serverinfo$"] = "serverinfo", ["^jobid$"] = "jobid", ["^rejoin$"] = "rejoin", ["^autorejoin$"] = "autorejoin",
+    ["^serverhop$"] = "serverhop", ["^gametp (.+)"] = "gametp %1"
+}
+
+-- [C] UTILITIES
 local function updateStatus(text, color)
     StatusLabel.Text = ">> " .. text
     StatusLabel.TextColor3 = color or Colors.Status
     StatusLabel.TextTransparency = 0
-    -- Fade out effect
     TweenService:Create(StatusLabel, TweenInfo.new(3, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {TextTransparency = 0.6}):Play()
 end
 
@@ -431,7 +494,7 @@ local function needsPlayerContext(text)
     return false
 end
 
--- [C] BRIDGE EXECUTION
+-- [D] BRIDGE EXECUTION
 local function executeBridge(text, source)
     if not IY_Interface then 
         warn("SIY: Bridge not connected.")
@@ -442,23 +505,48 @@ local function executeBridge(text, source)
     local cleanText = text:gsub("^%s*", ""):gsub("%s*$", "")
     
     if IS_CHAT_MODE then
-        -- Chat Mode
         local safeText = cleanText:gsub("'", ""):gsub('"', '')
         IY_Interface.Exec("notify " .. safeText) 
         updateStatus("[AI] Response Sent", Colors.Blue)
     else
-        -- CMD Mode
         if cleanText:sub(1,1) == ";" then cleanText = cleanText:sub(2) end
         
-        -- VISUAL FEEDBACK
+        -- [[ HELP INTERCEPT ]]
+        if cleanText == "help" then
+            IY_Interface.Exec("notify Check Status Bar for help.")
+            updateStatus("CMD: ;bind [key] [cmd], ;fly, RightShift=Toggle", Colors.Green)
+            return
+        end
+
+        -- [[ SMART BIND LOGIC ]]
+        local bindKey, bindCmd = cleanText:match("^bind (%w+) (.+)")
+        if bindKey and bindCmd then
+            local keyLower = bindKey:lower()
+            -- Check for Toggle Pair
+            local opposite = ToggleMap[bindCmd]
+            if opposite then
+                BindSystem[keyLower] = {Current = bindCmd, Next = opposite}
+                updateStatus("Bound '"..bindKey.."' to Toggle ("..bindCmd.."/"..opposite..")", Colors.Green)
+            else
+                BindSystem[keyLower] = {Current = bindCmd, Next = nil}
+                updateStatus("Bound '"..bindKey.."' to '"..bindCmd.."'", Colors.Green)
+            end
+            return
+        end
+        local unbindKey = cleanText:match("^unbind (%w+)")
+        if unbindKey then
+            BindSystem[unbindKey:lower()] = nil
+            updateStatus("Unbound '"..unbindKey.."'", Colors.Green)
+            return
+        end
+        
         local prefix = source and ("["..source.."] ") or ""
         updateStatus(prefix .. "Executing: " .. cleanText, Colors.Green)
-        
         IY_Interface.Exec(cleanText) 
     end
 end
 
--- [D] TARGET VALIDATION
+-- [E] TARGET VALIDATION
 local function validateCommandTarget(cmdString)
     local args = cmdString:split(" ")
     if #args < 2 then return true, "" end 
@@ -481,7 +569,7 @@ local function validateCommandTarget(cmdString)
     return false, "Target '"..targetArg.."' not found."
 end
 
--- [E] VISUAL STATE
+-- [F] VISUAL STATE
 local function resetVisuals()
     local pulse = TweenService:Create(MainStroke, TweenInfo.new(0.3), {Transparency = 1})
     pulse:Play()
@@ -498,33 +586,30 @@ local function setThinkingState(retry)
     pulse:Play()
 end
 
--- [F] CORE QUERY LOGIC
+-- [G] CORE QUERY LOGIC
 function queryAI(promptText, retryContext, attemptCount)
     if promptText == "" then return end
     
-    -- 1. FAST PATH CHECK (Now supports ;prefix)
     if not IS_CHAT_MODE and not retryContext then
-        -- Clean input: Lowercase -> Trim whitespace -> Remove leading semicolon
         local cleanPrompt = promptText:lower():gsub("^%s*", ""):gsub("%s*$", ""):gsub("^;", "")
-        
         for pattern, cmd in pairs(FastMap) do
-            local matchStart, matchEnd, capture = string.find(cleanPrompt, pattern)
+            local matchStart, matchEnd, capture, capture2 = string.find(cleanPrompt, pattern)
             if matchStart then
                 local finalCmd = cmd
                 if capture then finalCmd = finalCmd:gsub("%%1", capture) end
+                if capture2 then finalCmd = finalCmd:gsub("%%2", capture2) end
                 
                 local isValid, err = validateCommandTarget(finalCmd)
                 if isValid then
-                    executeBridge(finalCmd, "FAST") -- Tag as FAST execution
+                    executeBridge(finalCmd, "FAST")
                     resetVisuals()
-                    InputBox.Text = "" -- Clear input on success
+                    InputBox.Text = "" 
                     return 
                 end
             end
         end
     end
 
-    -- 2. API FALLBACK
     attemptCount = attemptCount or 0
     if attemptCount > CONFIG.MaxRetries then 
         updateStatus("Failed: Invalid Target", Colors.Red)
@@ -532,7 +617,7 @@ function queryAI(promptText, retryContext, attemptCount)
     end
 
     setThinkingState(attemptCount > 0)
-    updateStatus("Thinking...", Colors.Orange) -- Update status immediately
+    updateStatus("Thinking...", Colors.Orange)
 
     local systemPayload = IS_CHAT_MODE and getChatPrompt() or CONFIG.CommandPrompt
     local userPayload = promptText
@@ -570,7 +655,7 @@ function queryAI(promptText, retryContext, attemptCount)
                 
                 local isValid, errorMsg = validateCommandTarget(cleanCmd)
                 if isValid then 
-                    executeBridge(cleanCmd, "AI") -- Tag as AI execution
+                    executeBridge(cleanCmd, "AI")
                     resetVisuals()
                     InputBox.Text = ""
                 else
@@ -588,7 +673,6 @@ end
 InputBox.FocusLost:Connect(function(enter)
     if enter and InputBox.Text ~= "" then
         local text = InputBox.Text
-        -- Keep text visible while processing, clear only on success
         queryAI(text) 
     end
 end)
@@ -609,5 +693,31 @@ ModeBtn.MouseButton1Click:Connect(function()
         TweenService:Create(ModeBtn, TweenInfo.new(0.3), {BackgroundColor3 = Colors.Orange}):Play()
         InputBox.PlaceholderText = IsMobile and "Tap to type..." or "Enter command..."
         updateStatus("Switched to Command Mode", Colors.Orange)
+    end
+end)
+
+-- [[ UPDATED KEYBIND LISTENER ]]
+UIS.InputBegan:Connect(function(input, gpe)
+    if gpe then return end
+    
+    -- Master Toggle
+    if input.KeyCode == Enum.KeyCode.RightShift then
+        MainFrame.Visible = not MainFrame.Visible
+        OpenButton.Visible = not MainFrame.Visible
+    end
+    
+    -- Custom Binds (with Toggle Logic)
+    local keyName = input.KeyCode.Name:lower()
+    if BindSystem[keyName] then
+        local bindData = BindSystem[keyName]
+        local cmdToRun = bindData.Current
+        
+        executeBridge(cmdToRun, "BIND")
+        
+        -- Swap logic: If a 'Next' command exists, cycle to it.
+        if bindData.Next then
+            bindData.Current = bindData.Next
+            bindData.Next = cmdToRun -- Swap current so it toggles back next time
+        end
     end
 end)
