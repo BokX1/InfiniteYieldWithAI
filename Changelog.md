@@ -2,7 +2,7 @@
 
 All notable changes to the **SmartInfiniteYield** project will be documented in this file.
 
-## [1.3.0] - 2026-01-02
+## [1.2.1] - 2026-01-02
 ### Added
 - **Enhanced Bridge Reliability:** Implemented event-based system using BindableEvents for instant bridge connection, eliminating "Bridge not connected" errors.
 - **Intelligent Command Caching:** Local cache system using writefile/readfile to store successful AI translations, enabling instant execution of learned phrases without API calls.
@@ -15,10 +15,9 @@ All notable changes to the **SmartInfiniteYield** project will be documented in 
 - **Bridge System:** Replaced polling-based bridge detection with event-driven architecture for faster startup.
 - **Cache Optimization:** Automatic cache management with LRU-style cleanup when max entries reached.
 - **Target Resolution:** Enhanced player targeting with prefix matching, contains matching, and fuzzy matching fallback.
-- **UI Polish:** Updated tutorial modal with v1.3 feature highlights.
+- **UI Polish:** Updated tutorial modal with v1.2.1 feature highlights.
 
 ### Technical
-- **Version Bump:** Updated to v1.3 STABLE.
 - **New Dependencies:** Added RunService for animation handling.
 - **Config Expansion:** Added CacheEnabled, CacheFile, and MaxCacheEntries configuration options.
 

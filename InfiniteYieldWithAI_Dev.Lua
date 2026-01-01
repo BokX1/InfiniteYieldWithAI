@@ -1,5 +1,5 @@
 --[[ 
-    SMART INFINITE YIELD - V1.3 STABLE
+    SMART INFINITE YIELD - V1.2.1 STABLE
     - Architecture: Context Awareness + Event-Based Bridge
     - Logic: VolQ5 & Pollinations.AI (LLM Model)
     - Status: Stable 
@@ -788,7 +788,7 @@ local TutTitle = Instance.new("TextLabel")
 TutTitle.Size = UDim2.new(1, 0, 0, 30)
 TutTitle.Position = UDim2.new(0, 0, 0, 10)
 TutTitle.BackgroundTransparency = 1
-TutTitle.Text = "Smart IY v1.3 Latest"
+TutTitle.Text = "Smart IY v1.2.1 Latest"
 TutTitle.TextColor3 = Colors.Text
 TutTitle.Font = Enum.Font.GothamBold
 TutTitle.TextSize = 18
@@ -798,7 +798,7 @@ local TutDesc = Instance.new("TextLabel")
 TutDesc.Size = UDim2.new(1, -30, 1, -90)
 TutDesc.Position = UDim2.new(0, 15, 0, 40)
 TutDesc.BackgroundTransparency = 1
-TutDesc.Text = "<b>CONTROLS:</b>\n• Toggle Menu: <font color='#40e682'><b>Right Shift</b></font>\n• Autocomplete: <font color='#40e682'><b>Click Suggestion</b></font>\n\n<b>MODES:</b>\n• <b>CMD:</b> 'Fly me' -> ';fly'\n• <b>CHAT:</b> 'How do I win?' -> AI Advice\n\n<b>NEW IN V1.3:</b>\n• <font color='#b464ff'>Smart Caching</font> - Learns your phrases\n• <font color='#b464ff'>Fuzzy Targeting</font> - 'kill valk' -> Valkorym\n• <font color='#b464ff'>Quick Actions</font> - One-tap commands (Mobile)"
+TutDesc.Text = "<b>CONTROLS:</b>\n• Toggle Menu: <font color='#40e682'><b>Right Shift</b></font>\n• Autocomplete: <font color='#40e682'><b>Click Suggestion</b></font>\n\n<b>MODES:</b>\n• <b>CMD:</b> 'Fly me' -> ';fly'\n• <b>CHAT:</b> 'How do I win?' -> AI Advice\n\n<b>NEW IN V1.2.1:</b>\n• <font color='#b464ff'>Smart Caching</font> - Learns your phrases\n• <font color='#b464ff'>Fuzzy Targeting</font> - 'kill valk' -> Valkorym\n• <font color='#b464ff'>Quick Actions</font> - One-tap commands (Mobile)"
 TutDesc.TextColor3 = Colors.TextDim
 TutDesc.Font = Enum.Font.Gotham
 TutDesc.TextSize = 13
