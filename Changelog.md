@@ -3,6 +3,7 @@
 All notable changes to the **SmartInfiniteYield** project will be documented in this file.
 
 ## [1.2.1] - 2026-01-02
+
 ### Added
 - **Enhanced Bridge Reliability:** Implemented event-based system using BindableEvents for instant bridge connection, eliminating "Bridge not connected" errors.
 - **Intelligent Command Caching:** Local cache system using writefile/readfile to store successful AI translations, enabling instant execution of learned phrases without API calls.
@@ -21,7 +22,21 @@ All notable changes to the **SmartInfiniteYield** project will be documented in 
 - **New Dependencies:** Added RunService for animation handling.
 - **Config Expansion:** Added CacheEnabled, CacheFile, and MaxCacheEntries configuration options.
 
+### Code Quality (Refactor)
+- **Structure Reorganization:** Reorganized codebase into 18 clearly defined sections with numbered headers.
+- **Services Optimization:** Moved all service declarations to top of file for better caching and performance.
+- **Helper Functions:** Created reusable `createInstance()` helper function reducing repetitive Instance.new() chains.
+- **Variable Naming:** Standardized variable names to Roblox conventions (User → LocalPlayer).
+- **Duplicate Removal:** Fixed duplicate ToggleMap entries and removed redundant alias declarations.
+- **pcall Optimization:** Improved error handling patterns with cleaner pcall implementations.
+- **LRU Cache Fix:** Enhanced cache cleanup to properly remove oldest entries by timestamp.
+- **Iterator Optimization:** Used ipairs() instead of pairs() where array order matters.
+- **Shared Utilities:** Consolidated string operations with shared trim() function.
+- **Comment Standards:** Updated to Lua standard comment format (--//) for section headers.
+- **Code Formatting:** Standardized whitespace, indentation, and overall code style.
+
 ## [1.2.0] - 2026-01-01
+
 ### Added
 - **Split-Context Strategy:** Implemented static/dynamic context separation, reducing token costs by ~90%.
 - **Natural Chain Detection:** Support for multi-part requests (e.g., "fly and goto") with smarter processing.
@@ -37,6 +52,7 @@ All notable changes to the **SmartInfiniteYield** project will be documented in 
 - **UI Fixes:** Resolved Z-Index issues and general UI polish.
 
 ## [1.1.0] - 2025-12-28
+
 ### Added
 - **Security:** Integrated Cloudflare API to block abusive activity and bad actors.
 - **Logic Engine:** Significant improvements to the reasoning engine for faster and more accurate translations.
@@ -46,6 +62,7 @@ All notable changes to the **SmartInfiniteYield** project will be documented in 
 - **Bug Fixes:** Resolved several logic bugs and updated the core engine.
 
 ## [1.0.0] - 2025-11-25
+
 ### Added
 - **Initial Release:** First stable version of SmartInfiniteYield.
 - **AI Integration:** Basic natural language to command translation.

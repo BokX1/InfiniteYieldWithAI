@@ -2,63 +2,201 @@
 
 This document outlines the planned technical and user experience improvements for the SmartInfiniteYield project.
 
-## Technical Optimizations
+---
 
-### 1. Enhanced Bridge Reliability ✅ COMPLETED (v1.2.1)
-Currently, the bridge relies on polling `getgenv().PseudoBridge`.
-- **Goal:** Implement an event-based system using `BindableEvents`.
-- **Benefit:** Faster startup and elimination of "Bridge not connected" errors by ensuring the bridge is ready the instant Infinite Yield loads.
-- **Implementation:** Added `BridgeReady` BindableEvent with `waitForBridge()` helper function for event-driven bridge detection.
+## Completed Features (v1.2.1)
 
-### 2. Intelligent Command Caching ✅ COMPLETED (v1.2.1)
-The `FastMap` is currently static and requires manual updates.
-- **Goal:** Implement a local cache using `writefile` and `readfile` to store successful AI translations.
-- **Benefit:** The script will "learn" common user phrases (e.g., "Make me fast" -> `;speed 50`), executing them instantly from local storage without needing AI calls or incurring token costs.
-- **Implementation:** Added `CommandCache` system with `loadCache()`, `saveCache()`, `getCachedCommand()`, and `cacheCommand()` functions. Configurable via `CONFIG.CacheEnabled`, `CONFIG.CacheFile`, and `CONFIG.MaxCacheEntries`.
+### Technical Optimizations
 
-### 3. Advanced Target Resolution ✅ COMPLETED (v1.2.1)
-Current targeting relies on strict regex matching.
-- **Goal:** Implement fuzzy-matching for player names.
-- **Benefit:** Allows for more natural targeting (e.g., "kill valk" resolving to "Valkorym"), significantly improving the user experience in games with complex usernames.
-- **Implementation:** Added `levenshteinDistance()` and `fuzzyMatchPlayer()` functions with prefix matching, contains matching, and Levenshtein distance-based fuzzy matching.
+| Feature | Status | Description |
+|---------|--------|-------------|
+| **Enhanced Bridge Reliability** | ✅ Complete | Event-based system using BindableEvents with `waitForBridge()` helper for instant bridge connection. |
+| **Intelligent Command Caching** | ✅ Complete | Local cache using writefile/readfile to store successful AI translations. Configurable via CONFIG options. |
+| **Advanced Target Resolution** | ✅ Complete | Levenshtein distance-based fuzzy matching for player names with prefix and contains matching. |
+| **Code Optimization** | ✅ Complete | Reorganized codebase with helper functions, optimized patterns, and industry-standard formatting. |
 
-## AI & Prompt Engineering
+### UI/UX Enhancements
 
-### 1. Optimized System Prompting 🔄 IN PROGRESS
-The current system prompt is large (~3500 tokens).
-- **Goal:** Refactor the command database and logic rules to be as concise as possible while maintaining high reasoning quality.
-- **Note:** While dynamic chunking was considered, we will prioritize maintaining a consistent prompt structure above the 1.2k token threshold to leverage provider-side prompt caching for better performance and cost efficiency.
-- **Status:** Deferred to future release. Current caching system reduces API calls significantly, mitigating token costs.
-
-## UI/UX Enhancements
-
-### 1. Visual Feedback for AI Processing ✅ COMPLETED (v1.2.1)
-- **Goal:** Add a subtle visual indicator, such as a glowing aura or a progress bar, that pulses while the AI is processing a request.
-- **Benefit:** Provides clear feedback to the user that the system is working, making the wait time feel more interactive.
-- **Implementation:** Added `ProcessingGlow` frame with animated `UIGradient` and `UIStroke` that rotates and pulses during AI processing via `startGlowAnimation()` and `stopGlowAnimation()`.
-
-### 2. Command Preview ✅ COMPLETED (v1.2.1)
-- **Goal:** Display a brief preview of the AI-generated command in the status bar before execution.
-- **Benefit:** Increases user trust and allows for a split-second verification of the AI's intent before the command is applied.
-- **Implementation:** Added `PreviewBar` with `showPreview()` and `hidePreview()` functions. Preview displays for 3 seconds or until next action.
-
-### 3. Mobile-Specific UI ✅ COMPLETED (v1.2.1)
-- **Goal:** Create a "Quick Actions" grid for mobile users with common AI prompts.
-- **Benefit:** Reduces the need for slow mobile typing, allowing for one-tap AI interactions.
-- **Implementation:** Added `QuickActionsFrame` with 9 pre-configured actions (Fly, Speed, ESP, Noclip, God, Teleport, Kill, Reset, Anti-Lag) in a 3-column grid layout, toggled via ⚡ button.
+| Feature | Status | Description |
+|---------|--------|-------------|
+| **Visual AI Processing** | ✅ Complete | Animated glowing aura with rotating gradient that pulses during AI processing. |
+| **Command Preview** | ✅ Complete | Preview bar displays AI-generated command before execution for user verification. |
+| **Mobile Quick Actions** | ✅ Complete | 9-button grid for one-tap commands on mobile devices. |
 
 ---
 
-## Future Considerations
+## Version 1.3.0 - Major Update (Planned)
 
-### Performance Monitoring
-- **Goal:** Add optional telemetry for cache hit rates and AI response times.
-- **Status:** Planned for v1.3.0
+Version 1.3 represents a significant evolution of SmartInfiniteYield, introducing multi-model AI support, a plugin ecosystem, and advanced automation features.
 
-### Custom Quick Actions
-- **Goal:** Allow users to customize the Quick Actions grid with their own prompts.
-- **Status:** Planned for v1.3.0
+### 🧠 AI & Intelligence
 
-### Offline Mode
-- **Goal:** Enhanced offline functionality using expanded local FastMap.
-- **Status:** Under consideration
+#### 1. Multi-Model AI Support
+The current system is locked to a single AI provider. Version 1.3 will introduce model flexibility.
+
+- **Goal:** Allow users to switch between multiple AI models (OpenAI, Gemini, Claude, Local LLMs) via configuration.
+- **Benefit:** Users can choose models based on speed, accuracy, cost, or privacy preferences. Local LLM support enables fully offline operation.
+- **Implementation Notes:**
+  - Add `CONFIG.ModelProvider` with options: `openai`, `gemini`, `claude`, `local`
+  - Create abstraction layer for API calls to support different endpoints
+  - Implement model-specific prompt optimization
+
+#### 2. Conversation Memory & Context
+Currently, each AI request is stateless with no memory of previous interactions.
+
+- **Goal:** Implement short-term conversation memory that persists across commands within a session.
+- **Benefit:** Enables contextual follow-ups like "do that again" or "faster this time" without repeating the full command.
+- **Implementation Notes:**
+  - Store last 5-10 interactions in memory
+  - Include conversation history in AI context when relevant
+  - Add `CONFIG.ConversationMemory` toggle
+
+#### 3. Smart Command Suggestions
+Proactively suggest commands based on game context and player behavior.
+
+- **Goal:** Analyze game state and suggest relevant commands before the user types.
+- **Benefit:** Reduces typing and helps users discover commands they didn't know existed.
+- **Implementation Notes:**
+  - Detect game type (obby, combat, roleplay) and suggest relevant commands
+  - Track frequently used commands and surface them prominently
+  - Show contextual tips in status bar
+
+### 🔌 Plugin & Extension System
+
+#### 4. Custom Plugin Architecture
+Enable community-created extensions to expand functionality.
+
+- **Goal:** Create a plugin API that allows users to add custom commands, UI elements, and integrations.
+- **Benefit:** Community can extend SIY without modifying core code. Enables game-specific optimizations.
+- **Implementation Notes:**
+  - Define plugin manifest format (JSON/Lua)
+  - Create plugin loader with sandboxed execution
+  - Implement plugin marketplace browser within UI
+  - Add `CONFIG.PluginsEnabled` and `CONFIG.PluginDirectory`
+
+#### 5. Custom Quick Actions
+Allow users to customize the mobile Quick Actions grid.
+
+- **Goal:** Let users add, remove, and reorder Quick Action buttons with their own prompts.
+- **Benefit:** Personalized one-tap commands for each user's playstyle.
+- **Implementation Notes:**
+  - Add Quick Actions editor UI
+  - Store custom actions in local file
+  - Support importing/exporting action sets
+
+#### 6. Command Macros & Sequences
+Enable recording and playback of command sequences.
+
+- **Goal:** Allow users to record a series of commands and replay them with a single trigger.
+- **Benefit:** Automate repetitive tasks and create complex command chains.
+- **Implementation Notes:**
+  - Add macro recording mode (`/record`, `/stop`)
+  - Store macros with names and optional delays
+  - Support macro keybinds
+
+### 🎨 UI/UX Overhaul
+
+#### 7. Theme System & Customization
+The current UI uses a fixed dark theme with orange accents.
+
+- **Goal:** Implement a theme system with multiple presets and custom color options.
+- **Benefit:** Users can personalize the interface to match their preferences or reduce eye strain.
+- **Implementation Notes:**
+  - Create theme presets: Dark, Light, OLED Black, High Contrast
+  - Add color picker for accent colors
+  - Store theme preferences in local config
+
+#### 8. Advanced Settings Panel
+Currently, configuration requires editing the script directly.
+
+- **Goal:** Create an in-game settings panel for all CONFIG options.
+- **Benefit:** Users can adjust settings without reloading the script or editing code.
+- **Implementation Notes:**
+  - Design collapsible settings categories
+  - Add toggles, sliders, and dropdowns for each option
+  - Implement real-time preview for visual settings
+
+#### 9. Command History & Favorites
+No way to quickly access previously used commands.
+
+- **Goal:** Add command history browser and favorites system.
+- **Benefit:** Quick access to frequently used or recent commands without retyping.
+- **Implementation Notes:**
+  - Store last 50 commands with timestamps
+  - Add star/favorite functionality
+  - Create searchable history panel
+
+### 📊 Analytics & Monitoring
+
+#### 10. Performance Dashboard
+Users have no visibility into system performance.
+
+- **Goal:** Add optional telemetry dashboard showing cache hit rates, AI response times, and command statistics.
+- **Benefit:** Users can understand system performance and optimize their usage patterns.
+- **Implementation Notes:**
+  - Track cache hits vs misses
+  - Measure AI response latency
+  - Display statistics in collapsible panel
+  - All telemetry local-only (no external reporting)
+
+#### 11. Error Recovery & Diagnostics
+When errors occur, users have limited debugging information.
+
+- **Goal:** Implement comprehensive error logging with suggested fixes.
+- **Benefit:** Faster troubleshooting and better user support.
+- **Implementation Notes:**
+  - Create error log with timestamps and context
+  - Add "Report Issue" button that copies diagnostic info
+  - Implement automatic retry with exponential backoff
+
+### 🔒 Security & Privacy
+
+#### 12. Enhanced Privacy Mode
+Some users want to minimize data sent to external services.
+
+- **Goal:** Add privacy mode that maximizes local processing and minimizes API calls.
+- **Benefit:** Reduced data exposure for privacy-conscious users.
+- **Implementation Notes:**
+  - Expand FastMap to cover more natural language patterns
+  - Add `CONFIG.PrivacyMode` that disables AI for non-essential features
+  - Implement local-only fuzzy matching improvements
+
+#### 13. Executor Compatibility Layer
+Different executors have varying API support.
+
+- **Goal:** Create comprehensive compatibility layer that gracefully handles missing APIs.
+- **Benefit:** Consistent experience across all supported executors.
+- **Implementation Notes:**
+  - Detect executor capabilities on startup
+  - Provide fallbacks for missing functions
+  - Display compatibility warnings for limited executors
+
+---
+
+## Version 1.4.0 - Future Considerations
+
+These features are under consideration for future releases beyond v1.3.
+
+| Feature | Description | Status |
+|---------|-------------|--------|
+| **Voice Commands** | Speech-to-text input for hands-free operation | Under Research |
+| **Game Profiles** | Automatic settings/macros per game | Planned |
+| **Collaborative Mode** | Share commands with friends in real-time | Concept |
+| **AI Training Mode** | Let users correct AI mistakes to improve accuracy | Under Research |
+| **Visual Scripting** | Node-based command builder for complex automations | Concept |
+| **Cross-Platform Sync** | Sync settings and cache across devices | Under Research |
+
+---
+
+## Contributing
+
+We welcome community contributions! If you'd like to help implement any roadmap features:
+
+1. Check the [Issues](https://github.com/BokX1/InfiniteYieldWithAI/issues) for open tasks
+2. Fork the repository and create a feature branch
+3. Submit a Pull Request with your implementation
+4. Join discussions in the Discord server
+
+---
+
+*Last Updated: January 2, 2026*
