@@ -306,7 +306,7 @@ TutBtn.MouseButton1Click:Connect(function()
     TutorialFrame.Visible = false
 end)
 
--- 5. LOGIC ENGINE (OPTIMIZED - WITH FEEDBACK)
+-- 5. LOGIC ENGINE (OPTIMIZED - SEMICOLON SUPPORT ADDED)
 local IS_CHAT_MODE = false
 
 -- [A] FAST MAP
@@ -497,9 +497,11 @@ end
 function queryAI(promptText, retryContext, attemptCount)
     if promptText == "" then return end
     
-    -- 1. FAST PATH CHECK
+    -- 1. FAST PATH CHECK (Now supports ;prefix)
     if not IS_CHAT_MODE and not retryContext then
-        local cleanPrompt = promptText:lower():gsub("^%s*", ""):gsub("%s*$", "")
+        -- Clean input: Lowercase -> Trim whitespace -> Remove leading semicolon
+        local cleanPrompt = promptText:lower():gsub("^%s*", ""):gsub("%s*$", ""):gsub("^;", "")
+        
         for pattern, cmd in pairs(FastMap) do
             local matchStart, matchEnd, capture = string.find(cleanPrompt, pattern)
             if matchStart then
@@ -604,4 +606,3 @@ ModeBtn.MouseButton1Click:Connect(function()
         updateStatus("Switched to Command Mode", Colors.Orange)
     end
 end)
-
