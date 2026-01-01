@@ -124,22 +124,37 @@ local CONFIG = {
 
 ### 🏗 Architecture
 
-**SmartInfiniteYield V1.1** solves the "Hallucination" problem common in AI scripts using a **Validation-Retry Loop**:
+**SmartInfiniteYield V1.2** introduces a **Hybrid Dual-Path Engine** that combines the speed of a traditional admin script with the intelligence of an LLM.
 
-1. **Input:** User types "Goto vol".
-2. **Context:** Script grabs current player list (e.g., `[VolQ5, Player2, Player3]`).
-3. **Prompting:** Sends request + player list to AI.
-4. **Validation:**
-* *Scenario A:* AI returns `;goto VolQ5`. Target exists. **EXECUTE.**
-* *Scenario B:* AI returns `;goto Volcano`. Target missing. **HALT.**
+**1. The Logic Flow:**
+Every time you type, the engine performs a "First-Principles" check:
 
-
-5. **Recursion (If Scenario B):**
-* Script sends: `[FEEDBACK ERROR: Target 'Volcano' not found.]`
-* AI Retries: "Ah, looking at the list, it must be VolQ5." -> Returns `;goto VolQ5`.
-* **EXECUTE.**
+* **Path A: The "Fast Path" (Local Execution)**
+* **Input:** User types `fly` or `speed 50`.
+* **Logic:** The script checks its internal **FastMap Dictionary** (containing 200+ regex patterns).
+* **Result:** It finds a match and executes instantly (**0ms Latency**). No API calls are made.
 
 
+* **Path B: The "Neuro-Symbolic Bridge" (AI Execution)**
+* **Input:** User types *"kill the guy in red"*.
+* **Logic:** No local match found. The script captures the **Server State** (Player List: `[VolQ5, Guest_99]`) and sends it to the AI.
+* **Inference:** The AI analyzes the natural language and the player list.
+* **Result:** AI returns `;kill VolQ5`.
+
+
+
+**2. The Validation-Retry Loop (Anti-Hallucination):**
+If the AI path is triggered, we apply a strict safety layer to prevent errors:
+
+1. **Validation:** The AI suggests `;goto Volcano`.
+2. **Check:** Script scans the workspace. Is there a player named "Volcano"? **NO.**
+3. **Recursion:**
+* Script intercepts the command.
+* Sends feedback to AI: `[ERROR: Target 'Volcano' not found. Did you mean 'VolQ5'?]`
+* AI Retries: Returns `;goto VolQ5`.
+
+
+4. **Execution:** Valid command runs.
 
 ---
 
