@@ -34,14 +34,43 @@ The API is protected by CloudFlare to prevent bad actor (abuse)
 
 ### 📜 Changelog
 
-#### **Version 1.2 Stable (Current)**
-* **User Interface:**
-    * **Predictive Dropdown:** Replaced "Ghost Text" with a clickable suggestion menu sorted by command popularity.
-    * **Visual Polish:** Fixed Z-Index layering issues; the status bar now auto-hides when searching to prevent visual clutter.
-    * **Master Control:** Added **Right Shift** as the universal toggle key.
-* **Logic Engine:**
-    * **Smart Toggles:** Implemented a cycle system for keybinds (e.g., `bind f fly` automatically handles `unfly`).
-    * **Complete Dictionary:** Expanded the local `FastMap` to cover 100% of Infinite Yield commands for maximum speed.
+Here is the final, consolidated changelog for **Smart Infinite Yield v1.2**, combining your new UI/Logic updates with the backend optimizations we implemented.
+
+---
+
+### **Version 1.2 Stable**
+
+### **🚀 Core Architecture**
+
+* **Split-Context Strategy:** Separated system prompt into **Static** (Documentation) and **Dynamic** (Context) layers, reducing recurring request costs by **~90%**.
+* **Model Migration:** Switched default model from `grok` to `openai` (GPT-5 Mini) for superior caching discounts and logical reasoning.
+
+### **☁️ Cloudflare Worker (Backend)**
+
+* 
+**Abuse Gate Expansion:** Raised `MAX_BODY_CHARS` (100k) and `MAX_CACHED_CHARS` (40k) to support large cached system prompts without triggering spam filters.
+
+* 
+**Smart Defaults:** Logic now auto-defaults to `openai` if the client does not specify a model.
+
+### **🎮 Logic Engine & Lua Client**
+
+* **Smart Toggles:** Implemented a cycle system for keybinds (e.g., `bind f fly` automatically handles `unfly`).
+* **Complete Dictionary:** Expanded local `FastMap` to cover 100% of Infinite Yield commands for maximum local speed before querying AI.
+* **Dynamic Tone Mirroring:** Chat Mode now analyzes and mirrors user tone (slang vs. formal) using context injection.
+* **Strict Execution Mode:** Enforced temperature `0.1` and negative constraints in CMD Mode to prevent hallucinations and conversational filler.
+* **System Override:** Implemented `[SYSTEM OVERRIDE]` tags to forcibly switch the AI from "Translator" to "Assistant" persona in Chat Mode.
+
+### **🖥️ User Interface**
+
+* **Predictive Dropdown:** Replaced "Ghost Text" with a clickable suggestion menu sorted by command popularity.
+* **Visual Polish:** Fixed Z-Index layering issues; the status bar now auto-hides when searching to prevent visual clutter.
+* **Master Control:** Added **Right Shift** as the universal toggle key for the UI.
+
+### **🐛 Bug Fixes**
+
+* **Identity Hallucination:** Hardcoded "WhoAmI" logic (`User.Name`, `GameName`) into the system prompt to prevent the AI from executing identity questions as commands.
+* **Worker Blocks:** Resolved 429 errors caused by the new larger prompt size triggering old length-based abuse filters.
 
 #### **Version 1.1 Final**
 * **Hybrid Model:** Introduced the `FastMap` architecture.
