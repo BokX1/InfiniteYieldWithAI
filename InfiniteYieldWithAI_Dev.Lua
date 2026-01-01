@@ -617,6 +617,19 @@ local ModeBtn = createInstance("TextButton", {
 })
 addCorner(ModeBtn, 6)
 
+local HelpBtn = createInstance("TextButton", {
+    Size = UDim2.new(0, 30, 0, 30),
+    AnchorPoint = Vector2.new(1, 0),
+    Position = UDim2.new(1, -46, 0, 8),
+    BackgroundColor3 = Colors.InputBg,
+    Text = "?",
+    TextColor3 = Colors.Blue,
+    Font = Enum.Font.GothamBold,
+    TextSize = 16,
+    Parent = MainFrame
+})
+addCorner(HelpBtn, 6)
+
 local MinBtn = createInstance("TextButton", {
     Size = UDim2.new(0, 30, 0, 30),
     AnchorPoint = Vector2.new(1, 0),
@@ -632,7 +645,7 @@ addCorner(MinBtn, 6)
 
 --// Input Area
 local LeftPad = 8 + BtnWidth + 8
-local RightPad = 8 + 30 + 8
+local RightPad = 8 + 30 + 8 + 30 + 8  -- Mode + Help + Minimize buttons
 
 local InputContainer = createInstance("Frame", {
     Size = UDim2.new(1, -(LeftPad + RightPad), 0, 30),
@@ -769,9 +782,9 @@ local QuickActions = {
     {text = "Speed", prompt = "make me fast", color = Colors.Green},
     {text = "ESP", prompt = "esp", color = Colors.Purple},
     {text = "Noclip", prompt = "noclip", color = Colors.Orange},
-    {text = "God", prompt = "god mode", color = Colors.Green},
+    {text = "Jump", prompt = "infinite jump", color = Colors.Green},
     {text = "Teleport", prompt = "goto random", color = Colors.Blue},
-    {text = "Kill", prompt = "kill nearest", color = Colors.Red},
+    {text = "Invisible", prompt = "make me invisible", color = Colors.Purple},
     {text = "Reset", prompt = "reset", color = Colors.TextDim},
     {text = "Anti-Lag", prompt = "antilag", color = Colors.Orange},
 }
@@ -848,7 +861,7 @@ local TutorialSteps = {
     {
         title = "What It Does",
         icon = "🧠",
-        content = "<b>Smart IY translates your words into commands:</b>\n\n<font color='#ff9128'>\"Kill the guy in red\"</font> → <font color='#40e682'>;kill PlayerName</font>\n\n<font color='#ff9128'>\"Make me super fast\"</font> → <font color='#40e682'>;speed 100</font>\n\n<font color='#ff9128'>\"Teleport to spawn\"</font> → <font color='#40e682'>;goto spawn</font>\n\nIt even figures out <b>which player</b> you mean!",
+        content = "<b>Smart IY translates your words into commands:</b>\n\n<font color='#ff9128'>\"Make me fly\"</font> → <font color='#40e682'>;fly</font>\n\n<font color='#ff9128'>\"Make me super fast\"</font> → <font color='#40e682'>;speed 100</font>\n\n<font color='#ff9128'>\"Teleport to that player\"</font> → <font color='#40e682'>;goto PlayerName</font>\n\nIt even figures out <b>which player</b> you mean!",
         button = "Next →"
     },
     {
@@ -1112,6 +1125,49 @@ end)
 
 SkipBtn.MouseButton1Click:Connect(function()
     completeTutorial()
+end)
+
+-- Function to show tutorial (for help button)
+local function showTutorial()
+    CurrentStep = 1
+    TutorialCompleted = false
+    
+    -- Reset tutorial UI
+    local data = TutorialSteps[1]
+    TutorialIcon.Text = data.icon
+    TutorialTitle.Text = data.title
+    TutorialContent.Text = data.content
+    NextBtn.Text = data.button
+    NextBtn.BackgroundColor3 = Colors.Orange
+    NextBtn.Size = UDim2.new(0, 120, 0, 36)
+    NextBtn.Position = UDim2.new(1, -140, 1, -55)
+    BackBtn.Visible = false
+    StepCounter.Text = "Step 1 of " .. TotalSteps
+    ProgressFill.Size = UDim2.new(1 / TotalSteps, 0, 1, 0)
+    
+    -- Reset transparency
+    TutorialFrame.BackgroundTransparency = 0
+    TutorialIcon.TextTransparency = 0
+    TutorialTitle.TextTransparency = 0
+    TutorialContent.TextTransparency = 0
+    
+    for _, child in ipairs(TutorialFrame:GetDescendants()) do
+        if child:IsA("Frame") then
+            child.BackgroundTransparency = child.Name == "ProcessingGlow" and 1 or 0
+        elseif child:IsA("TextButton") then
+            child.BackgroundTransparency = 0
+            child.TextTransparency = 0
+        elseif child:IsA("TextLabel") then
+            child.TextTransparency = 0
+        end
+    end
+    
+    TutorialFrame.Visible = true
+end
+
+-- Help button shows tutorial
+HelpBtn.MouseButton1Click:Connect(function()
+    showTutorial()
 end)
 
 -- Initially hide main GUI until tutorial is complete
