@@ -85,6 +85,7 @@ The main interface consists of three primary elements:
 |---------|----------|
 | **Input Box** | Type your command or natural language request |
 | **Mode Button** | Toggle between CMD (orange) and CHAT (blue) modes |
+| **Help (?)** | Reopen the interactive tutorial anytime |
 | **Minimize (-)** | Collapse to floating icon |
 
 ### CMD Mode (Orange)
@@ -118,8 +119,8 @@ Mobile users can tap the ⚡ button to reveal a 3x3 grid of common commands:
 | Row 1 | Row 2 | Row 3 |
 |-------|-------|-------|
 | Fly | Speed | ESP |
-| Noclip | God | Teleport |
-| Kill | Reset | Anti-Lag |
+| Noclip | Jump | Teleport |
+| Invisible | Reset | Anti-Lag |
 
 ---
 
@@ -200,6 +201,18 @@ Version 1.2.1 introduced an event-based bridge using BindableEvents, replacing t
 | **Quick Actions** | Mobile-optimized one-tap command grid |
 | **Interactive Tutorial** | 8-step onboarding that teaches all features before unlocking GUI |
 
+### UX Enhancements
+
+The interface was enhanced for a more engaging experience:
+
+| Enhancement | Description |
+|-------------|-------------|
+| **Fun Messages** | Varied status messages with personality ("Nailed it!", "Consulting the AI...") |
+| **Random Tips** | Helpful tips shown after 25% of successful commands |
+| **Button Animations** | Hover effects, bounce animations, and visual feedback |
+| **Pulse Effect** | Open button glows to draw attention when visible |
+| **Engaging Placeholders** | "Tell me what to do..." instead of generic text |
+
 ### Code Quality Improvements
 
 The codebase was refactored for efficiency and maintainability:
@@ -226,17 +239,17 @@ The codebase was refactored for efficiency and maintainability:
 | **Settings Panel** | In-game configuration without editing code |
 | **Conversation Memory** | Context-aware follow-up commands |
 
-See the full [Roadmap](RoadMap.md) for detailed plans.
+See the full [ROADMAP.md](docs/ROADMAP.md) for detailed plans.
 
 ---
 
 ## Changelog
 
-See [Changelog.md](Changelog.md) for the complete version history.
+See [CHANGELOG.md](docs/CHANGELOG.md) for the complete version history.
 
 ### Recent Updates
 
-**V1.2.1** - Event-based bridge, intelligent caching with management commands, fuzzy targeting, visual feedback, mobile quick actions, interactive 8-step tutorial, code optimization
+**V1.2.1** - Event-based bridge, intelligent caching, fuzzy targeting, visual feedback, mobile quick actions, interactive tutorial, fun messages system, button animations, engaging UX
 
 **V1.2.0** - Split-context strategy, predictive dropdown, smart keybinds, complete command database
 

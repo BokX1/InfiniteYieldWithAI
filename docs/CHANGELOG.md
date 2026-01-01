@@ -27,6 +27,11 @@ Features currently in development for the next release.
 | **Cache Management** | `clearcache` wipes learned commands; `cacheinfo` shows statistics |
 | **Interactive Tutorial** | 8-step onboarding covering all features before GUI unlock |
 | **Help Button** | Reopen tutorial anytime via "?" button in main GUI |
+| **Fun Messages System** | Varied status messages with personality (Ready, Thinking, Success, etc.) |
+| **Random Tips** | Helpful tips displayed after 25% of successful executions |
+| **Button Animations** | Hover effects on Help/Minimize buttons, bounce on Mode switch |
+| **Open Button Pulse** | Glowing pulse animation when floating button is visible |
+| **Quick Action Effects** | Hover and press animations for mobile command grid |
 
 ### Changed
 
@@ -37,6 +42,8 @@ Features currently in development for the next release.
 | **Target Resolution** | Added prefix, contains, and fuzzy matching fallback |
 | **Tutorial** | Multi-step walkthrough replaces single-screen modal |
 | **Quick Actions** | Replaced God/Kill with Jump/Invisible for universal compatibility |
+| **Placeholder Text** | More engaging prompts ("Tell me what to do..." instead of "Enter command...") |
+| **Status Messages** | Friendlier, more varied feedback with personality |
 
 ### Technical
 
