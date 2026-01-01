@@ -604,7 +604,7 @@ local function setThinkingState(retry)
     pulse:Play()
 end
 
--- [G] CORE QUERY LOGIC
+-- [G] CORE QUERY LOGIC (STRICT PURITY + IDENTITY FIX)
 function queryAI(promptText, retryContext, attemptCount)
     if promptText == "" then return end
     
@@ -640,58 +640,57 @@ function queryAI(promptText, retryContext, attemptCount)
     updateStatus("Thinking...", Colors.Orange)
 
     -- [[ 3. SPLIT CONTEXT CONSTRUCTION ]]
-    -- Message 1: STATIC (Cached & Cheap).
     local staticSystem = CONFIG.CommandPrompt
-
-    -- Message 2: DYNAMIC (The Override).
     local dynamicContext = ""
     
     if IS_CHAT_MODE then
         local displayName = (GameName ~= "Loading...") and GameName or "this game"
         
-        -- [CRITICAL FIX] "System Override" Pattern
-        -- This forces the AI to IGNORE the syntax task from Message 1 and behave like a chatbot.
+        -- [CHAT FIX] Force Identity & Ban Syntax
         dynamicContext = string.format([[
-            [SYSTEM OVERRIDE: CHAT MODE ACTIVE]
-            INSTRUCTION: Disregard the "Translate to syntax" task from the previous message.
-            
-            NEW ROLE: You are a helpful, witty, and friendly Game Assistant.
-            
-            CURRENT CONTEXT:
-            - User Name: '%s'
-            - Game Name: '%s'
-            
-            TASKS:
-            1. Answer questions naturally. If asked "whoami", use the User Name. If asked "whereami", use the Game Name.
-            2. Analyze the user's tone (Gen Z slang, formal, rude, etc.) and MIRROR it exactly.
-            3. Do NOT output commands starting with ';'. Just chat.
-            
-            Constraint: Keep answer under 30 words.
-        ]], User.Name, displayName)
+            [SYSTEM OVERRIDE: CHAT MODE]
+            IGNORE the "Translate" task.
+            ROLE: Helpful Game Assistant.
+            CONTEXT: User='%s', Game='%s'.
+            RULES:
+            1. If asked "whoami", say "You are %s".
+            2. If asked "whereami", say "You are in %s".
+            3. MIRROR user's tone (slang/formal).
+            4. OUTPUT TEXT ONLY. NO COMMANDS.
+            5. Keep it short (under 25 words).
+        ]], User.Name, displayName, User.Name, displayName)
         
     else
-        -- COMMAND MODE (Standard)
-        dynamicContext = "MODE: COMMAND SYNTAX."
+        -- [CMD FIX] Force Strict Syntax & Ban Chat
+        dynamicContext = [[
+            MODE: STRICT EXECUTION.
+            RULES:
+            1. Output ONLY the command string.
+            2. NO conversational filler (e.g., "Here is...", "Sure!").
+            3. NO Markdown (e.g., `code blocks`).
+            4. If the user says "make me fast", output "speed 100" (NOT "speed 100 me").
+            5. If command not found, output nothing.
+        ]]
         
         if needsPlayerContext(promptText) then
-             dynamicContext = dynamicContext .. " Active Players: [" .. getPlayerList() .. "]."
+             dynamicContext = dynamicContext .. " Players: [" .. getPlayerList() .. "]."
         end
         
         if retryContext then
-            dynamicContext = dynamicContext .. " PREVIOUS ERROR: " .. retryContext
+            dynamicContext = dynamicContext .. " FIX ERROR: " .. retryContext
         end
     end
 
     -- [[ 4. PAYLOAD CONSTRUCTION ]]
     local body = HttpService:JSONEncode({
-        model = CONFIG.Model, -- "openai"
+        model = CONFIG.Model, 
         messages = { 
-            { role = "system", content = staticSystem },   -- CACHED (Message 1)
-            { role = "system", content = dynamicContext }, -- OVERRIDE (Message 2)
-            { role = "user", content = promptText }        -- INPUT (Message 3)
+            { role = "system", content = staticSystem },   -- CACHED
+            { role = "system", content = dynamicContext }, -- STRICT RULES
+            { role = "user", content = promptText }        -- INPUT
         },
-        -- Higher temperature (0.85) for Chat ensures personality shines through
-        temperature = IS_CHAT_MODE and 0.85 or 0.2 
+        -- Low temp for CMD to stop hallucinations, High for CHAT for personality
+        temperature = IS_CHAT_MODE and 0.85 or 0.1 
     })
 
     -- [[ 5. ASYNC REQUEST ]]
@@ -706,21 +705,32 @@ function queryAI(promptText, retryContext, attemptCount)
 
         if success and response.StatusCode == 200 then
             local data = HttpService:JSONDecode(response.Body)
-            
             local aiOutput = ""
             if data.choices and data.choices[1] and data.choices[1].message then
                 aiOutput = data.choices[1].message.content
             end
             
+            -- [SANITIZATION LAYER]
+            aiOutput = aiOutput:gsub("`", ""):gsub("Here is the command:", ""):gsub("^%s*", ""):gsub("%s*$", "")
+
             if IS_CHAT_MODE then
-                 -- Chat Mode: Display response
-                 executeBridge(aiOutput); resetVisuals()
+                 -- Clean newlines so 'notify' doesn't break
+                 local safeChat = aiOutput:gsub("\n", " "):gsub('"', "'")
+                 executeBridge(safeChat); resetVisuals()
                  InputBox.Text = ""
             else
-                -- Command Mode: Execute syntax
-                local cleanCmd = aiOutput:gsub("^%s*", ""):gsub("%s*$", "")
+                -- CMD Mode: Remove leading ";" if AI added it
+                local cleanCmd = aiOutput
                 if cleanCmd:sub(1,1) == ";" then cleanCmd = cleanCmd:sub(2) end
                 
+                -- Check for empty/hallucinated outputs
+                if cleanCmd == "" or cleanCmd:lower():sub(1,4) == "sure" then
+                     updateStatus("AI Uncertain", Colors.Orange)
+                     task.wait(1)
+                     resetVisuals()
+                     return
+                end
+
                 local isValid, errorMsg = validateCommandTarget(cleanCmd)
                 if isValid then 
                     executeBridge(cleanCmd, "AI")
