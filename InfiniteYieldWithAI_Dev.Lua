@@ -1,8 +1,9 @@
 --[[ 
-    SMART INFINITE YIELD - V1.2 STABLE
-    - Architecture: Context Awareness
+    SMART INFINITE YIELD - V1.3 STABLE
+    - Architecture: Context Awareness + Event-Based Bridge
     - Logic: VolQ5 & Pollinations.AI (LLM Model)
     - Status: Stable 
+    - New: Enhanced Bridge, Command Caching, Fuzzy Targeting, Visual Feedback, Command Preview, Mobile Quick Actions
 ]]
     
 -- 1. CONFIGURATION
@@ -13,6 +14,11 @@ local CONFIG = {
     Endpoint = "https://infiniteyieldai.ahazihak03.workers.dev/v1/chat/completions",
     Model = "openai",
     MaxRetries = 2, 
+    
+    -- [CACHE SETTINGS]
+    CacheEnabled = true,
+    CacheFile = "SIY_CommandCache.json",
+    MaxCacheEntries = 100,
     
     -- [CACHE OPTIMIZATION: ~3500 Tokens] 
     -- This prompt includes the FULL Infinite Yield command database and advanced logic rules.
@@ -231,6 +237,7 @@ local HttpService = game:GetService("HttpService")
 local UserInputService = game:GetService("UserInputService")
 local TweenService = game:GetService("TweenService")
 local CoreGui = game:GetService("CoreGui")
+local RunService = game:GetService("RunService")
 
 local User = Players.LocalPlayer or Players.PlayerAdded:Wait()
 local GameName = "Loading..." 
@@ -248,29 +255,150 @@ end)
 local httpRequest = (syn and syn.request) or (http and http.request) or http_request or (fluxus and fluxus.request) or request
 if not httpRequest then warn("SIY: Executor incompatible.") end
 
--- 3. THE BRIDGE (PRESERVED & STABLE)
+-- ============================================
+-- 3. INTELLIGENT COMMAND CACHE SYSTEM (NEW)
+-- ============================================
+local CommandCache = {}
+
+local function loadCache()
+    if not CONFIG.CacheEnabled then return end
+    local success, content = pcall(function()
+        if readfile then
+            return readfile(CONFIG.CacheFile)
+        end
+        return nil
+    end)
+    if success and content then
+        local parsed = pcall(function() return HttpService:JSONDecode(content) end)
+        if parsed then
+            CommandCache = HttpService:JSONDecode(content)
+        end
+    end
+end
+
+local function saveCache()
+    if not CONFIG.CacheEnabled then return end
+    pcall(function()
+        if writefile then
+            writefile(CONFIG.CacheFile, HttpService:JSONEncode(CommandCache))
+        end
+    end)
+end
+
+local function normalizeInput(text)
+    -- Normalize input for cache key: lowercase, trim, remove extra spaces
+    return text:lower():gsub("^%s+", ""):gsub("%s+$", ""):gsub("%s+", " ")
+end
+
+local function getCachedCommand(input)
+    local key = normalizeInput(input)
+    return CommandCache[key]
+end
+
+local function cacheCommand(input, output)
+    if not CONFIG.CacheEnabled then return end
+    local key = normalizeInput(input)
+    
+    -- Don't cache if output is empty or uncertain
+    if not output or output == "" or output:lower():find("sure") then return end
+    
+    -- Enforce max cache entries (LRU-style: remove oldest)
+    local count = 0
+    for _ in pairs(CommandCache) do count = count + 1 end
+    
+    if count >= CONFIG.MaxCacheEntries then
+        -- Remove first entry (simple approach)
+        for k, _ in pairs(CommandCache) do
+            CommandCache[k] = nil
+            break
+        end
+    end
+    
+    CommandCache[key] = {
+        command = output,
+        timestamp = os.time()
+    }
+    saveCache()
+end
+
+-- Load cache on startup
+loadCache()
+
+-- ============================================
+-- 4. ENHANCED BRIDGE SYSTEM (EVENT-BASED)
+-- ============================================
 local IY_Interface = nil
+local BridgeReady = Instance.new("BindableEvent")
+local BridgeConnected = false
 
 task.spawn(function()
+    -- Check if bridge already exists
     if getgenv().PseudoBridge then 
         IY_Interface = getgenv().PseudoBridge
+        BridgeConnected = true
+        BridgeReady:Fire()
         return 
     end
 
+    -- Load Infinite Yield if not present
     if not game.CoreGui:FindFirstChild("InfiniteYield") then
-        local Success, IY_Source = pcall(function() return game:HttpGet("https://raw.githubusercontent.com/EdgeIY/infiniteyield/master/source") end)
+        local Success, IY_Source = pcall(function() 
+            return game:HttpGet("https://raw.githubusercontent.com/EdgeIY/infiniteyield/master/source") 
+        end)
         if Success then
-            local BridgeCode = [[ getgenv().PseudoBridge = { Exec = function(cmd) if execCmd then execCmd(cmd) end end } ]]
+            -- Enhanced bridge code with event notification
+            local BridgeCode = [[ 
+                getgenv().PseudoBridge = { 
+                    Exec = function(cmd) if execCmd then execCmd(cmd) end end,
+                    Ready = true
+                } 
+            ]]
             loadstring(IY_Source .. "\n" .. BridgeCode)()
         end
     end
     
+    -- Event-based waiting with timeout
     local timeout = 0
-    repeat task.wait(0.2); timeout = timeout + 0.2 until getgenv().PseudoBridge or timeout > 10
-    IY_Interface = getgenv().PseudoBridge
+    local checkInterval = 0.1
+    
+    while not getgenv().PseudoBridge and timeout < 10 do
+        task.wait(checkInterval)
+        timeout = timeout + checkInterval
+    end
+    
+    if getgenv().PseudoBridge then
+        IY_Interface = getgenv().PseudoBridge
+        BridgeConnected = true
+        BridgeReady:Fire()
+    else
+        warn("SIY: Bridge connection timeout")
+    end
 end)
 
--- 4. GUI CONSTRUCTION (WITH GOOGLE-STYLE DROPDOWN)
+-- Helper function to wait for bridge
+local function waitForBridge(timeout)
+    if BridgeConnected then return true end
+    
+    local connection
+    local result = false
+    
+    connection = BridgeReady.Event:Connect(function()
+        result = true
+    end)
+    
+    local waited = 0
+    while not result and waited < (timeout or 5) do
+        task.wait(0.1)
+        waited = waited + 0.1
+    end
+    
+    connection:Disconnect()
+    return BridgeConnected
+end
+
+-- ============================================
+-- 5. GUI CONSTRUCTION
+-- ============================================
 if CoreGui:FindFirstChild("SmartInfiniteYieldGUI") then CoreGui.SmartInfiniteYieldGUI:Destroy() end
 
 local SIY_Screen = Instance.new("ScreenGui")
@@ -286,11 +414,13 @@ local IsMobile = UIS.TouchEnabled and not UIS.MouseEnabled
 local Colors = {
     Background = Color3.fromRGB(20, 20, 20),
     InputBg    = Color3.fromRGB(30, 30, 30),
-    DropdownBg = Color3.fromRGB(25, 25, 25), -- Slightly distinct
+    DropdownBg = Color3.fromRGB(25, 25, 25),
     Border     = Color3.fromRGB(60, 60, 60),
     Orange     = Color3.fromRGB(255, 145, 40), 
     Blue       = Color3.fromRGB(50, 180, 255), 
     Green      = Color3.fromRGB(40, 230, 130),
+    Red        = Color3.fromRGB(255, 80, 80),
+    Purple     = Color3.fromRGB(180, 100, 255),
     Text       = Color3.fromRGB(240, 240, 240),
     TextDim    = Color3.fromRGB(150, 150, 150),
     Status     = Color3.fromRGB(200, 200, 200)
@@ -352,7 +482,7 @@ enableDrag(OpenButton)
 local MainFrame = Instance.new("Frame")
 MainFrame.Name = "MainFrame"
 MainFrame.AnchorPoint = Vector2.new(0.5, 0) 
-local MainSize = IsMobile and UDim2.new(0.8, 0, 0, 60) or UDim2.new(0, 500, 0, 65)
+local MainSize = IsMobile and UDim2.new(0.9, 0, 0, 60) or UDim2.new(0, 500, 0, 65)
 MainFrame.Size = MainSize
 MainFrame.Position = UDim2.new(0.5, 0, 0.15, 0)
 MainFrame.BackgroundColor3 = Colors.Background
@@ -362,6 +492,60 @@ addCorner(MainFrame, 8)
 enableDrag(MainFrame)
 
 local MainStroke = addStroke(MainFrame, Colors.Orange, 1)
+
+-- ============================================
+-- [NEW] AI PROCESSING VISUAL INDICATOR
+-- ============================================
+local ProcessingGlow = Instance.new("Frame")
+ProcessingGlow.Name = "ProcessingGlow"
+ProcessingGlow.Size = UDim2.new(1, 10, 1, 10)
+ProcessingGlow.Position = UDim2.new(0, -5, 0, -5)
+ProcessingGlow.BackgroundTransparency = 1
+ProcessingGlow.ZIndex = 0
+ProcessingGlow.Parent = MainFrame
+
+local GlowGradient = Instance.new("UIGradient")
+GlowGradient.Color = ColorSequence.new({
+    ColorSequenceKeypoint.new(0, Colors.Orange),
+    ColorSequenceKeypoint.new(0.5, Colors.Purple),
+    ColorSequenceKeypoint.new(1, Colors.Blue)
+})
+GlowGradient.Rotation = 0
+GlowGradient.Parent = ProcessingGlow
+
+local GlowCorner = Instance.new("UICorner")
+GlowCorner.CornerRadius = UDim.new(0, 12)
+GlowCorner.Parent = ProcessingGlow
+
+local GlowStroke = Instance.new("UIStroke")
+GlowStroke.Color = Colors.Orange
+GlowStroke.Thickness = 3
+GlowStroke.Transparency = 1
+GlowStroke.Parent = ProcessingGlow
+
+-- Glow animation connection (will be set later)
+local glowConnection = nil
+
+local function startGlowAnimation()
+    if glowConnection then return end
+    GlowStroke.Transparency = 0
+    local rotation = 0
+    glowConnection = RunService.Heartbeat:Connect(function(dt)
+        rotation = (rotation + dt * 100) % 360
+        GlowGradient.Rotation = rotation
+        -- Pulse effect
+        local pulse = math.sin(tick() * 3) * 0.3 + 0.5
+        GlowStroke.Transparency = pulse
+    end)
+end
+
+local function stopGlowAnimation()
+    if glowConnection then
+        glowConnection:Disconnect()
+        glowConnection = nil
+    end
+    GlowStroke.Transparency = 1
+end
 
 -- 3. Controls
 local BtnWidth = IsMobile and 55 or 80
@@ -399,7 +583,7 @@ local RightPad = 8 + 30 + 8
 InputContainer.Size = UDim2.new(1, -(LeftPad+RightPad), 0, 30)
 InputContainer.Position = UDim2.new(0, LeftPad, 0, 8)
 InputContainer.BackgroundColor3 = Colors.InputBg
-InputContainer.ZIndex = 2 -- [[ FIX: Prioritize Input over Status ]]
+InputContainer.ZIndex = 2
 InputContainer.Parent = MainFrame
 addCorner(InputContainer, 6)
 
@@ -417,11 +601,11 @@ InputBox.TextXAlignment = Enum.TextXAlignment.Left
 InputBox.ClearTextOnFocus = false
 InputBox.Parent = InputContainer
 
--- [[ NEW: SEARCH SUGGESTION DROPDOWN ]]
+-- [[ SEARCH SUGGESTION DROPDOWN ]]
 local SuggestionFrame = Instance.new("Frame")
 SuggestionFrame.Name = "Dropdown"
-SuggestionFrame.Size = UDim2.new(1, 0, 0, 0) -- Height handled dynamically
-SuggestionFrame.Position = UDim2.new(0, 0, 1, 5) -- Hangs below input
+SuggestionFrame.Size = UDim2.new(1, 0, 0, 0)
+SuggestionFrame.Position = UDim2.new(0, 0, 1, 5)
 SuggestionFrame.BackgroundColor3 = Colors.DropdownBg
 SuggestionFrame.BorderSizePixel = 0
 SuggestionFrame.Visible = false
@@ -433,6 +617,48 @@ addStroke(SuggestionFrame, Colors.Border, 1)
 local ListLayout = Instance.new("UIListLayout")
 ListLayout.SortOrder = Enum.SortOrder.LayoutOrder
 ListLayout.Parent = SuggestionFrame
+
+-- ============================================
+-- [NEW] COMMAND PREVIEW BAR
+-- ============================================
+local PreviewBar = Instance.new("Frame")
+PreviewBar.Name = "PreviewBar"
+PreviewBar.Size = UDim2.new(1, -20, 0, 20)
+PreviewBar.Position = UDim2.new(0, 10, 1, -25)
+PreviewBar.BackgroundColor3 = Colors.InputBg
+PreviewBar.BackgroundTransparency = 0.5
+PreviewBar.Visible = false
+PreviewBar.ZIndex = 3
+PreviewBar.Parent = MainFrame
+addCorner(PreviewBar, 4)
+
+local PreviewLabel = Instance.new("TextLabel")
+PreviewLabel.Name = "PreviewText"
+PreviewLabel.Size = UDim2.new(1, -10, 1, 0)
+PreviewLabel.Position = UDim2.new(0, 5, 0, 0)
+PreviewLabel.BackgroundTransparency = 1
+PreviewLabel.Text = ""
+PreviewLabel.TextColor3 = Colors.Green
+PreviewLabel.Font = Enum.Font.Code
+PreviewLabel.TextSize = 11
+PreviewLabel.TextXAlignment = Enum.TextXAlignment.Left
+PreviewLabel.TextTruncate = Enum.TextTruncate.AtEnd
+PreviewLabel.Parent = PreviewBar
+
+local function showPreview(command)
+    PreviewLabel.Text = "→ " .. command
+    PreviewBar.Visible = true
+    -- Auto-hide after 3 seconds
+    task.delay(3, function()
+        if PreviewLabel.Text == "→ " .. command then
+            PreviewBar.Visible = false
+        end
+    end)
+end
+
+local function hidePreview()
+    PreviewBar.Visible = false
+end
 
 -- Status Bar
 local StatusLabel = Instance.new("TextLabel")
@@ -448,8 +674,105 @@ StatusLabel.TextXAlignment = Enum.TextXAlignment.Left
 StatusLabel.TextTransparency = 0.5
 StatusLabel.Parent = MainFrame
 
--- 4. Tutorial Modal (UPDATED)
-local TutSize = IsMobile and UDim2.new(0.8, 0, 0, 200) or UDim2.new(0, 400, 0, 220)
+-- ============================================
+-- [NEW] MOBILE QUICK ACTIONS GRID
+-- ============================================
+local QuickActionsFrame = Instance.new("Frame")
+QuickActionsFrame.Name = "QuickActions"
+QuickActionsFrame.Size = UDim2.new(1, -16, 0, 0)
+QuickActionsFrame.Position = UDim2.new(0, 8, 1, 5)
+QuickActionsFrame.BackgroundColor3 = Colors.Background
+QuickActionsFrame.BackgroundTransparency = 0.1
+QuickActionsFrame.Visible = false
+QuickActionsFrame.ClipsDescendants = true
+QuickActionsFrame.Parent = MainFrame
+addCorner(QuickActionsFrame, 8)
+addStroke(QuickActionsFrame, Colors.Border, 1)
+
+local QuickActionsGrid = Instance.new("UIGridLayout")
+QuickActionsGrid.CellSize = UDim2.new(0.33, -4, 0, 35)
+QuickActionsGrid.CellPadding = UDim2.new(0, 4, 0, 4)
+QuickActionsGrid.SortOrder = Enum.SortOrder.LayoutOrder
+QuickActionsGrid.Parent = QuickActionsFrame
+
+local QuickActionsPadding = Instance.new("UIPadding")
+QuickActionsPadding.PaddingTop = UDim.new(0, 6)
+QuickActionsPadding.PaddingBottom = UDim.new(0, 6)
+QuickActionsPadding.PaddingLeft = UDim.new(0, 6)
+QuickActionsPadding.PaddingRight = UDim.new(0, 6)
+QuickActionsPadding.Parent = QuickActionsFrame
+
+-- Quick action definitions
+local QuickActions = {
+    {text = "Fly", prompt = "fly", color = Colors.Blue},
+    {text = "Speed", prompt = "make me fast", color = Colors.Green},
+    {text = "ESP", prompt = "esp", color = Colors.Purple},
+    {text = "Noclip", prompt = "noclip", color = Colors.Orange},
+    {text = "God", prompt = "god mode", color = Colors.Green},
+    {text = "Teleport", prompt = "goto random", color = Colors.Blue},
+    {text = "Kill", prompt = "kill nearest", color = Colors.Red},
+    {text = "Reset", prompt = "reset", color = Colors.TextDim},
+    {text = "Anti-Lag", prompt = "antilag", color = Colors.Orange},
+}
+
+-- Create quick action buttons
+for i, action in ipairs(QuickActions) do
+    local btn = Instance.new("TextButton")
+    btn.Name = "QuickAction_" .. action.text
+    btn.Size = UDim2.new(0, 0, 0, 0)
+    btn.BackgroundColor3 = action.color
+    btn.BackgroundTransparency = 0.7
+    btn.Text = action.text
+    btn.TextColor3 = Colors.Text
+    btn.Font = Enum.Font.GothamBold
+    btn.TextSize = 11
+    btn.LayoutOrder = i
+    btn.Parent = QuickActionsFrame
+    addCorner(btn, 4)
+    
+    btn.MouseButton1Click:Connect(function()
+        InputBox.Text = action.prompt
+        InputBox:CaptureFocus()
+        task.wait(0.1)
+        InputBox:ReleaseFocus(true)
+    end)
+end
+
+-- Calculate grid height
+local rows = math.ceil(#QuickActions / 3)
+local gridHeight = (rows * 35) + ((rows - 1) * 4) + 12
+
+-- Quick Actions Toggle Button (Mobile Only)
+local QuickActionsToggle = Instance.new("TextButton")
+QuickActionsToggle.Name = "QuickActionsToggle"
+QuickActionsToggle.Size = UDim2.new(0, 25, 0, 25)
+QuickActionsToggle.Position = UDim2.new(1, -40, 0, 10)
+QuickActionsToggle.BackgroundColor3 = Colors.Purple
+QuickActionsToggle.BackgroundTransparency = 0.5
+QuickActionsToggle.Text = "⚡"
+QuickActionsToggle.TextColor3 = Colors.Text
+QuickActionsToggle.Font = Enum.Font.GothamBold
+QuickActionsToggle.TextSize = 14
+QuickActionsToggle.Visible = IsMobile
+QuickActionsToggle.Parent = MainFrame
+addCorner(QuickActionsToggle, 6)
+
+local quickActionsOpen = false
+QuickActionsToggle.MouseButton1Click:Connect(function()
+    quickActionsOpen = not quickActionsOpen
+    if quickActionsOpen then
+        QuickActionsFrame.Visible = true
+        TweenService:Create(QuickActionsFrame, TweenInfo.new(0.2), {Size = UDim2.new(1, -16, 0, gridHeight)}):Play()
+    else
+        TweenService:Create(QuickActionsFrame, TweenInfo.new(0.2), {Size = UDim2.new(1, -16, 0, 0)}):Play()
+        task.delay(0.2, function()
+            if not quickActionsOpen then QuickActionsFrame.Visible = false end
+        end)
+    end
+end)
+
+-- 4. Tutorial Modal
+local TutSize = IsMobile and UDim2.new(0.85, 0, 0, 240) or UDim2.new(0, 420, 0, 250)
 local TutorialFrame = Instance.new("Frame")
 TutorialFrame.Name = "Tutorial"
 TutorialFrame.AnchorPoint = Vector2.new(0.5, 0.5)
@@ -465,22 +788,23 @@ local TutTitle = Instance.new("TextLabel")
 TutTitle.Size = UDim2.new(1, 0, 0, 30)
 TutTitle.Position = UDim2.new(0, 0, 0, 10)
 TutTitle.BackgroundTransparency = 1
-TutTitle.Text = "Smart IY v1.2 Latest"
+TutTitle.Text = "Smart IY v1.3 Latest"
 TutTitle.TextColor3 = Colors.Text
 TutTitle.Font = Enum.Font.GothamBold
 TutTitle.TextSize = 18
 TutTitle.Parent = TutorialFrame
 
 local TutDesc = Instance.new("TextLabel")
-TutDesc.Size = UDim2.new(1, -30, 1, -80)
+TutDesc.Size = UDim2.new(1, -30, 1, -90)
 TutDesc.Position = UDim2.new(0, 15, 0, 40)
 TutDesc.BackgroundTransparency = 1
-TutDesc.Text = "<b>CONTROLS:</b>\n• Toggle Menu: <font color='#40e682'><b>Right Shift</b></font>\n• Autocomplete: <font color='#40e682'><b>Click Suggestion</b></font>\n\n<b>MODES:</b>\n• <b>CMD:</b> 'Fly me' -> ';fly'\n• <b>CHAT:</b> 'How do I win?' -> AI Advice"
+TutDesc.Text = "<b>CONTROLS:</b>\n• Toggle Menu: <font color='#40e682'><b>Right Shift</b></font>\n• Autocomplete: <font color='#40e682'><b>Click Suggestion</b></font>\n\n<b>MODES:</b>\n• <b>CMD:</b> 'Fly me' -> ';fly'\n• <b>CHAT:</b> 'How do I win?' -> AI Advice\n\n<b>NEW IN V1.3:</b>\n• <font color='#b464ff'>Smart Caching</font> - Learns your phrases\n• <font color='#b464ff'>Fuzzy Targeting</font> - 'kill valk' -> Valkorym\n• <font color='#b464ff'>Quick Actions</font> - One-tap commands (Mobile)"
 TutDesc.TextColor3 = Colors.TextDim
 TutDesc.Font = Enum.Font.Gotham
-TutDesc.TextSize = 14
+TutDesc.TextSize = 13
 TutDesc.RichText = true
 TutDesc.TextWrapped = true
+TutDesc.TextYAlignment = Enum.TextYAlignment.Top
 TutDesc.Parent = TutorialFrame
 
 local Trademark = Instance.new("TextLabel")
@@ -495,7 +819,7 @@ Trademark.Parent = TutorialFrame
 
 local TutBtn = Instance.new("TextButton")
 TutBtn.Size = UDim2.new(0, 100, 0, 32)
-TutBtn.Position = UDim2.new(0.5, -50, 1, -45)
+TutBtn.Position = UDim2.new(0.5, -50, 1, -50)
 TutBtn.BackgroundColor3 = Colors.Green
 TutBtn.Text = "Start"
 TutBtn.TextColor3 = Color3.new(0,0,0)
@@ -513,13 +837,14 @@ TutBtn.MouseButton1Click:Connect(function()
     TutorialFrame.Visible = false
 end)
 
--- 5. LOGIC ENGINE (COMPLETE FAST MAP & TOGGLES)
+-- ============================================
+-- 6. LOGIC ENGINE
+-- ============================================
 local IS_CHAT_MODE = false
-local BindSystem = {} -- Format: {Key = {Current="fly", Next="unfly"}}
+local BindSystem = {}
 
--- [A] TOGGLE DICTIONARY (Automatic Inverses)
+-- [A] TOGGLE DICTIONARY
 local ToggleMap = {
-    -- Movement
     ["fly"] = "unfly",       ["unfly"] = "fly",
     ["noclip"] = "clip",     ["clip"] = "noclip", ["noclip"] = "unnoclip", ["unnoclip"] = "noclip",
     ["float"] = "unfloat",   ["unfloat"] = "float",
@@ -530,8 +855,6 @@ local ToggleMap = {
     ["cframefly"] = "uncframefly", ["uncframefly"] = "cframefly",
     ["spam"] = "unspam",     ["unspam"] = "spam",
     ["pmspam"] = "unpmspam", ["unpmspam"] = "pmspam",
-    
-    -- Visuals
     ["esp"] = "noesp",       ["noesp"] = "esp",
     ["chams"] = "nochams",   ["nochams"] = "chams",
     ["xray"] = "noxray",     ["noxray"] = "xray",
@@ -539,14 +862,10 @@ local ToggleMap = {
     ["shadows"] = "noshadows", ["noshadows"] = "shadows",
     ["fog"] = "nofog",       ["nofog"] = "fog",
     ["light"] = "nolight",   ["nolight"] = "light",
-    
-    -- Camera
     ["spectate"] = "unspectate", ["unspectate"] = "spectate",
     ["freecam"] = "unfreecam",   ["unfreecam"] = "freecam",
     ["fc"] = "unfc",             ["unfc"] = "fc",
     ["shiftlock"] = "unshiftlock",
-    
-    -- Character & Actions
     ["god"] = "ungod",       ["ungod"] = "god",
     ["invisible"] = "visible", ["visible"] = "invisible",
     ["invis"] = "vis",       ["vis"] = "invis",
@@ -560,9 +879,9 @@ local ToggleMap = {
     ["anim"] = "noanim",     ["noanim"] = "anim"
 }
 
--- [B] FAST MAP (COMPLETE IY DICTIONARY)
+-- [B] FAST MAP
 local FastMap = {
-    -- [[ 0. SYSTEM & ALIASES (NEW) ]]
+    -- [[ 0. SYSTEM & ALIASES ]]
     ["^help$"] = "help", ["^cmds$"] = "help", ["^commands$"] = "help",
     ["^bind (%w+) (.+)"] = "bind %1 %2", ["^unbind (%w+)"] = "unbind %1",
     ["^addalias (.+) (.+)"] = "addalias %1 %2", ["^removealias (.+)"] = "removealias %1", ["^clraliases$"] = "clraliases",
@@ -589,20 +908,14 @@ local FastMap = {
     ["^record$"] = "record", ["^screenshot$"] = "screenshot", ["^togglefullscreen$"] = "togglefullscreen",
     ["^notify (.+)"] = "notify %1", ["^lastcommand$"] = "lastcommand", ["^setfpscap (%d+)"] = "setfpscap %1",
 
-    -- [[ 2. MOVEMENT (STRICT NUMBERS FIXED) ]]
+    -- [[ 2. MOVEMENT ]]
     ["^noclip$"] = "noclip", ["^unnoclip$"] = "unnoclip", ["^clip$"] = "clip",
-    
-    -- CHANGE: (.+) -> (%d+) ensures fly only accepts numbers. 
-    -- If text is typed (e.g. "fly goto"), it fails this check and goes to AI.
     ["^fly$"] = "fly", ["^fly (%d+)$"] = "fly %1", ["^unfly$"] = "unfly", 
     ["^flyspeed (%d+)$"] = "flyspeed %1",
-    
     ["^vfly$"] = "vehiclefly", ["^vfly (%d+)$"] = "vehiclefly %1", ["^unvfly$"] = "unvehiclefly", 
     ["^vehicleflyspeed (%d+)$"] = "vehicleflyspeed %1",
-    
     ["^cfly$"] = "cframefly", ["^cfly (%d+)$"] = "cframefly %1", ["^uncfly$"] = "uncframefly", 
     ["^cframeflyspeed (%d+)$"] = "cframeflyspeed %1",
-    
     ["^qefly$"] = "qefly", ["^vehiclenoclip$"] = "vehiclenoclip", ["^vehicleclip$"] = "vehicleclip",
     ["^float$"] = "float", ["^unfloat$"] = "unfloat",
     ["^swim$"] = "swim", ["^unswim$"] = "unswim", ["^toggleswim$"] = "toggleswim",
@@ -620,7 +933,7 @@ local FastMap = {
 
     -- [[ 4. VISUALS ]]
     ["^esp$"] = "esp", ["^noesp$"] = "noesp", ["^espteam$"] = "espteam", ["^esptransparency (%d+)"] = "esptransparency %1",
-    ["^partesp (.+)"] = "partesp %1", ["^unpartesp (.+)"] = "unpartesp %1", -- [ADDED]
+    ["^partesp (.+)"] = "partesp %1", ["^unpartesp (.+)"] = "unpartesp %1",
     ["^chams$"] = "chams", ["^nochams$"] = "nochams", ["^xray$"] = "xray", ["^noxray$"] = "noxray",
     ["^locate (.+)"] = "locate %1", ["^unlocate$"] = "unlocate",
     ["^spectate (.+)"] = "spectate %1", ["^view (.+)"] = "view %1", ["^unspectate$"] = "unspectate",
@@ -679,7 +992,7 @@ local FastMap = {
     ["^autoclick$"] = "autoclick", ["^unautoclick$"] = "unautoclick", ["^mousesensitivity$"] = "mousesensitivity",
     ["^tools$"] = "tools", ["^notools$"] = "notools", ["^grabtools$"] = "grabtools", ["^ungrabtools$"] = "ungrabtools",
     ["^equiptools$"] = "equiptools", ["^unequiptools$"] = "unequiptools", ["^reach (%d+)"] = "reach %1", ["^unreach$"] = "unreach",
-    ["^dupetools (%d+)"] = "dupetools %1", ["^droppabletools$"] = "droppabletools", ["^droptools$"] = "droptools", -- [ADDED]
+    ["^dupetools (%d+)"] = "dupetools %1", ["^droppabletools$"] = "droppabletools", ["^droptools$"] = "droptools",
 
     -- [[ 10. SERVER ]]
     ["^serverinfo$"] = "serverinfo", ["^jobid$"] = "jobid", ["^rejoin$"] = "rejoin", ["^autorejoin$"] = "autorejoin",
@@ -716,7 +1029,82 @@ local function needsPlayerContext(text)
     return false
 end
 
--- [D] ADVANCED TARGET RESOLVER
+-- ============================================
+-- [NEW] ADVANCED FUZZY TARGET RESOLUTION
+-- ============================================
+local function levenshteinDistance(s1, s2)
+    local len1, len2 = #s1, #s2
+    local matrix = {}
+    
+    for i = 0, len1 do matrix[i] = {[0] = i} end
+    for j = 0, len2 do matrix[0][j] = j end
+    
+    for i = 1, len1 do
+        for j = 1, len2 do
+            local cost = (s1:sub(i,i):lower() == s2:sub(j,j):lower()) and 0 or 1
+            matrix[i][j] = math.min(
+                matrix[i-1][j] + 1,
+                matrix[i][j-1] + 1,
+                matrix[i-1][j-1] + cost
+            )
+        end
+    end
+    
+    return matrix[len1][len2]
+end
+
+local function fuzzyMatchPlayer(partial)
+    if not partial or partial == "" then return nil end
+    
+    local partialLower = partial:lower()
+    local bestMatch = nil
+    local bestScore = math.huge
+    local threshold = math.max(2, math.floor(#partial * 0.5)) -- Allow up to 50% character difference
+    
+    for _, player in pairs(Players:GetPlayers()) do
+        local name = player.Name:lower()
+        local displayName = player.DisplayName:lower()
+        
+        -- Exact prefix match (highest priority)
+        if name:sub(1, #partialLower) == partialLower then
+            return player.Name
+        end
+        if displayName:sub(1, #partialLower) == partialLower then
+            return player.Name
+        end
+        
+        -- Contains match
+        if name:find(partialLower, 1, true) then
+            local score = levenshteinDistance(partialLower, name)
+            if score < bestScore then
+                bestScore = score
+                bestMatch = player.Name
+            end
+        end
+        
+        if displayName:find(partialLower, 1, true) then
+            local score = levenshteinDistance(partialLower, displayName)
+            if score < bestScore then
+                bestScore = score
+                bestMatch = player.Name
+            end
+        end
+        
+        -- Fuzzy match using Levenshtein distance
+        local nameScore = levenshteinDistance(partialLower, name)
+        local displayScore = levenshteinDistance(partialLower, displayName)
+        local minScore = math.min(nameScore, displayScore)
+        
+        if minScore <= threshold and minScore < bestScore then
+            bestScore = minScore
+            bestMatch = player.Name
+        end
+    end
+    
+    return bestMatch
+end
+
+-- [D] ADVANCED TARGET RESOLVER (WITH FUZZY MATCHING)
 local function resolveTarget(cmdString)
     -- 1. Handle "all" / "everyone" rejection (Safety)
     if cmdString:match("%sall$") or cmdString:match("%severyone$") then
@@ -744,6 +1132,25 @@ local function resolveTarget(cmdString)
             return nil, "No other players to target."
         end
     end
+    
+    -- 4. [NEW] Fuzzy Player Name Resolution
+    -- Extract potential player name from command
+    local cmdParts = cmdString:split(" ")
+    if #cmdParts >= 2 then
+        local potentialTarget = cmdParts[#cmdParts]
+        
+        -- Skip if it's a number or special keyword
+        if not tonumber(potentialTarget) and potentialTarget ~= "me" and potentialTarget ~= "random" then
+            local fuzzyMatch = fuzzyMatchPlayer(potentialTarget)
+            
+            if fuzzyMatch and fuzzyMatch:lower() ~= potentialTarget:lower() then
+                -- Replace the partial name with the full match
+                cmdParts[#cmdParts] = fuzzyMatch
+                cmdString = table.concat(cmdParts, " ")
+                updateStatus("Fuzzy Match: " .. potentialTarget .. " → " .. fuzzyMatch, Colors.Purple)
+            end
+        end
+    end
 
     return cmdString, nil
 end
@@ -751,21 +1158,21 @@ end
 -- [E] BRIDGE EXECUTION (CHAIN-AWARE)
 local function executeBridge(text, source)
     if not IY_Interface then 
-        warn("SIY: Bridge not connected.")
-        updateStatus("Error: Bridge Failed", Colors.Red)
-        return 
+        -- Try waiting for bridge
+        if not waitForBridge(3) then
+            warn("SIY: Bridge not connected.")
+            updateStatus("Error: Bridge Failed", Colors.Red)
+            return
+        end
     end
     
     local cleanText = text:gsub("^%s*", ""):gsub("%s*$", "")
     
     if IS_CHAT_MODE then
-        -- Chat mode: Just notify the text
         local safeText = cleanText:gsub("'", ""):gsub('"', '')
         IY_Interface.Exec("notify " .. safeText) 
         updateStatus("[AI] Response Sent", Colors.Blue)
     else
-        -- CMD Mode: Handle Chains & Binds
-        
         -- 1. Remove initial semicolon if present
         if cleanText:sub(1,1) == ";" then cleanText = cleanText:sub(2) end
         
@@ -799,21 +1206,20 @@ local function executeBridge(text, source)
         end
         
         -- 4. CHAIN SPLITTER & EXECUTION
-        -- Infinite Yield doesn't support ";cmd1 ;cmd2", so we split manually
         local commands = cleanText:split(";")
         
         task.spawn(function()
             for _, rawCmd in ipairs(commands) do
-                -- Clean whitespace
                 local cmd = rawCmd:gsub("^%s*", ""):gsub("%s*$", "")
                 if cmd ~= "" then
-                    -- 5. RESOLVE TARGETS ("me", "random", "all")
                     local finalCmd, err = resolveTarget(cmd)
                     
                     if finalCmd then
                         local prefix = source and ("["..source.."] ") or ""
                         
-                        -- Update status
+                        -- Show command preview
+                        showPreview(finalCmd)
+                        
                         if #commands > 1 then
                             updateStatus("Chain: " .. finalCmd, Colors.Green)
                         else
@@ -822,7 +1228,6 @@ local function executeBridge(text, source)
                         
                         IY_Interface.Exec(finalCmd)
                         
-                        -- Small delay between chain links
                         if #commands > 1 then task.wait(0.1) end 
                     else
                         updateStatus("Error: " .. (err or "Invalid Cmd"), Colors.Red)
@@ -835,14 +1240,17 @@ end
 
 -- [F] VISUAL STATE
 local function resetVisuals()
+    stopGlowAnimation()
     local pulse = TweenService:Create(MainStroke, TweenInfo.new(0.3), {Transparency = 1})
     pulse:Play()
     InputBox.TextEditable = true
     InputBox.PlaceholderColor3 = Colors.TextDim
     InputBox.PlaceholderText = IS_CHAT_MODE and "Ask about game..." or (IsMobile and "Tap to type..." or "Enter command...")
+    hidePreview()
 end
 
 local function setThinkingState(retry)
+    startGlowAnimation()
     InputBox.TextEditable = false
     InputBox.PlaceholderText = retry and "Retrying..." or "Thinking..."
     InputBox.PlaceholderColor3 = retry and Colors.Orange or Colors.Green
@@ -866,11 +1274,22 @@ function queryAI(promptText, retryContext, attemptCount)
 
         local cleanPrompt = promptText:lower():gsub("^%s*", ""):gsub("%s*$", ""):gsub("^;", "")
 
-        -- [[ B. CHAIN BREAKER ]]
+        -- [[ B. CHECK CACHE FIRST ]]
+        local cached = getCachedCommand(cleanPrompt)
+        if cached then
+            updateStatus("Cache Hit!", Colors.Purple)
+            showPreview(cached.command)
+            executeBridge(cached.command, "CACHE")
+            resetVisuals()
+            InputBox.Text = ""
+            return
+        end
+
+        -- [[ C. CHAIN BREAKER ]]
         local isChain = cleanPrompt:find(" and ") or cleanPrompt:find(" & ") or cleanPrompt:find(" then ")
         
         if not isChain then
-            -- C. Fast Map
+            -- D. Fast Map
             for pattern, cmd in pairs(FastMap) do
                 local matchStart, matchEnd, capture, capture2 = string.find(cleanPrompt, pattern)
                 if matchStart then
@@ -878,6 +1297,7 @@ function queryAI(promptText, retryContext, attemptCount)
                     if capture then finalCmd = finalCmd:gsub("%%1", capture) end
                     if capture2 then finalCmd = finalCmd:gsub("%%2", capture2) end
                     
+                    showPreview(finalCmd)
                     executeBridge(finalCmd, "FAST")
                     resetVisuals()
                     InputBox.Text = "" 
@@ -891,7 +1311,6 @@ function queryAI(promptText, retryContext, attemptCount)
     setThinkingState(false)
     updateStatus("Thinking...", Colors.Orange)
 
-    -- Dynamic Context Construction
     local staticSystem = CONFIG.CommandPrompt
     local dynamicContext = ""
     local messagesPayload = {} 
@@ -899,7 +1318,6 @@ function queryAI(promptText, retryContext, attemptCount)
     if IS_CHAT_MODE then
         local displayName = (GameName ~= "Loading...") and GameName or "this game"
         
-        -- [[ CHAT CONTEXT ]]
         dynamicContext = string.format([[
             ROLE: Friendly Roblox Assistant.
             CURRENT GAME: '%s'. USER: '%s'.
@@ -908,11 +1326,9 @@ function queryAI(promptText, retryContext, attemptCount)
             LENGTH: Under 25 words.
         ]], displayName, User.Name)
         
-        -- IF CHAT MODE NO CMD DATABASE
         table.insert(messagesPayload, { role = "system", content = dynamicContext })
         
     else
-        -- [[ CMD CONTEXT ]]
         dynamicContext = [[
             MODE: STRICT COMPILATION.
             REMINDER: Output ONLY Infinite Yield commands (e.g. ;fly).
@@ -921,22 +1337,18 @@ function queryAI(promptText, retryContext, attemptCount)
              dynamicContext = dynamicContext .. " Players: [" .. getPlayerList() .. "]."
         end
         
-        -- IF CMD MODE GO DATABASE
         table.insert(messagesPayload, { role = "system", content = staticSystem })
         table.insert(messagesPayload, { role = "system", content = dynamicContext })
     end
 
-    -- Add User Input
     table.insert(messagesPayload, { role = "user", content = promptText })
 
-    -- Payload Construction
     local body = HttpService:JSONEncode({
         model = CONFIG.Model, 
-        messages = messagesPayload, -- Use our filtered list
+        messages = messagesPayload,
         temperature = IS_CHAT_MODE and 0.85 or 0.1 
     })
 
-    -- Async Request
     task.spawn(function()
         local success, response = pcall(function()
             return httpRequest({
@@ -953,19 +1365,15 @@ function queryAI(promptText, retryContext, attemptCount)
                 aiOutput = data.choices[1].message.content
             end
             
-            -- Basic Sanitization
             aiOutput = aiOutput:gsub("`", ""):gsub("^%s*", ""):gsub("%s*$", "")
 
             if IS_CHAT_MODE then
-                 -- Force strip command prefixes if the AI hallucinates them
-                 -- Removes ";chat " or leading ";" or quotes
                  local safeChat = aiOutput:gsub("^;chat%s+", ""):gsub("^;", ""):gsub('"', ""):gsub("\n", " ")
                  
                  executeBridge(safeChat)
                  resetVisuals()
                  InputBox.Text = ""
             else
-                -- CMD Mode logic
                 if aiOutput == "" or aiOutput:lower():sub(1,4) == "sure" then
                      updateStatus("AI Uncertain", Colors.Orange)
                      task.wait(1)
@@ -973,6 +1381,13 @@ function queryAI(promptText, retryContext, attemptCount)
                      return
                 end
 
+                -- [NEW] Cache successful AI translation
+                cacheCommand(promptText, aiOutput)
+                
+                -- Show preview before execution
+                showPreview(aiOutput)
+                task.wait(0.3) -- Brief pause to show preview
+                
                 executeBridge(aiOutput, "AI")
                 resetVisuals()
                 InputBox.Text = ""
@@ -985,27 +1400,23 @@ function queryAI(promptText, retryContext, attemptCount)
     end)
 end
 
--- 6. EVENTS & HANDLERS
+-- ============================================
+-- 7. EVENTS & HANDLERS
+-- ============================================
 
 -- [[ SEARCH PRIORITY SYSTEM ]]
 local Priority = {
-    -- High Tier (Most Used) - 100pts
     ["fly"]=100, ["unfly"]=100, ["noclip"]=100, ["clip"]=100,
     ["speed"]=95, ["ws"]=95, ["jumppower"]=95, ["jp"]=95,
     ["goto"]=90, ["tp"]=90, ["bring"]=90,
-    
-    -- Mid Tier (Combat/Visuals) - 80pts
     ["kill"]=80, ["fling"]=80, ["loopkill"]=80,
     ["esp"]=75, ["noesp"]=75, ["xray"]=75, ["spectate"]=75,
     ["btools"]=70, ["f3x"]=70, ["dex"]=70,
-    
-    -- Low Tier (Utils) - 50pts
     ["rejoin"]=50, ["serverhop"]=50, ["console"]=50, ["reset"]=50
 }
 
 local SuggestionList = {}
 
--- Build Dictionary
 local function buildSuggestions()
     local tempMap = {}
     for pattern, _ in pairs(FastMap) do
@@ -1018,13 +1429,11 @@ local function buildSuggestions()
                 cleanName = cmdName .. " [arg]"
             end
             
-            -- Store clean name
             if not tempMap[cmdName] or #cleanName > #tempMap[cmdName] then
                 tempMap[cmdName] = cleanName
             end
         end
     end
-    -- Convert to list
     for cmdKey, displayStr in pairs(tempMap) do
         table.insert(SuggestionList, {
             Key = cmdKey, 
@@ -1037,18 +1446,16 @@ buildSuggestions()
 
 -- [[ DYNAMIC DROPDOWN RENDERER ]]
 local function updateDropdown(text)
-    -- Clear old buttons
     for _, child in pairs(SuggestionFrame:GetChildren()) do
         if child:IsA("TextButton") then child:Destroy() end
     end
     
     if text == "" or IS_CHAT_MODE then 
         SuggestionFrame.Visible = false 
-        StatusLabel.Visible = true -- [[ FIX: Show Status ]]
+        StatusLabel.Visible = true
         return 
     end
     
-    -- Find matches
     local matches = {}
     for _, item in ipairs(SuggestionList) do
         if item.Key:sub(1, #text):lower() == text:lower() then
@@ -1058,21 +1465,18 @@ local function updateDropdown(text)
     
     if #matches == 0 then
         SuggestionFrame.Visible = false
-        StatusLabel.Visible = true -- [[ FIX: Show Status ]]
+        StatusLabel.Visible = true
         return
     end
     
-    -- Sort Matches: Priority > Shortest Length > Alphabetical
     table.sort(matches, function(a, b)
         if a.Score ~= b.Score then return a.Score > b.Score end
         if #a.Key ~= #b.Key then return #a.Key < #b.Key end
         return a.Key < b.Key
     end)
     
-    -- Cap at 5 results
     local resultCount = math.min(#matches, 5)
     
-    -- Create Buttons
     for i = 1, resultCount do
         local data = matches[i]
         local btn = Instance.new("TextButton")
@@ -1085,10 +1489,9 @@ local function updateDropdown(text)
         btn.Font = Enum.Font.Gotham
         btn.TextSize = 13
         btn.TextXAlignment = Enum.TextXAlignment.Left
-        btn.ZIndex = 10 -- [[ FIX: Ensure Buttons are on top ]]
+        btn.ZIndex = 10
         btn.Parent = SuggestionFrame
         
-        -- Hover Effect
         btn.MouseEnter:Connect(function() 
             btn.BackgroundColor3 = Colors.InputBg 
             btn.TextColor3 = Colors.Text
@@ -1098,20 +1501,18 @@ local function updateDropdown(text)
             btn.TextColor3 = Colors.TextDim
         end)
         
-        -- Click Logic
         btn.MouseButton1Click:Connect(function()
             local cmdOnly = data.Display:match("^([%w_]+)")
             InputBox.Text = cmdOnly .. " "
             InputBox:CaptureFocus()
             SuggestionFrame.Visible = false
-            StatusLabel.Visible = true -- [[ FIX: Show Status after click ]]
+            StatusLabel.Visible = true
         end)
     end
     
-    -- Resize Frame & Show
     SuggestionFrame.Size = UDim2.new(1, 0, 0, resultCount * 25)
     SuggestionFrame.Visible = true
-    StatusLabel.Visible = false -- [[ FIX: Hide Status while searching ]]
+    StatusLabel.Visible = false
 end
 
 -- Input Listener
@@ -1120,8 +1521,6 @@ InputBox:GetPropertyChangedSignal("Text"):Connect(function()
 end)
 
 InputBox.FocusLost:Connect(function(enter)
-    -- Hide dropdown on submit, but keep if just clicking away? 
-    -- Better to hide to prevent obstruction.
     if enter then
         if InputBox.Text ~= "" then
             local text = InputBox.Text
@@ -1129,7 +1528,6 @@ InputBox.FocusLost:Connect(function(enter)
         end
         SuggestionFrame.Visible = false
     else
-        -- Small delay to allow clicking a button before it vanishes
         task.delay(0.2, function()
             if not InputBox:IsFocused() then SuggestionFrame.Visible = false end
         end)
@@ -1147,7 +1545,7 @@ ModeBtn.MouseButton1Click:Connect(function()
         TweenService:Create(ModeBtn, TweenInfo.new(0.3), {BackgroundColor3 = Colors.Blue}):Play()
         InputBox.PlaceholderText = "Ask about " .. uiName .. "..."
         updateStatus("Switched to Chat Mode", Colors.Blue)
-        SuggestionFrame.Visible = false -- Hide suggestions in chat
+        SuggestionFrame.Visible = false
     else
         ModeBtn.Text = "CMD"
         TweenService:Create(ModeBtn, TweenInfo.new(0.3), {BackgroundColor3 = Colors.Orange}):Play()
@@ -1156,7 +1554,7 @@ ModeBtn.MouseButton1Click:Connect(function()
     end
 end)
 
--- [[ UPDATED INPUT & KEYBIND LISTENER ]]
+-- [[ INPUT & KEYBIND LISTENER ]]
 UIS.InputBegan:Connect(function(input, gpe)
     if gpe then return end
     
@@ -1178,4 +1576,9 @@ UIS.InputBegan:Connect(function(input, gpe)
             bindData.Next = cmdToRun 
         end
     end
+end)
+
+-- Bridge ready notification
+BridgeReady.Event:Connect(function()
+    updateStatus("Bridge Connected!", Colors.Green)
 end)

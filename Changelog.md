@@ -2,6 +2,26 @@
 
 All notable changes to the **SmartInfiniteYield** project will be documented in this file.
 
+## [1.3.0] - 2026-01-02
+### Added
+- **Enhanced Bridge Reliability:** Implemented event-based system using BindableEvents for instant bridge connection, eliminating "Bridge not connected" errors.
+- **Intelligent Command Caching:** Local cache system using writefile/readfile to store successful AI translations, enabling instant execution of learned phrases without API calls.
+- **Advanced Fuzzy Target Resolution:** Implemented Levenshtein distance-based fuzzy matching for player names (e.g., "kill valk" → "Valkorym").
+- **Visual AI Processing Indicator:** Added animated glowing aura effect that pulses while AI processes requests.
+- **Command Preview Bar:** Displays AI-generated command preview in status bar before execution for user verification.
+- **Mobile Quick Actions Grid:** Added one-tap command grid for mobile users with 9 common AI prompts (Fly, Speed, ESP, Noclip, God, Teleport, Kill, Reset, Anti-Lag).
+
+### Improved
+- **Bridge System:** Replaced polling-based bridge detection with event-driven architecture for faster startup.
+- **Cache Optimization:** Automatic cache management with LRU-style cleanup when max entries reached.
+- **Target Resolution:** Enhanced player targeting with prefix matching, contains matching, and fuzzy matching fallback.
+- **UI Polish:** Updated tutorial modal with v1.3 feature highlights.
+
+### Technical
+- **Version Bump:** Updated to v1.3 STABLE.
+- **New Dependencies:** Added RunService for animation handling.
+- **Config Expansion:** Added CacheEnabled, CacheFile, and MaxCacheEntries configuration options.
+
 ## [1.2.0] - 2026-01-01
 ### Added
 - **Split-Context Strategy:** Implemented static/dynamic context separation, reducing token costs by ~90%.
