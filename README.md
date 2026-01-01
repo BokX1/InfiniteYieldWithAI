@@ -34,8 +34,6 @@ The API is protected by CloudFlare to prevent bad actor (abuse)
 
 ### 📜 Changelog
 
-Here is the final, consolidated changelog for **Smart Infinite Yield v1.2**, combining your new UI/Logic updates with the backend optimizations we implemented.
-
 ---
 
 ### **Version 1.2 Stable**
