@@ -47,11 +47,9 @@ Here is the final, consolidated changelog for **Smart Infinite Yield v1.2**, com
 
 ### **☁️ Cloudflare Worker (Backend)**
 
-* 
-**Abuse Gate Expansion:** Raised `MAX_BODY_CHARS` (100k) and `MAX_CACHED_CHARS` (40k) to support large cached system prompts without triggering spam filters.
+* **Abuse Gate Expansion:** Raised `MAX_BODY_CHARS` (100k) and `MAX_CACHED_CHARS` (40k) to support large cached system prompts without triggering spam filters.
 
-* 
-**Smart Defaults:** Logic now auto-defaults to `openai` if the client does not specify a model.
+* **Smart Defaults:** Logic now auto-defaults to `openai` if the client does not specify a model.
 
 ### **🎮 Logic Engine & Lua Client**
 
