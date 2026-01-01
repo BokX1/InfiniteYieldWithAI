@@ -36,35 +36,37 @@ The API is protected by CloudFlare to prevent bad actor (abuse)
 
 ---
 
-### **Version 1.2 Stable**
+## Version 1.2 Stable (Final Polish)
 
-### **🚀 Core Architecture**
+### 🚀 Core Architecture
 
-* **Split-Context Strategy:** Separated system prompt into **Static** (Documentation) and **Dynamic** (Context) layers, reducing recurring request costs by **~90%**.
+* **Split-Context Strategy:** Separated system prompt into **Static** (Documentation) and **Dynamic** (Context) layers, reducing recurring request costs by ~90%.
+* **Context Isolation:** The Command Database is now strictly **excluded** from the payload during Chat Mode, preventing the AI from training itself to output command syntax during casual conversation.
 * **Model Migration:** Switched default model from `grok` to `openai` (GPT-5 Mini) for superior caching discounts and logical reasoning.
 
-### **☁️ Cloudflare Worker (Backend)**
+### ☁️ Cloudflare Worker (Backend)
 
 * **Abuse Gate Expansion:** Raised `MAX_BODY_CHARS` (100k) and `MAX_CACHED_CHARS` (40k) to support large cached system prompts without triggering spam filters.
-
 * **Smart Defaults:** Logic now auto-defaults to `openai` if the client does not specify a model.
 
-### **🎮 Logic Engine & Lua Client**
+### 🎮 Logic Engine & Lua Client
 
+* **Natural Chain Detection:** Added a "Chain Breaker" that detects keywords (`and`, `&`, `then`) to bypass local FastMap execution. This ensures complex natural language requests (e.g., "fly and gotorandom") are correctly sent to the AI for splitting.
+* **Strict Regex Validation:** Updated `FastMap` patterns for movement and stat commands (e.g., `fly`, `speed`, `jumppower`) to strictly enforce numeric inputs (`%d+$`). This prevents text arguments (e.g., "fly goto") from triggering incorrect local commands.
 * **Smart Toggles:** Implemented a cycle system for keybinds (e.g., `bind f fly` automatically handles `unfly`).
 * **Complete Dictionary:** Expanded local `FastMap` to cover 100% of Infinite Yield commands for maximum local speed before querying AI.
-* **Dynamic Tone Mirroring:** Chat Mode now analyzes and mirrors user tone (slang vs. formal) using context injection.
-* **Strict Execution Mode:** Enforced temperature `0.1` and negative constraints in CMD Mode to prevent hallucinations and conversational filler.
 * **System Override:** Implemented `[SYSTEM OVERRIDE]` tags to forcibly switch the AI from "Translator" to "Assistant" persona in Chat Mode.
 
-### **🖥️ User Interface**
+### 🖥️ User Interface
 
 * **Predictive Dropdown:** Replaced "Ghost Text" with a clickable suggestion menu sorted by command popularity.
 * **Visual Polish:** Fixed Z-Index layering issues; the status bar now auto-hides when searching to prevent visual clutter.
 * **Master Control:** Added **Right Shift** as the universal toggle key for the UI.
 
-### **🐛 Bug Fixes**
+### 🐛 Bug Fixes
 
+* **Prompt Pollution:** Fixed an issue where the AI would prefix chat responses with `;chat` or `;` by implementing an output sanitizer that strips these artifacts before display.
+* **Greedy Regex Fix:** Resolved an issue where `fly` commands would "eat" subsequent words in a chain.
 * **Identity Hallucination:** Hardcoded "WhoAmI" logic (`User.Name`, `GameName`) into the system prompt to prevent the AI from executing identity questions as commands.
 * **Worker Blocks:** Resolved 429 errors caused by the new larger prompt size triggering old length-based abuse filters.
 
