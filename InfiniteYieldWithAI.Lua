@@ -604,19 +604,17 @@ local function setThinkingState(retry)
     pulse:Play()
 end
 
--- [G] CORE QUERY LOGIC (OPTIMIZED)
+-- [G] CORE QUERY LOGIC
 function queryAI(promptText, retryContext, attemptCount)
     if promptText == "" then return end
     
     -- [[ 1. FAST LOCAL CHECK (PRESERVED) ]]
-    -- Critical for speed: Checks local regex map before sending on AI
     if not IS_CHAT_MODE and not retryContext then
         local cleanPrompt = promptText:lower():gsub("^%s*", ""):gsub("%s*$", ""):gsub("^;", "")
         for pattern, cmd in pairs(FastMap) do
             local matchStart, matchEnd, capture, capture2 = string.find(cleanPrompt, pattern)
             if matchStart then
                 local finalCmd = cmd
-                -- Integer Checks (e.g., speed %1 -> speed 50)
                 if capture then finalCmd = finalCmd:gsub("%%1", capture) end
                 if capture2 then finalCmd = finalCmd:gsub("%%2", capture2) end
                 
@@ -631,7 +629,7 @@ function queryAI(promptText, retryContext, attemptCount)
         end
     end
 
-    -- [[ 2. RETRY LIMITER (PRESERVED) ]]
+    -- [[ 2. RETRY LIMITER ]]
     attemptCount = attemptCount or 0
     if attemptCount > CONFIG.MaxRetries then 
         updateStatus("Failed: Invalid Target", Colors.Red)
@@ -641,34 +639,44 @@ function queryAI(promptText, retryContext, attemptCount)
     setThinkingState(attemptCount > 0)
     updateStatus("Thinking...", Colors.Orange)
 
-    -- [[ 3. SPLIT CONTEXT CONSTRUCTION (NEW ARCHITECTURE) ]]
-    -- Message 1: STATIC. The heavy documentation. 
-    -- This MUST match CONFIG.CommandPrompt exactly to trigger the Cache Discount.
+    -- [[ 3. SPLIT CONTEXT CONSTRUCTION ]]
+    -- Message 1: STATIC (Cached & Cheap).
     local staticSystem = CONFIG.CommandPrompt
 
-    -- Message 2: DYNAMIC. The context and style instructions.
+    -- Message 2: DYNAMIC (The Override).
     local dynamicContext = ""
     
     if IS_CHAT_MODE then
         local displayName = (GameName ~= "Loading...") and GameName or "this game"
         
-        -- [STYLE INJECTION] Tone Mirroring Implementation
+        -- [CRITICAL FIX] "System Override" Pattern
+        -- This forces the AI to IGNORE the syntax task from Message 1 and behave like a chatbot.
         dynamicContext = string.format([[
-            MODE: CHAT. Game: '%s'. User: '%s'. 
-            RULE: Analyze the user's tone (Gen Z slang, formal, rude, technical, etc.) and MIRROR it exactly in your response.
-            Constraint: Keep answer under 25 words.
-        ]], displayName, User.Name)
+            [SYSTEM OVERRIDE: CHAT MODE ACTIVE]
+            INSTRUCTION: Disregard the "Translate to syntax" task from the previous message.
+            
+            NEW ROLE: You are a helpful, witty, and friendly Game Assistant.
+            
+            CURRENT CONTEXT:
+            - User Name: '%s'
+            - Game Name: '%s'
+            
+            TASKS:
+            1. Answer questions naturally. If asked "whoami", use the User Name. If asked "whereami", use the Game Name.
+            2. Analyze the user's tone (Gen Z slang, formal, rude, etc.) and MIRROR it exactly.
+            3. Do NOT output commands starting with ';'. Just chat.
+            
+            Constraint: Keep answer under 30 words.
+        ]], User.Name, displayName)
         
     else
-        -- COMMAND MODE (Strict Logic)
+        -- COMMAND MODE (Standard)
         dynamicContext = "MODE: COMMAND SYNTAX."
         
-        -- Bandwidth Optimization: Only inject player list if the command targets a player
         if needsPlayerContext(promptText) then
              dynamicContext = dynamicContext .. " Active Players: [" .. getPlayerList() .. "]."
         end
         
-        -- Error Correction: Feeds previous failure back to AI for correction
         if retryContext then
             dynamicContext = dynamicContext .. " PREVIOUS ERROR: " .. retryContext
         end
@@ -676,17 +684,17 @@ function queryAI(promptText, retryContext, attemptCount)
 
     -- [[ 4. PAYLOAD CONSTRUCTION ]]
     local body = HttpService:JSONEncode({
-        model = CONFIG.Model, -- Sends "openai"
+        model = CONFIG.Model, -- "openai"
         messages = { 
-            { role = "system", content = staticSystem },   -- CACHE ANCHOR (90% Savings)
-            { role = "system", content = dynamicContext }, -- DYNAMIC CONTEXT (Style/State)
-            { role = "user", content = promptText }        -- USER INPUT
+            { role = "system", content = staticSystem },   -- CACHED (Message 1)
+            { role = "system", content = dynamicContext }, -- OVERRIDE (Message 2)
+            { role = "user", content = promptText }        -- INPUT (Message 3)
         },
-        -- Temperature: 0.8 for Chat (Personality), 0.2 for Commands (Accuracy)
-        temperature = IS_CHAT_MODE and 0.8 or 0.2 
+        -- Higher temperature (0.85) for Chat ensures personality shines through
+        temperature = IS_CHAT_MODE and 0.85 or 0.2 
     })
 
-    -- [[ 5. ASYNC REQUEST & HANDLING (PRESERVED) ]]
+    -- [[ 5. ASYNC REQUEST ]]
     task.spawn(function()
         local success, response = pcall(function()
             return httpRequest({
@@ -699,18 +707,17 @@ function queryAI(promptText, retryContext, attemptCount)
         if success and response.StatusCode == 200 then
             local data = HttpService:JSONDecode(response.Body)
             
-            -- Safety: Handle rare cases where 'choices' might be nil
             local aiOutput = ""
             if data.choices and data.choices[1] and data.choices[1].message then
                 aiOutput = data.choices[1].message.content
             end
             
             if IS_CHAT_MODE then
-                 -- Chat Mode: Just display the text
+                 -- Chat Mode: Display response
                  executeBridge(aiOutput); resetVisuals()
                  InputBox.Text = ""
             else
-                -- Command Mode: Validate syntax and targets
+                -- Command Mode: Execute syntax
                 local cleanCmd = aiOutput:gsub("^%s*", ""):gsub("%s*$", "")
                 if cleanCmd:sub(1,1) == ";" then cleanCmd = cleanCmd:sub(2) end
                 
@@ -720,12 +727,10 @@ function queryAI(promptText, retryContext, attemptCount)
                     resetVisuals()
                     InputBox.Text = ""
                 else
-                    -- Recursion: Auto-retry with error context (up to MaxRetries)
                     queryAI(promptText, errorMsg, attemptCount + 1)
                 end
             end
         else
-            -- Error Reporting
             warn("SIY Net Error:", response and response.StatusCode or "Unknown")
             updateStatus("Net Error: " .. (response and response.StatusCode or "Unknown"), Colors.Red)
             task.wait(2); resetVisuals()
