@@ -337,6 +337,18 @@ local function cacheCommand(input, output)
     saveCache()
 end
 
+local function clearCache()
+    CommandCache = {}
+    saveCache()
+    return true
+end
+
+local function getCacheInfo()
+    local count = 0
+    for _ in pairs(CommandCache) do count = count + 1 end
+    return count, CONFIG.MaxCacheEntries
+end
+
 -- Initialize cache
 loadCache()
 
@@ -939,6 +951,7 @@ local ToggleMap = {
 local FastMap = {
     -- System & Aliases
     ["^help$"] = "help", ["^cmds$"] = "help", ["^commands$"] = "help",
+    ["^clearcache$"] = "clearcache", ["^cacheinfo$"] = "cacheinfo",
     ["^bind (%w+) (.+)"] = "bind %1 %2", ["^unbind (%w+)"] = "unbind %1",
     ["^addalias (.+) (.+)"] = "addalias %1 %2", ["^removealias (.+)"] = "removealias %1", ["^clraliases$"] = "clraliases",
     ["^addplugin (.+)"] = "addplugin %1", ["^removeplugin (.+)"] = "removeplugin %1",
@@ -1234,6 +1247,22 @@ local function executeBridge(text, source)
         if cleanText == "help" then
             IY_Interface.Exec("notify Check Status Bar for help.")
             updateStatus("CMD: ;bind [key] [cmd], RightShift=Toggle", Colors.Green)
+            return
+        end
+
+        -- Cache Management Commands
+        if cleanText == "clearcache" then
+            clearCache()
+            IY_Interface.Exec("notify Cache cleared successfully!")
+            updateStatus("Cache Cleared - All learned commands removed", Colors.Green)
+            return
+        end
+        
+        if cleanText == "cacheinfo" then
+            local count, max = getCacheInfo()
+            local message = string.format("Cache: %d/%d commands stored", count, max)
+            IY_Interface.Exec("notify " .. message)
+            updateStatus(message, Colors.Purple)
             return
         end
 

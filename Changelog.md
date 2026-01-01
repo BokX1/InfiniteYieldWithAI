@@ -11,6 +11,7 @@ All notable changes to the **SmartInfiniteYield** project will be documented in 
 - **Visual AI Processing Indicator:** Added animated glowing aura effect that pulses while AI processes requests.
 - **Command Preview Bar:** Displays AI-generated command preview in status bar before execution for user verification.
 - **Mobile Quick Actions Grid:** Added one-tap command grid for mobile users with 9 common AI prompts (Fly, Speed, ESP, Noclip, God, Teleport, Kill, Reset, Anti-Lag).
+- **Cache Management Commands:** Added `clearcache` to wipe all learned commands and `cacheinfo` to view cache statistics.
 
 ### Improved
 - **Bridge System:** Replaced polling-based bridge detection with event-driven architecture for faster startup.

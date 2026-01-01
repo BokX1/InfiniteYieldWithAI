@@ -20,6 +20,7 @@ The system features a **Recursive Feedback Loop**: if the AI targets a non-exist
 |---------|-------------|
 | **Hybrid Execution Engine** | Zero-latency local execution for 200+ commands, with AI fallback for complex natural language |
 | **Intelligent Caching** | Learns your phrases and executes them instantly without API calls |
+| **Cache Management** | Use `clearcache` to reset learned commands, `cacheinfo` to view cache status |
 | **Fuzzy Player Targeting** | Type partial names like "kill valk" and it resolves to "Valkorym" automatically |
 | **Natural Chain Detection** | Understands requests like "fly and goto random" and splits them correctly |
 
@@ -226,7 +227,7 @@ See [Changelog.md](Changelog.md) for the complete version history.
 
 ### Recent Updates
 
-**V1.2.1** - Event-based bridge, intelligent caching, fuzzy targeting, visual feedback, mobile quick actions, code optimization
+**V1.2.1** - Event-based bridge, intelligent caching with management commands, fuzzy targeting, visual feedback, mobile quick actions, code optimization
 
 **V1.2.0** - Split-context strategy, predictive dropdown, smart keybinds, complete command database
 
