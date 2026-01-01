@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Discord Support
+    url: https://discord.gg/infiniteyield
+    about: Get help from the community on Discord (use ;discord in-game)
+  - name: Documentation
+    url: https://github.com/BokX1/InfiniteYieldWithAI/blob/main/docs/ROADMAP.md
+    about: Check the roadmap for planned features before requesting
