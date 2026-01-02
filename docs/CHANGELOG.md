@@ -18,6 +18,43 @@ Features currently in development for the next release.
 
 ---
 
+## [1.2.2] - 2026-01-03
+
+### Changed
+
+| Change | Description |
+|--------|-------------|
+| **Compact Mode Dropdown** | Replaced oversized mode toggle button with a compact dropdown selector (55px vs 95px) |
+| **Streamlined Header Layout** | Reduced button sizes (26px vs 30px) and optimized spacing for a cleaner header |
+| **Compact CMD Mode Frame** | Reduced default CMD mode height from 220px to 65px for minimal footprint |
+| **Optimized Chat Mode Frame** | Reduced chat mode width from 560px to 420px for better screen utilization |
+| **Input Box Sizing** | Adjusted input box height (26px vs 30px) and font size (12px vs 14px) for compact layout |
+| **Preview Bar Positioning** | Moved preview bar to tooltip-style position below input area |
+| **Quick Actions Toggle** | Relocated mobile quick actions button to bottom-right corner |
+
+### Fixed
+
+| Fix | Description |
+|-----|-------------|
+| **Text Collision** | Eliminated text overlap between mode button, input area, and status elements |
+| **Oversized Mode Button** | Fixed the permanently large CMD/CHAT button that consumed excessive header space |
+| **Status Bar Visibility** | Status now appears temporarily and auto-hides in compact CMD mode |
+| **Frame Expansion** | Frame temporarily expands to show status messages, then returns to compact size |
+| **Dropdown Arrow Indicator** | Added "▾" arrow to mode button to indicate dropdown functionality |
+| **Mobile Quick Actions** | Fixed visibility toggle for quick actions button when switching modes |
+
+### Technical
+
+| Improvement | Description |
+|-------------|-------------|
+| **Mode Dropdown System** | New dropdown container with CMD/CHAT options and hover effects |
+| **Click-Outside-to-Close** | Dropdown automatically closes when clicking outside its area |
+| **Temporary Status Display** | Status messages expand frame, display for 2.5s, then collapse |
+| **Consistent Sizing** | All header elements now use consistent 26px height and 4px corner radius |
+| **Removed Status Persistence** | StatusLabel no longer persists in compact CMD mode, reducing visual clutter |
+
+---
+
 ## [1.2.1] - 2026-01-03
 
 ### Added
@@ -176,7 +213,8 @@ Features currently in development for the next release.
 
 ---
 
-[Unreleased]: https://github.com/BokX1/InfiniteYieldWithAI/compare/v1.2.1...HEAD
+[Unreleased]: https://github.com/BokX1/InfiniteYieldWithAI/compare/v1.2.2...HEAD
+[1.2.2]: https://github.com/BokX1/InfiniteYieldWithAI/compare/v1.2.1...v1.2.2
 [1.2.1]: https://github.com/BokX1/InfiniteYieldWithAI/compare/v1.2.0...v1.2.1
 [1.2.0]: https://github.com/BokX1/InfiniteYieldWithAI/compare/v1.1.0...v1.2.0
 [1.1.0]: https://github.com/BokX1/InfiniteYieldWithAI/compare/v1.0.0...v1.1.0

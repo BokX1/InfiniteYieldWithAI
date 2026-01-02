@@ -1,10 +1,10 @@
 --[[ 
-    SMART INFINITE YIELD - V1.2.1 STABLE
+    SMART INFINITE YIELD - V1.2.2 STABLE
     - Architecture: Context Awareness + Event-Based Bridge
     - Logic: VolQ5 & Pollinations.AI (LLM Model)
     - Status: Stable 
-    - New: Next-Gen CHAT Mode with ChatGPT-like UI, Enhanced Memory Buffer, Auto-Context Injection,
-           Robust Bridge Connection, Improved Fuzzy Matching, Mobile UI Scaling, Dropdown Focus Management
+    - New: Compact Mode Dropdown UI, Streamlined Header Layout, Text Collision Fixes,
+           Optimized Frame Sizing, Temporary Status Display, Industry-Standard GUI
 ]]
 
 --// ============================================
@@ -776,8 +776,9 @@ local Colors = {
     ChatTimestamp = Color3.fromRGB(142, 142, 160)
 }
 
-local BaseMainSize = IsMobile and UDim2.new(0.9, 0, 0, 200) or UDim2.new(0, 520, 0, 220)
-local ChatMainSize = IsMobile and UDim2.new(0.9, 0, 0, 320) or UDim2.new(0, 560, 0, 340)
+-- Optimized frame sizes: reduced base height, consistent chat expansion
+local BaseMainSize = IsMobile and UDim2.new(0.9, 0, 0, 65) or UDim2.new(0, 420, 0, 65)
+local ChatMainSize = IsMobile and UDim2.new(0.9, 0, 0, 280) or UDim2.new(0, 420, 0, 300)
 
 -- UI Helper Functions
 local function addCorner(obj, radius)
@@ -971,34 +972,155 @@ local function stopGlowAnimation()
     GlowStroke.Transparency = 1
 end
 
---// Control Buttons
-local BtnWidth = IsMobile and 65 or 95
-local FontSize = IsMobile and 12 or 15
+--// Control Buttons - Compact Mode Dropdown
+local ModeDropdownWidth = IsMobile and 50 or 55
+local ModeFontSize = IsMobile and 10 or 11
 
-local ModeBtn = createInstance("TextButton", {
-    Size = UDim2.new(0, BtnWidth, 0, 30),
-    Position = UDim2.new(0, 8, 0, 8),
-    BackgroundColor3 = Colors.Orange,
-    Text = "CMD",
-    TextColor3 = Color3.new(0, 0, 0),
-    Font = Enum.Font.GothamBold,
-    TextSize = FontSize,
+-- Mode dropdown container
+local ModeDropdownContainer = createInstance("Frame", {
+    Name = "ModeDropdownContainer",
+    Size = UDim2.new(0, ModeDropdownWidth, 0, 26),
+    Position = UDim2.new(0, 8, 0, 10),
+    BackgroundTransparency = 1,
+    ClipsDescendants = false,
+    ZIndex = 10,
     Parent = MainFrame
 })
-addCorner(ModeBtn, 6)
+
+-- Current mode indicator button (compact)
+local ModeBtn = createInstance("TextButton", {
+    Name = "ModeIndicator",
+    Size = UDim2.new(1, 0, 1, 0),
+    Position = UDim2.new(0, 0, 0, 0),
+    BackgroundColor3 = Colors.Orange,
+    Text = "CMD ▾",
+    TextColor3 = Color3.new(0, 0, 0),
+    Font = Enum.Font.GothamBold,
+    TextSize = ModeFontSize,
+    ZIndex = 11,
+    Parent = ModeDropdownContainer
+})
+addCorner(ModeBtn, 4)
+
+-- Mode dropdown options frame (hidden by default)
+local ModeDropdownFrame = createInstance("Frame", {
+    Name = "ModeDropdownOptions",
+    Size = UDim2.new(1, 0, 0, 52),
+    Position = UDim2.new(0, 0, 1, 2),
+    BackgroundColor3 = Colors.DropdownBg,
+    BorderSizePixel = 0,
+    Visible = false,
+    ZIndex = 12,
+    Parent = ModeDropdownContainer
+})
+addCorner(ModeDropdownFrame, 4)
+addStroke(ModeDropdownFrame, Colors.Border, 1)
+
+-- CMD option in dropdown
+local CmdOption = createInstance("TextButton", {
+    Name = "CmdOption",
+    Size = UDim2.new(1, 0, 0, 24),
+    Position = UDim2.new(0, 0, 0, 2),
+    BackgroundColor3 = Colors.DropdownBg,
+    BackgroundTransparency = 0,
+    Text = "CMD",
+    TextColor3 = Colors.Orange,
+    Font = Enum.Font.GothamBold,
+    TextSize = ModeFontSize,
+    ZIndex = 13,
+    Parent = ModeDropdownFrame
+})
+
+-- CHAT option in dropdown
+local ChatOption = createInstance("TextButton", {
+    Name = "ChatOption",
+    Size = UDim2.new(1, 0, 0, 24),
+    Position = UDim2.new(0, 0, 0, 26),
+    BackgroundColor3 = Colors.DropdownBg,
+    BackgroundTransparency = 0,
+    Text = "CHAT",
+    TextColor3 = Colors.Blue,
+    Font = Enum.Font.GothamBold,
+    TextSize = ModeFontSize,
+    ZIndex = 13,
+    Parent = ModeDropdownFrame
+})
+
+-- Dropdown state
+local modeDropdownOpen = false
+
+-- Hover effects for dropdown options
+CmdOption.MouseEnter:Connect(function()
+    TweenService:Create(CmdOption, TweenInfo.new(0.1), {
+        BackgroundColor3 = Colors.InputBg,
+        TextColor3 = Colors.Text
+    }):Play()
+end)
+CmdOption.MouseLeave:Connect(function()
+    TweenService:Create(CmdOption, TweenInfo.new(0.1), {
+        BackgroundColor3 = Colors.DropdownBg,
+        TextColor3 = Colors.Orange
+    }):Play()
+end)
+
+ChatOption.MouseEnter:Connect(function()
+    TweenService:Create(ChatOption, TweenInfo.new(0.1), {
+        BackgroundColor3 = Colors.InputBg,
+        TextColor3 = Colors.Text
+    }):Play()
+end)
+ChatOption.MouseLeave:Connect(function()
+    TweenService:Create(ChatOption, TweenInfo.new(0.1), {
+        BackgroundColor3 = Colors.DropdownBg,
+        TextColor3 = Colors.Blue
+    }):Play()
+end)
+
+-- Function to close dropdown
+local function closeModeDropdown()
+    if modeDropdownOpen then
+        modeDropdownOpen = false
+        TweenService:Create(ModeDropdownFrame, TweenInfo.new(0.15), {
+            Size = UDim2.new(1, 0, 0, 0)
+        }):Play()
+        task.delay(0.15, function()
+            if not modeDropdownOpen then
+                ModeDropdownFrame.Visible = false
+            end
+        end)
+    end
+end
+
+-- Function to toggle dropdown
+local function toggleModeDropdown()
+    modeDropdownOpen = not modeDropdownOpen
+    if modeDropdownOpen then
+        ModeDropdownFrame.Visible = true
+        ModeDropdownFrame.Size = UDim2.new(1, 0, 0, 0)
+        TweenService:Create(ModeDropdownFrame, TweenInfo.new(0.15, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+            Size = UDim2.new(1, 0, 0, 52)
+        }):Play()
+    else
+        closeModeDropdown()
+    end
+end
+
+-- Legacy variable for backward compatibility with BtnWidth references
+local BtnWidth = ModeDropdownWidth
+local FontSize = ModeFontSize
 
 local HelpBtn = createInstance("TextButton", {
-    Size = UDim2.new(0, 30, 0, 30),
+    Size = UDim2.new(0, 26, 0, 26),
     AnchorPoint = Vector2.new(1, 0),
-    Position = UDim2.new(1, -46, 0, 8),
+    Position = UDim2.new(1, -38, 0, 10),
     BackgroundColor3 = Colors.InputBg,
     Text = "?",
     TextColor3 = Colors.Blue,
     Font = Enum.Font.GothamBold,
-    TextSize = 16,
+    TextSize = 14,
     Parent = MainFrame
 })
-addCorner(HelpBtn, 6)
+addCorner(HelpBtn, 4)
 
 -- Help button hover effect
 HelpBtn.MouseEnter:Connect(function()
@@ -1015,17 +1137,17 @@ HelpBtn.MouseLeave:Connect(function()
 end)
 
 local MinBtn = createInstance("TextButton", {
-    Size = UDim2.new(0, 30, 0, 30),
+    Size = UDim2.new(0, 26, 0, 26),
     AnchorPoint = Vector2.new(1, 0),
-    Position = UDim2.new(1, -8, 0, 8),
+    Position = UDim2.new(1, -8, 0, 10),
     BackgroundColor3 = Colors.InputBg,
     Text = "-",
     TextColor3 = Colors.TextDim,
     Font = Enum.Font.GothamBold,
-    TextSize = 20,
+    TextSize = 18,
     Parent = MainFrame
 })
-addCorner(MinBtn, 6)
+addCorner(MinBtn, 4)
 
 -- Minimize button hover effect
 MinBtn.MouseEnter:Connect(function()
@@ -1041,30 +1163,31 @@ MinBtn.MouseLeave:Connect(function()
     }):Play()
 end)
 
---// Input Area
-local LeftPad = 8 + BtnWidth + 8
-local RightPad = 8 + 30 + 8 + 30 + 8  -- Mode + Help + Minimize buttons
+--// Input Area (optimized spacing for compact layout)
+local LeftPad = 8 + BtnWidth + 6
+local RightPad = 8 + 26 + 4 + 26 + 8  -- Mode dropdown + Help + Minimize buttons
 
 local InputContainer = createInstance("Frame", {
-    Size = UDim2.new(1, -(LeftPad + RightPad), 0, 30),
-    Position = UDim2.new(0, LeftPad, 0, 8),
+    Size = UDim2.new(1, -(LeftPad + RightPad), 0, 26),
+    Position = UDim2.new(0, LeftPad, 0, 10),
     BackgroundColor3 = Colors.InputBg,
     ZIndex = 2,
     Parent = MainFrame
 })
-addCorner(InputContainer, 6)
+addCorner(InputContainer, 4)
 
 local InputBox = createInstance("TextBox", {
-    Size = UDim2.new(1, -12, 1, 0),
-    Position = UDim2.new(0, 6, 0, 0),
+    Size = UDim2.new(1, -10, 1, 0),
+    Position = UDim2.new(0, 5, 0, 0),
     BackgroundTransparency = 1,
     Text = "",
     PlaceholderText = IsMobile and "What do you want to do?" or "Tell me what to do...",
     TextColor3 = Colors.Text,
     PlaceholderColor3 = Colors.TextDim,
     Font = Enum.Font.GothamMedium,
-    TextSize = 14,
+    TextSize = 12,
     TextXAlignment = Enum.TextXAlignment.Left,
+    TextTruncate = Enum.TextTruncate.AtEnd,
     ClearTextOnFocus = false,
     Parent = InputContainer
 })
@@ -1088,28 +1211,28 @@ createInstance("UIListLayout", {
     Parent = SuggestionFrame
 })
 
---// Preview Bar
+--// Preview Bar (tooltip-style, appears below input)
 local PreviewBar = createInstance("Frame", {
     Name = "PreviewBar",
-    Size = UDim2.new(1, -20, 0, 20),
-    Position = UDim2.new(0, 10, 1, -25),
+    Size = UDim2.new(1, -16, 0, 18),
+    Position = UDim2.new(0, 8, 0, 40),
     BackgroundColor3 = Colors.InputBg,
-    BackgroundTransparency = 0.5,
+    BackgroundTransparency = 0.3,
     Visible = false,
-    ZIndex = 3,
+    ZIndex = 8,
     Parent = MainFrame
 })
-addCorner(PreviewBar, 4)
+addCorner(PreviewBar, 3)
 
 local PreviewLabel = createInstance("TextLabel", {
     Name = "PreviewText",
-    Size = UDim2.new(1, -10, 1, 0),
-    Position = UDim2.new(0, 5, 0, 0),
+    Size = UDim2.new(1, -8, 1, 0),
+    Position = UDim2.new(0, 4, 0, 0),
     BackgroundTransparency = 1,
     Text = "",
     TextColor3 = Colors.Green,
     Font = Enum.Font.Code,
-    TextSize = 11,
+    TextSize = 10,
     TextXAlignment = Enum.TextXAlignment.Left,
     TextTruncate = Enum.TextTruncate.AtEnd,
     Parent = PreviewBar
@@ -1129,26 +1252,28 @@ local function hidePreview()
     PreviewBar.Visible = false
 end
 
---// Status Bar
+--// Status Bar (hidden in compact mode, shown during processing)
 local StatusLabel = createInstance("TextLabel", {
     Name = "Status",
-    Size = UDim2.new(1, -20, 0, 15),
+    Size = UDim2.new(1, -20, 0, 14),
     Position = UDim2.new(0, 10, 0, 42),
     BackgroundTransparency = 1,
     Text = ">> Ready",
     TextColor3 = Colors.TextDim,
     Font = Enum.Font.Code,
-    TextSize = 12,
+    TextSize = 10,
     TextXAlignment = Enum.TextXAlignment.Left,
-    TextTransparency = 0.5,
+    TextTransparency = 0.4,
+    TextTruncate = Enum.TextTruncate.AtEnd,
+    Visible = false, -- Hidden by default in compact CMD mode
     Parent = MainFrame
 })
 
 -- Chat mode container (only visible in CHAT mode)
 local ChatModeContainer = createInstance("Frame", {
     Name = "ChatModeContainer",
-    Size = UDim2.new(1, 0, 1, -45),
-    Position = UDim2.new(0, 0, 0, 45),
+    Size = UDim2.new(1, 0, 1, -46),
+    Position = UDim2.new(0, 0, 0, 46),
     BackgroundTransparency = 1,
     Visible = false, -- Hidden by default, shown only in CHAT mode
     Parent = MainFrame
@@ -1328,20 +1453,23 @@ end
 local rows = math.ceil(#QuickActions / 3)
 local gridHeight = (rows * scaledCellHeight) + ((rows - 1) * 4) + 12
 
+-- Quick Actions Toggle moved to bottom of frame for mobile
 local QuickActionsToggle = createInstance("TextButton", {
     Name = "QuickActionsToggle",
-    Size = UDim2.new(0, 25, 0, 25),
-    Position = UDim2.new(1, -40, 0, 10),
+    Size = UDim2.new(0, 22, 0, 22),
+    AnchorPoint = Vector2.new(1, 1),
+    Position = UDim2.new(1, -8, 1, -8),
     BackgroundColor3 = Colors.Purple,
     BackgroundTransparency = 0.5,
     Text = "⚡",
     TextColor3 = Colors.Text,
     Font = Enum.Font.GothamBold,
-    TextSize = 14,
-    Visible = IsMobile,
+    TextSize = 12,
+    Visible = IsMobile and not IS_CHAT_MODE,
+    ZIndex = 5,
     Parent = MainFrame
 })
-addCorner(QuickActionsToggle, 6)
+addCorner(QuickActionsToggle, 4)
 
 local quickActionsOpen = false
 QuickActionsToggle.MouseButton1Click:Connect(function()
@@ -2180,7 +2308,31 @@ local function updateStatus(text, color, useRandom)
     StatusLabel.Text = ">> " .. displayText
     StatusLabel.TextColor3 = color or Colors.Status
     StatusLabel.TextTransparency = 0
-    TweenService:Create(StatusLabel, TweenInfo.new(3, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {TextTransparency = 0.6}):Play()
+    
+    -- In compact CMD mode, show status temporarily then hide
+    if not IS_CHAT_MODE then
+        StatusLabel.Visible = true
+        -- Expand frame temporarily to show status
+        TweenService:Create(MainFrame, TweenInfo.new(0.15), {
+            Size = IsMobile and UDim2.new(0.9, 0, 0, 80) or UDim2.new(0, 420, 0, 80)
+        }):Play()
+        
+        task.delay(2.5, function()
+            if not IS_CHAT_MODE then
+                TweenService:Create(StatusLabel, TweenInfo.new(0.3), {TextTransparency = 1}):Play()
+                TweenService:Create(MainFrame, TweenInfo.new(0.2), {
+                    Size = BaseMainSize
+                }):Play()
+                task.delay(0.3, function()
+                    if not IS_CHAT_MODE then
+                        StatusLabel.Visible = false
+                    end
+                end)
+            end
+        end)
+    else
+        TweenService:Create(StatusLabel, TweenInfo.new(3, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {TextTransparency = 0.6}):Play()
+    end
 end
 
 local function getPlayerList()
@@ -2770,7 +2922,7 @@ local function updateDropdown(text)
     
     if text == "" or IS_CHAT_MODE then
         SuggestionFrame.Visible = false
-        StatusLabel.Visible = true
+        -- Don't show status in compact CMD mode
         return
     end
     
@@ -2831,7 +2983,7 @@ local function updateDropdown(text)
     
     if #matches == 0 then
         SuggestionFrame.Visible = false
-        StatusLabel.Visible = true
+        -- Don't show status in compact CMD mode
         return
     end
     
@@ -2880,13 +3032,11 @@ local function updateDropdown(text)
             end
             InputBox:CaptureFocus()
             SuggestionFrame.Visible = false
-            StatusLabel.Visible = true
         end)
     end
     
     SuggestionFrame.Size = UDim2.new(1, 0, 0, resultCount * 25)
     SuggestionFrame.Visible = true
-    StatusLabel.Visible = false
 end
 
 --// ============================================
@@ -2904,7 +3054,7 @@ local function hideDropdownWithDelay()
         -- Only hide if this is still the latest check and input is not focused
         if currentCheckId == dropdownFocusCheckId and not InputBox:IsFocused() then
             SuggestionFrame.Visible = false
-            StatusLabel.Visible = true
+            -- Don't show status in compact CMD mode
         end
     end)
 end
@@ -2919,7 +3069,7 @@ InputBox.FocusLost:Connect(function(enterPressed)
             queryAI(InputBox.Text)
         end
         SuggestionFrame.Visible = false
-        StatusLabel.Visible = true
+        -- Don't show status in compact CMD mode
     else
         -- Use configurable delay-based check to ensure UI cleanliness
         hideDropdownWithDelay()
@@ -2945,27 +3095,26 @@ OpenButton.MouseButton1Click:Connect(function()
     MainFrame.Visible = true
 end)
 
-ModeBtn.MouseButton1Click:Connect(function()
-    IS_CHAT_MODE = not IS_CHAT_MODE
+-- Function to switch mode (shared by dropdown options)
+local function switchMode(toChatMode)
     local uiName = (GameName ~= "Loading...") and GameName or "game"
     
-    -- Fun bounce animation on mode switch
-    local originalSize = ModeBtn.Size
-    TweenService:Create(ModeBtn, TweenInfo.new(0.1, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
-        Size = UDim2.new(0, originalSize.X.Offset + 10, 0, originalSize.Y.Offset + 4)
-    }):Play()
-    task.delay(0.1, function()
-        TweenService:Create(ModeBtn, TweenInfo.new(0.15, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
-            Size = originalSize
-        }):Play()
-    end)
+    -- Only switch if actually changing mode
+    if IS_CHAT_MODE == toChatMode then
+        closeModeDropdown()
+        return
+    end
+    
+    IS_CHAT_MODE = toChatMode
+    
+    -- Close dropdown first
+    closeModeDropdown()
     
     if IS_CHAT_MODE then
         -- CHAT Mode activated
-        ModeBtn.Text = "CHAT"
-        TweenService:Create(ModeBtn, TweenInfo.new(0.3), {BackgroundColor3 = Colors.Blue}):Play()
+        ModeBtn.Text = "CHAT ▾"
+        TweenService:Create(ModeBtn, TweenInfo.new(0.2), {BackgroundColor3 = Colors.Blue}):Play()
         InputBox.PlaceholderText = "Ask about " .. uiName .. "..."
-        updateStatus("Chat Mode - Memory active", Colors.Blue)
         
         -- Show CHAT mode container with animation
         ChatModeContainer.Visible = true
@@ -2978,27 +3127,62 @@ ModeBtn.MouseButton1Click:Connect(function()
         -- Hide CMD-specific elements
         SuggestionFrame.Visible = false
         StatusLabel.Visible = false
+        if IsMobile then QuickActionsToggle.Visible = false end
         
         -- Update memory indicator
         updateMemoryIndicator()
     else
         -- CMD Mode activated
-        ModeBtn.Text = "CMD"
-        TweenService:Create(ModeBtn, TweenInfo.new(0.3), {BackgroundColor3 = Colors.Orange}):Play()
+        ModeBtn.Text = "CMD ▾"
+        TweenService:Create(ModeBtn, TweenInfo.new(0.2), {BackgroundColor3 = Colors.Orange}):Play()
         InputBox.PlaceholderText = IsMobile and "What do you want to do?" or "Tell me what to do..."
-        updateStatus("Command Mode - Ready!", Colors.Orange)
         
         -- Hide CHAT mode container
         ChatModeContainer.Visible = false
         
-        -- Show CMD-specific elements
-        StatusLabel.Visible = true
+        -- In compact CMD mode, status is hidden by default
+        StatusLabel.Visible = false
+        if IsMobile then QuickActionsToggle.Visible = true end
     end
     
     -- Animate main frame size change
     TweenService:Create(MainFrame, TweenInfo.new(0.25, Enum.EasingStyle.Sine, Enum.EasingDirection.Out), {
         Size = IS_CHAT_MODE and ChatMainSize or BaseMainSize
     }):Play()
+end
+
+-- Mode button click toggles dropdown
+ModeBtn.MouseButton1Click:Connect(function()
+    toggleModeDropdown()
+end)
+
+-- Dropdown option click handlers
+CmdOption.MouseButton1Click:Connect(function()
+    switchMode(false) -- Switch to CMD mode
+end)
+
+ChatOption.MouseButton1Click:Connect(function()
+    switchMode(true) -- Switch to CHAT mode
+end)
+
+-- Close dropdown when clicking elsewhere on MainFrame
+MainFrame.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        -- Check if click is outside dropdown area
+        task.defer(function()
+            if modeDropdownOpen then
+                local mousePos = UserInputService:GetMouseLocation()
+                local dropdownAbsPos = ModeDropdownContainer.AbsolutePosition
+                local dropdownAbsSize = ModeDropdownContainer.AbsoluteSize
+                local expandedHeight = dropdownAbsSize.Y + 54 -- Account for dropdown options
+                
+                if mousePos.X < dropdownAbsPos.X or mousePos.X > dropdownAbsPos.X + dropdownAbsSize.X or
+                   mousePos.Y < dropdownAbsPos.Y or mousePos.Y > dropdownAbsPos.Y + expandedHeight then
+                    closeModeDropdown()
+                end
+            end
+        end)
+    end
 end)
 
 UserInputService.InputBegan:Connect(function(input, gameProcessed)
@@ -3075,5 +3259,5 @@ end)
 setNamespaceValue("Cleanup", cleanup)
 setNamespaceValue("ClearChat", clearChatLog)
 setNamespaceValue("GetBridgeStatus", getBridgeStatus)
-setNamespaceValue("Version", "1.2.1")
+setNamespaceValue("Version", "1.2.2")
 setNamespaceValue("Ready", true)
