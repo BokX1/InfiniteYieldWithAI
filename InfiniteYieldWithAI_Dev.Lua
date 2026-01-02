@@ -31,9 +31,6 @@ local CONFIG = {
     CacheFile = "SIY_CommandCache.json",
     MaxCacheEntries = 100,
     
-    -- Waypoint Settings
-    WaypointFile = "SIY_Waypoints.json",
-    
     -- System Prompt (~3500 Tokens)
     CommandPrompt = [[
 [SYSTEM MANIFESTO: SMART INFINITE YIELD]
@@ -223,38 +220,31 @@ ROLE: You are a Roblox Command Compiler. Convert Natural Language -> Infinite Yi
 ;gametp [id]           : Join different game.
 ;exit                  : Close Roblox.
 
-### SECTION 3: SMART WAYPOINT SYSTEM (CRITICAL) ###
-[LOCATION STORAGE RULES]
-1. SAVE LOCATION RULE:
+### SECTION 3: SMART WAYPOINT & GOTO SYSTEM ###
+[WAYPOINT RULES - Uses Infinite Yield Native Commands]
+1. SAVE LOCATION:
    - If user wants to save/mark/remember a location/position/spot:
-     > Output: ;localsave [name_lowercase]
-     > Example: "save this spot as base" -> ;localsave base
-     > Example: "mark this location as farm" -> ;localsave farm
-     > Example: "remember here as shop" -> ;localsave shop
-   - ALWAYS convert name to lowercase, no spaces (use underscores).
+     > Output: ;setwaypoint [name] OR ;swp [name]
+     > Example: "save this spot as base" -> ;swp base
+     > Example: "mark this location as farm" -> ;swp farm
+     > Example: "remember here as coffee" -> ;swp coffee
 
-2. GO TO LOCATION RULE:
-   - If user wants to go/teleport/travel to a saved location:
-     > Output: ;smartgoto [name_lowercase]
+2. GO TO LOCATION OR PLAYER (Smart Routing):
+   - If user wants to go/teleport to a waypoint OR player:
+     > Output: ;smartgoto [name]
      > Example: "go to base" -> ;smartgoto base
-     > Example: "teleport to farm" -> ;smartgoto farm
-     > Example: "take me to shop" -> ;smartgoto shop
-   - smartgoto automatically falls back to player search if waypoint not found.
+     > Example: "goto coffee" -> ;smartgoto coffee
+     > Example: "teleport to John" -> ;smartgoto john
+   - smartgoto tries waypoint first, then player search automatically.
 
 3. LIST WAYPOINTS:
-   - "show waypoints", "list locations" -> ;localwaypoints
+   - "show waypoints", "list my saved spots" -> ;waypoints
 
 4. DELETE WAYPOINT:
-   - "delete waypoint base", "remove location farm" -> ;localdelete [name]
+   - "delete waypoint base" -> ;deletewaypoint base
 
 5. CLEAR ALL WAYPOINTS:
-   - "clear all waypoints", "delete all locations" -> ;localclear
-
-[CONSTRAINT: NO COORDINATE HALLUCINATION]
-- NEVER invent or guess coordinates.
-- NEVER output raw CFrame or Vector3 values.
-- ALWAYS use localsave/smartgoto for location management.
-- If user asks to "go to coordinates X,Y,Z", respond: "Use ;localsave to save locations first."
+   - "clear all waypoints" -> ;clearwaypoints
 
 ### SECTION 4: FEW-SHOT TRAINING ###
 User: "Stop flying immediately"
@@ -273,25 +263,28 @@ User: "Don't let me fall in the void"
 AI: ;antivoid
 
 User: "Save this spot as my base"
-AI: ;localsave base
+AI: ;swp base
 
 User: "Go to my base"
 AI: ;smartgoto base
 
-User: "Remember this location as farm_spot"
-AI: ;localsave farm_spot
+User: "Remember this location as coffee"
+AI: ;swp coffee
 
-User: "Teleport me to farm_spot"
-AI: ;smartgoto farm_spot
+User: "Goto coffee"
+AI: ;smartgoto coffee
 
 User: "Show my saved waypoints"
-AI: ;localwaypoints
+AI: ;waypoints
 
 User: "Delete the base waypoint"
-AI: ;localdelete base
+AI: ;deletewaypoint base
 
-User: "Go to John" (player name)
+User: "Go to John"
 AI: ;smartgoto john
+
+User: "Teleport me to the shop waypoint"
+AI: ;smartgoto shop
 
 [END OF STATIC CONTEXT]
 ]],
@@ -408,156 +401,6 @@ end
 
 -- Initialize cache
 loadCache()
-
---// ============================================
---// 5.5. SMART WAYPOINT SYSTEM (Defensive Backend)
---// ============================================
--- Initialize global waypoint table
-if not getgenv().SIY_Waypoints then
-    getgenv().SIY_Waypoints = {}
-end
-
-local function loadWaypoints()
-    local success, content = pcall(function()
-        return readfile and readfile(CONFIG.WaypointFile) or nil
-    end)
-    
-    if success and content then
-        local parseSuccess, parsed = pcall(HttpService.JSONDecode, HttpService, content)
-        if parseSuccess and type(parsed) == "table" then
-            getgenv().SIY_Waypoints = parsed
-        else
-            -- Corrupt JSON, initialize empty
-            getgenv().SIY_Waypoints = {}
-        end
-    else
-        -- File missing or unreadable, initialize empty silently
-        getgenv().SIY_Waypoints = {}
-    end
-end
-
-local function saveWaypoints()
-    pcall(function()
-        if writefile then
-            writefile(CONFIG.WaypointFile, HttpService:JSONEncode(getgenv().SIY_Waypoints))
-        end
-    end)
-end
-
--- SaveWaypoint: Defensive function to save current position
--- Returns: true on success, false on failure (no crash)
-local function SaveWaypoint(name)
-    -- Sanitize name to lowercase
-    local safeName = name and tostring(name):lower():gsub("%s+", "_") or nil
-    if not safeName or safeName == "" then
-        return false
-    end
-    
-    -- Defensive character/HumanoidRootPart check
-    local character = LocalPlayer and LocalPlayer.Character
-    if not character then
-        return false
-    end
-    
-    local hrp = character:FindFirstChild("HumanoidRootPart")
-    if not hrp then
-        return false
-    end
-    
-    -- Save CFrame components (position + orientation)
-    local cf = hrp.CFrame
-    getgenv().SIY_Waypoints[safeName] = {
-        x = cf.X,
-        y = cf.Y,
-        z = cf.Z,
-        rx = cf.LookVector.X,
-        ry = cf.LookVector.Y,
-        rz = cf.LookVector.Z,
-        timestamp = os.time()
-    }
-    
-    -- Persist to file
-    saveWaypoints()
-    return true
-end
-
--- GotoWaypoint: Defensive function to teleport to saved waypoint
--- Returns: true on success, false on failure (waypoint not found or teleport failed)
-local function GotoWaypoint(name)
-    -- Sanitize name to lowercase
-    local safeName = name and tostring(name):lower():gsub("%s+", "_") or nil
-    if not safeName or safeName == "" then
-        return false
-    end
-    
-    -- Check if waypoint exists
-    local waypoint = getgenv().SIY_Waypoints[safeName]
-    if not waypoint then
-        return false
-    end
-    
-    -- Defensive character/HumanoidRootPart check
-    local character = LocalPlayer and LocalPlayer.Character
-    if not character then
-        return false
-    end
-    
-    local hrp = character:FindFirstChild("HumanoidRootPart")
-    if not hrp then
-        return false
-    end
-    
-    -- Anti-Glitch: Unsit before teleporting to prevent physics flinging
-    local humanoid = character:FindFirstChildOfClass("Humanoid")
-    if humanoid and humanoid.Sit then
-        humanoid.Sit = false
-        task.wait(0.1) -- Brief wait for physics to settle
-    end
-    
-    -- Teleport using saved CFrame
-    local success = pcall(function()
-        hrp.CFrame = CFrame.new(waypoint.x, waypoint.y, waypoint.z)
-    end)
-    
-    return success
-end
-
--- ListWaypoints: Returns a formatted string of all saved waypoints
-local function ListWaypoints()
-    local waypoints = {}
-    for name, data in pairs(getgenv().SIY_Waypoints) do
-        table.insert(waypoints, name)
-    end
-    
-    if #waypoints == 0 then
-        return "No waypoints saved."
-    end
-    
-    table.sort(waypoints)
-    return "Waypoints: " .. table.concat(waypoints, ", ")
-end
-
--- DeleteWaypoint: Remove a specific waypoint
-local function DeleteWaypoint(name)
-    local safeName = name and tostring(name):lower():gsub("%s+", "_") or nil
-    if not safeName or not getgenv().SIY_Waypoints[safeName] then
-        return false
-    end
-    
-    getgenv().SIY_Waypoints[safeName] = nil
-    saveWaypoints()
-    return true
-end
-
--- ClearAllWaypoints: Remove all waypoints
-local function ClearAllWaypoints()
-    getgenv().SIY_Waypoints = {}
-    saveWaypoints()
-    return true
-end
-
--- Initialize waypoints on load
-loadWaypoints()
 
 --// ============================================
 --// 6. BRIDGE SYSTEM (Event-Based)
@@ -1517,12 +1360,8 @@ local FastMap = {
     ["^help$"] = "help", ["^cmds$"] = "help", ["^commands$"] = "help",
     ["^clearcache$"] = "clearcache", ["^cacheinfo$"] = "cacheinfo",
     
-    -- Smart Waypoint System
-    ["^localsave (.+)"] = "localsave %1", ["^savewp (.+)"] = "localsave %1", ["^saveme (.+)"] = "localsave %1",
+    -- Smart Goto (Waypoint + Player)
     ["^smartgoto (.+)"] = "smartgoto %1", ["^sgo (.+)"] = "smartgoto %1", ["^sgoto (.+)"] = "smartgoto %1",
-    ["^localwaypoints$"] = "localwaypoints", ["^lwp$"] = "localwaypoints", ["^listwp$"] = "localwaypoints",
-    ["^localdelete (.+)"] = "localdelete %1", ["^delwp (.+)"] = "localdelete %1",
-    ["^localclear$"] = "localclear", ["^clearwp$"] = "localclear",
     ["^bind (%w+) (.+)"] = "bind %1 %2", ["^unbind (%w+)"] = "unbind %1",
     ["^addalias (.+) (.+)"] = "addalias %1 %2", ["^removealias (.+)"] = "removealias %1", ["^clraliases$"] = "clraliases",
     ["^addplugin (.+)"] = "addplugin %1", ["^removeplugin (.+)"] = "removeplugin %1",
@@ -1919,72 +1758,22 @@ local function executeBridge(text, source)
         end
 
         --// ==========================================
-        --// SMART WAYPOINT COMMAND INTERCEPTION
+        --// SMART GOTO - Waypoint First, Then Player
         --// ==========================================
-        
-        -- localsave [name] - Save current position as waypoint
-        local saveWpName = cleanText:match("^localsave%s+(.+)")
-        if saveWpName then
-            local success = SaveWaypoint(saveWpName)
-            if success then
-                IY_Interface.Exec("notify Waypoint '" .. saveWpName:lower() .. "' saved!")
-                updateStatus("Waypoint Saved: " .. saveWpName:lower(), Colors.Green)
-            else
-                IY_Interface.Exec("notify Failed to save waypoint (character not found)")
-                updateStatus("Error: Cannot save waypoint", Colors.Red)
-            end
+        -- smartgoto [target] - Try IY waypoint first, fallback to player goto
+        local smartTarget = cleanText:match("^smartgoto%s+(.+)")
+        if smartTarget then
+            -- First try IY's native waypoint command
+            updateStatus("Trying waypoint: " .. smartTarget, Colors.Purple)
+            IY_Interface.Exec("waypoint " .. smartTarget)
+            -- IY will handle the fallback notification if waypoint doesn't exist
+            -- Also try goto as fallback (IY handles both gracefully)
+            task.delay(0.3, function()
+                -- If waypoint didn't work, try player goto
+                IY_Interface.Exec("goto " .. smartTarget)
+            end)
             return
         end
-        
-        -- smartgoto [target] - Try waypoint first, fallback to player search
-        local gotoTarget = cleanText:match("^smartgoto%s+(.+)")
-        if gotoTarget then
-            local success = GotoWaypoint(gotoTarget)
-            if success then
-                IY_Interface.Exec("notify Teleported to waypoint '" .. gotoTarget:lower() .. "'")
-                updateStatus("Waypoint TP: " .. gotoTarget:lower(), Colors.Green)
-                return
-            else
-                -- Fallback: Waypoint not found, try player search via IY
-                updateStatus("Waypoint not found, searching for player...", Colors.Orange)
-                IY_Interface.Exec("notify Waypoint not found, trying player search...")
-                -- Mutate command to standard goto and let it proceed
-                cleanText = "goto " .. gotoTarget
-                -- Continue to chain execution below
-            end
-        end
-        
-        -- localwaypoints - List all saved waypoints
-        if cleanText == "localwaypoints" then
-            local list = ListWaypoints()
-            IY_Interface.Exec("notify " .. list)
-            updateStatus(list, Colors.Purple)
-            return
-        end
-        
-        -- localdelete [name] - Delete a specific waypoint
-        local deleteWpName = cleanText:match("^localdelete%s+(.+)")
-        if deleteWpName then
-            local success = DeleteWaypoint(deleteWpName)
-            if success then
-                IY_Interface.Exec("notify Waypoint '" .. deleteWpName:lower() .. "' deleted!")
-                updateStatus("Waypoint Deleted: " .. deleteWpName:lower(), Colors.Green)
-            else
-                IY_Interface.Exec("notify Waypoint '" .. deleteWpName .. "' not found")
-                updateStatus("Error: Waypoint not found", Colors.Red)
-            end
-            return
-        end
-        
-        -- localclear - Clear all waypoints
-        if cleanText == "localclear" then
-            ClearAllWaypoints()
-            IY_Interface.Exec("notify All waypoints cleared!")
-            updateStatus("All Waypoints Cleared", Colors.Green)
-            return
-        end
-        
-        --// END SMART WAYPOINT INTERCEPTION
         --// ==========================================
 
         -- Bind Commands
