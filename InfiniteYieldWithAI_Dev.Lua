@@ -202,6 +202,12 @@ AI: ;goto bob
 }
 
 --// ============================================
+--// 2.1 CHAT HISTORY STORAGE
+--// ============================================
+local ChatHistory = {}
+local MaxHistory = 6
+
+--// ============================================
 --// 3. LOCAL PLAYER & ENVIRONMENT
 --// ============================================
 local LocalPlayer = Players.LocalPlayer or Players.PlayerAdded:Wait()
@@ -722,6 +728,87 @@ local InputBox = createInstance("TextBox", {
     ClearTextOnFocus = false,
     Parent = InputContainer
 })
+
+--// Chat History Log (CHAT Mode)
+local ChatLogFrame = createInstance("ScrollingFrame", {
+    Name = "ChatLog",
+    Active = true,
+    AnchorPoint = Vector2.new(0.5, 0),
+    Size = UDim2.new(1, -20, 0, 170),
+    Position = UDim2.new(0.5, 0, 0, 60),
+    BackgroundColor3 = Colors.InputBg,
+    BorderSizePixel = 0,
+    CanvasSize = UDim2.new(0, 0, 0, 0),
+    ScrollBarThickness = 4,
+    Visible = false,
+    Parent = MainFrame
+})
+addCorner(ChatLogFrame, 8)
+addStroke(ChatLogFrame, Colors.Border, 1)
+
+local ChatLogPadding = createInstance("UIPadding", {
+    PaddingTop = UDim.new(0, 8),
+    PaddingBottom = UDim.new(0, 8),
+    PaddingLeft = UDim.new(0, 10),
+    PaddingRight = UDim.new(0, 10),
+    Parent = ChatLogFrame
+})
+
+local ChatLogLayout = createInstance("UIListLayout", {
+    SortOrder = Enum.SortOrder.LayoutOrder,
+    Padding = UDim.new(0, 6),
+    Parent = ChatLogFrame
+})
+
+ChatLogLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+    ChatLogFrame.CanvasSize = UDim2.new(0, 0, 0, ChatLogLayout.AbsoluteContentSize.Y + 12)
+end)
+
+local function addChatMessage(role, text)
+    if not text or text == "" then return end
+    
+    local isUser = role == "user"
+    local entry = createInstance("Frame", {
+        Name = (isUser and "User" or "Assistant") .. "Entry",
+        AutomaticSize = Enum.AutomaticSize.Y,
+        Size = UDim2.new(1, 0, 0, 0),
+        BackgroundTransparency = 1,
+        LayoutOrder = #ChatLogFrame:GetChildren()
+    })
+    
+    local nameLabel = createInstance("TextLabel", {
+        Name = "Speaker",
+        Size = UDim2.new(1, 0, 0, 16),
+        BackgroundTransparency = 1,
+        Text = isUser and "You" or "AI",
+        TextColor3 = isUser and Colors.Orange or Colors.Blue,
+        Font = Enum.Font.GothamBold,
+        TextSize = 12,
+        TextXAlignment = Enum.TextXAlignment.Left
+    })
+    nameLabel.Parent = entry
+    
+    local messageLabel = createInstance("TextLabel", {
+        Name = "Message",
+        AutomaticSize = Enum.AutomaticSize.Y,
+        Size = UDim2.new(1, 0, 0, 0),
+        BackgroundTransparency = 1,
+        Text = text,
+        TextWrapped = true,
+        TextColor3 = Colors.Text,
+        TextTransparency = 0.1,
+        Font = Enum.Font.Gotham,
+        TextSize = 13,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        TextYAlignment = Enum.TextYAlignment.Top
+    })
+    messageLabel.Parent = entry
+    
+    entry.Parent = ChatLogFrame
+    task.delay(0.05, function()
+        ChatLogFrame.CanvasPosition = Vector2.new(0, math.max(0, ChatLogFrame.CanvasSize.Y.Offset - ChatLogFrame.AbsoluteWindowSize.Y))
+    end)
+end
 
 --// Suggestion Dropdown
 local SuggestionFrame = createInstance("Frame", {
@@ -1865,6 +1952,7 @@ local function queryAI(promptText, retryContext, attemptCount)
     local messagesPayload = {}
     
     if IS_CHAT_MODE then
+        updateStatus("History Active", Colors.Blue)
         local displayName = (GameName ~= "Loading...") and GameName or "Unknown Game"
         
         -- [UPDATED PROMPT] Chat Mode: Advisor & Guide (No Execution)
@@ -1887,15 +1975,19 @@ User: "%s".
 ]], displayName, LocalPlayer.Name)
         
         table.insert(messagesPayload, {role = "system", content = dynamicContext})
+        for _, entry in ipairs(ChatHistory) do
+            table.insert(messagesPayload, {role = entry.role, content = entry.content})
+        end
+        table.insert(messagesPayload, {role = "user", content = promptText})
+        addChatMessage("user", promptText)
     else
         table.insert(messagesPayload, {role = "system", content = CONFIG.CommandPrompt})
         
         local playerList = needsPlayerContext(promptText) and ("\nPlayers: " .. getPlayerList()) or ""
         local environment = string.format("\n[ENV] Game: %s | User: %s", GameName, LocalPlayer.Name)
         promptText = promptText .. environment .. playerList
+        table.insert(messagesPayload, {role = "user", content = promptText})
     end
-
-    table.insert(messagesPayload, {role = "user", content = promptText})
 
     local body = HttpService:JSONEncode({
         model = CONFIG.Model,
@@ -1929,8 +2021,20 @@ User: "%s".
             aiOutput = aiOutput:gsub("`", ""):gsub("^%s+", ""):gsub("%s+$", "")
 
             if IS_CHAT_MODE then
-                local safeChat = aiOutput:gsub("^;chat%s+", ""):gsub("^;", ""):gsub('"', ""):gsub("\n", " ")
-                executeBridge(safeChat)
+                local aiReply = aiOutput:gsub("^;chat%s+", ""):gsub("^;", ""):gsub('"', ""):gsub("\n", " ")
+                
+                table.insert(ChatHistory, {role = "user", content = promptText})
+                table.insert(ChatHistory, {role = "assistant", content = aiReply})
+                
+                while #ChatHistory > MaxHistory do
+                    table.remove(ChatHistory, 1)
+                    if #ChatHistory > MaxHistory then
+                        table.remove(ChatHistory, 1)
+                    end
+                end
+                
+                addChatMessage("assistant", aiReply)
+                updateStatus("Sent", Colors.Blue)
                 resetVisuals()
                 InputBox.Text = ""
             else
@@ -2173,6 +2277,8 @@ end)
 ModeBtn.MouseButton1Click:Connect(function()
     IS_CHAT_MODE = not IS_CHAT_MODE
     local uiName = (GameName ~= "Loading...") and GameName or "game"
+    local normalHeight = MainSize
+    local chatHeight = IsMobile and UDim2.new(0.9, 0, 0, 260) or UDim2.new(0, 500, 0, 280)
     
     -- Fun bounce animation on mode switch
     local originalSize = ModeBtn.Size
@@ -2189,13 +2295,21 @@ ModeBtn.MouseButton1Click:Connect(function()
         ModeBtn.Text = "CHAT"
         TweenService:Create(ModeBtn, TweenInfo.new(0.3), {BackgroundColor3 = Colors.Blue}):Play()
         InputBox.PlaceholderText = "Ask about " .. uiName .. "..."
-        updateStatus("Chat Mode - Ask me anything!", Colors.Blue)
+        updateStatus("History Active", Colors.Blue)
         SuggestionFrame.Visible = false
+        ChatLogFrame.Visible = true
+        TweenService:Create(MainFrame, TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Size = chatHeight}):Play()
+        task.delay(0.1, function()
+            ChatLogFrame.CanvasPosition = Vector2.new(0, math.max(0, ChatLogFrame.CanvasSize.Y.Offset - ChatLogFrame.AbsoluteWindowSize.Y))
+        end)
     else
         ModeBtn.Text = "CMD"
         TweenService:Create(ModeBtn, TweenInfo.new(0.3), {BackgroundColor3 = Colors.Orange}):Play()
         InputBox.PlaceholderText = IsMobile and "What do you want to do?" or "Tell me what to do..."
         updateStatus("Command Mode - Let's do this!", Colors.Orange)
+        SuggestionFrame.Visible = false
+        ChatLogFrame.Visible = false
+        TweenService:Create(MainFrame, TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Size = normalHeight}):Play()
     end
 end)
 
