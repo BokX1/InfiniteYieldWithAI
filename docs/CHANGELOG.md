@@ -10,25 +10,69 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 Features currently in development for the next release.
 
-### To be added ASAP
+### Planned
 
-- **Overall Overview**: SmartInfiniteYield (SIY) is evolving into a more context-aware and user-friendly wrapper for Infinite Yield. The current focus is on enhancing the AI's understanding of game state and improving the interactive experience through better UI feedback and memory.
+- Additional game genre detection patterns
+- Voice command integration exploration
+- Plugin system for custom command handlers
 
-- **💬 Next-Gen CHAT Mode**:
-  - **Improved GUI**: Redesigning the CHAT mode interface to provide a more modern, "ChatGPT-like" feel with distinct message bubbles and better readability.
-  - **Transcript UI**: Developing a scrollable chat log with styled entries, auto-scroll, and transcript-aware placeholders for both PC and mobile layouts.
-  - **Memory Buffer**: Implementing a rolling memory buffer of the last six exchanges to allow for follow-up questions and conversational context.
-  - **Mode-Specific Visibility**: Ensuring CHAT mode GUI components only appear when CHAT mode is active, keeping the CMD mode interface clean and focused.
+---
 
-- **🧠 Intelligence & Context**:
-  - **Auto-Context Injection**: Implementing automatic game-state context injection (Game Name, Player Role, etc.) to give the AI better situational awareness without manual input.
-  - **Target-Smart Context**: Refining the logic to inject player lists into API payloads only when target cues are detected, optimizing token usage.
+## [1.3.0] - 2026-01-03
 
-- **🛠️ Stability & Bug Fixes**:
-  - **Bridge Connection Stability**: Implementing a more robust `waitForBridge` helper with configurable retries to eliminate intermittent connection failures.
-  - **Dropdown Focus Management**: Resolving issues where suggestions would persist after focus loss; adding a delay-based check to ensure UI cleanliness.
-  - **Fuzzy Match Precision**: Refining the Levenshtein threshold logic to prevent short player names from triggering incorrect matches.
-  - **Mobile UI Scaling**: Optimizing Quick Action grid scaling for high-density mobile displays.
+### Added
+
+| Feature | Description |
+|---------|-------------|
+| **ChatGPT-like CHAT Mode UI** | Complete redesign of CHAT mode with modern message bubbles, role indicators (👤 You / 🤖 Assistant), and timestamps |
+| **Memory Indicator** | Visual indicator showing conversation context usage (Memory: X/6) with color-coded status |
+| **Chat Placeholder** | Helpful placeholder text when chat is empty, guiding users to start conversations |
+| **Auto-Context Injection** | Automatic game-state context injection including Game Name, Genre, Player Team, and Player Count |
+| **Game Genre Detection** | Automatic detection of game type (Obby, Tycoon, Simulator, Roleplay, PvP, Horror) from game metadata |
+| **Team Awareness** | Tracks player team changes and includes team context in AI prompts |
+| **Enhanced Bridge System** | Configurable retry logic with `BridgeMaxRetries`, `BridgeRetryDelay`, and `BridgeTimeout` settings |
+| **Bridge Status Function** | New `getBridgeStatus()` function for debugging connection issues |
+| **Dropdown Focus Management** | Configurable delay-based focus check (`DropdownFocusDelay`) to prevent UI flickering |
+| **Clear Chat Function** | New `clearChatLog()` function exposed via namespace for programmatic chat clearing |
+| **Mobile UI Scaling** | Dynamic scaling for high-density displays with `MobileQuickActionScale` and `MobileMinCellSize` config |
+| **Chat Mode Container** | Dedicated container for CHAT mode components with proper visibility toggling |
+
+### Changed
+
+| Change | Description |
+|--------|-------------|
+| **Fuzzy Match Precision** | Dynamic threshold based on input length - shorter inputs require stricter matching to prevent false positives |
+| **Minimum Input Length** | New `FuzzyMatchMinInputLength` config (default: 3) prevents 1-2 character inputs from fuzzy matching |
+| **Chat Log Styling** | Increased padding, larger font sizes, and better color contrast for readability |
+| **Mode Switch Animation** | Enhanced mode switch with proper container visibility toggling and status updates |
+| **Bridge Initialization** | Added retry logic during initial connection with periodic reconnection attempts |
+| **Context Injection** | CMD mode now includes minimal game context for better command understanding |
+| **CHAT Mode Prompt** | Enhanced with genre hints and team awareness for more contextual responses |
+| **Quick Action Grid** | Cell size and font now scale based on display density |
+
+### Fixed
+
+| Fix | Description |
+|-----|-------------|
+| **ChatHistoryLimit Declaration** | Fixed forward declaration to prevent nil reference errors |
+| **Duplicate Variable Declaration** | Removed duplicate `ChatHistoryLimit` declaration |
+| **Bridge Validation** | Added proper nil checks for bridge interface and Exec function |
+| **Input Validation** | Enhanced `executeBridge` with input type and empty string validation |
+| **Chat Log Cleanup** | Added pcall protection when destroying chat entries |
+| **Memory Leak Prevention** | `clearChatLog` now properly clears both UI and internal ChatHistory |
+| **Dropdown Persistence** | Fixed issue where suggestions would persist after input focus loss |
+| **Focus Race Condition** | Added focus check ID system to prevent stale hide operations |
+
+### Technical
+
+| Improvement | Description |
+|-------------|-------------|
+| **Config Expansion** | Added 8 new configuration options for bridge, mobile, dropdown, and fuzzy matching |
+| **Color Palette** | Extended Colors table with ChatGPT-like colors for CHAT mode UI |
+| **Namespace Exports** | Added `ClearChat` and `GetBridgeStatus` to namespace for external access |
+| **Version Bump** | Updated to 1.3.0 in both header and namespace |
+| **Code Organization** | Enhanced section headers and comments for better maintainability |
+| **Error Handling** | Improved pcall usage throughout bridge and UI operations |
 
 ---
 
@@ -82,7 +126,6 @@ Features currently in development for the next release.
 | **Command Reference** | CHAT mode now includes curated command reference for better question answering |
 
 ### Fixed
-
 | Fix | Description |
 |-----|-------------|
 | **CHAT Mode Refusals** | Resolved issue where AI would refuse to answer questions about commands like "how do I fly?" |
@@ -160,7 +203,8 @@ Features currently in development for the next release.
 
 ---
 
-[Unreleased]: https://github.com/BokX1/InfiniteYieldWithAI/compare/v1.2.1...HEAD
+[Unreleased]: https://github.com/BokX1/InfiniteYieldWithAI/compare/v1.3.0...HEAD
+[1.3.0]: https://github.com/BokX1/InfiniteYieldWithAI/compare/v1.2.1...v1.3.0
 [1.2.1]: https://github.com/BokX1/InfiniteYieldWithAI/compare/v1.2.0...v1.2.1
 [1.2.0]: https://github.com/BokX1/InfiniteYieldWithAI/compare/v1.1.0...v1.2.0
 [1.1.0]: https://github.com/BokX1/InfiniteYieldWithAI/compare/v1.0.0...v1.1.0
