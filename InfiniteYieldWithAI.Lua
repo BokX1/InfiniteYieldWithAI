@@ -17,19 +17,61 @@ local TweenService = game:GetService("TweenService")
 local CoreGui = game:GetService("CoreGui")
 local RunService = game:GetService("RunService")
 
+-- Namespace for global variable isolation
+local NAMESPACE = "SmartInfiniteYield"
+
+-- Safe global access helpers
+local function getNamespace()
+    if getgenv then
+        getgenv()[NAMESPACE] = getgenv()[NAMESPACE] or {}
+        return getgenv()[NAMESPACE]
+    elseif _G then
+        _G[NAMESPACE] = _G[NAMESPACE] or {}
+        return _G[NAMESPACE]
+    end
+    return {}
+end
+
+local function setNamespaceValue(key, value)
+    local ns = getNamespace()
+    ns[key] = value
+end
+
+local function getNamespaceValue(key)
+    local ns = getNamespace()
+    return ns[key]
+end
+
 --// ============================================
 --// 2. CONFIGURATION
 --// ============================================
 local CONFIG = {
+    -- API Settings
     ApiKey = "Null",
     Endpoint = "https://infiniteyieldai.ahazihak03.workers.dev/v1/chat/completions",
     Model = "openai",
     MaxRetries = 2,
+    RequestTimeout = 10, -- Seconds to wait for API response
     
     -- Cache Settings
     CacheEnabled = true,
     CacheFile = "SIY_CommandCache.json",
     MaxCacheEntries = 100,
+    
+    -- Rate Limiting
+    AIRequestCooldown = 0.5, -- Minimum seconds between AI requests
+    
+    -- Input Validation
+    MaxInputLength = 500, -- Maximum characters allowed in input
+    
+    -- UI Timing Constants
+    PreviewDelay = 0.3, -- Seconds to show preview before execution
+    ErrorDisplayTime = 2, -- Seconds to display error messages
+    StatusFadeTime = 3, -- Seconds before status text fades
+    
+    -- Fuzzy Matching
+    FuzzyMatchMinThreshold = 2, -- Minimum Levenshtein distance threshold
+    FuzzyMatchRatio = 0.5, -- Ratio of input length for threshold calculation
     
     -- System Prompt (~3500 Tokens)
     CommandPrompt = [[
@@ -339,6 +381,34 @@ local function normalizeInput(text)
     return text:lower():gsub("^%s+", ""):gsub("%s+$", ""):gsub("%s+", " ")
 end
 
+-- Input sanitization for security
+local function sanitizeInput(text)
+    if not text or type(text) ~= "string" then return "" end
+    
+    -- Remove control characters (except newline and tab)
+    text = text:gsub("[%c]", function(c)
+        if c == "\n" or c == "\t" then return " " end
+        return ""
+    end)
+    
+    -- Limit input length to prevent abuse
+    if #text > CONFIG.MaxInputLength then
+        text = text:sub(1, CONFIG.MaxInputLength)
+    end
+    
+    -- Remove potentially dangerous Lua patterns (security)
+    text = text:gsub("loadstring", ""):gsub("require", "")
+    text = text:gsub("getfenv", ""):gsub("setfenv", "")
+    text = text:gsub("rawget", ""):gsub("rawset", "")
+    text = text:gsub("debug%.", "")
+    
+    -- Normalize whitespace
+    text = text:gsub("%s+", " ")
+    text = trim(text)
+    
+    return text
+end
+
 --// ============================================
 --// 5. COMMAND CACHE SYSTEM
 --// ============================================
@@ -447,8 +517,10 @@ end
 
 -- Initialize Bridge
 task.spawn(function()
-    if getgenv().PseudoBridge then
-        IY_Interface = getgenv().PseudoBridge
+    -- Check for existing bridge in namespace or legacy location
+    local existingBridge = getNamespaceValue("PseudoBridge") or (getgenv and getgenv().PseudoBridge)
+    if existingBridge then
+        IY_Interface = existingBridge
         BridgeConnected = true
         BridgeReady:Fire()
         return
@@ -457,24 +529,28 @@ task.spawn(function()
     if not CoreGui:FindFirstChild("InfiniteYield") then
         local success, source = pcall(game.HttpGet, game, "https://raw.githubusercontent.com/EdgeIY/infiniteyield/master/source")
         if success then
-            local bridgeCode = [[
-                getgenv().PseudoBridge = {
+            -- Bridge code uses namespace for isolation
+            local bridgeCode = string.format([[
+                local ns = getgenv()["%s"] or {}
+                getgenv()["%s"] = ns
+                ns.PseudoBridge = {
                     Exec = function(cmd) if execCmd then execCmd(cmd) end end,
                     Ready = true
                 }
-            ]]
+            ]], NAMESPACE, NAMESPACE)
             loadstring(source .. "\n" .. bridgeCode)()
         end
     end
 
     local timeout, interval = 0, 0.1
-    while not getgenv().PseudoBridge and timeout < 10 do
+    while not getNamespaceValue("PseudoBridge") and timeout < 10 do
         task.wait(interval)
         timeout = timeout + interval
     end
 
-    if getgenv().PseudoBridge then
-        IY_Interface = getgenv().PseudoBridge
+    local bridge = getNamespaceValue("PseudoBridge")
+    if bridge then
+        IY_Interface = bridge
         BridgeConnected = true
         BridgeReady:Fire()
     else
@@ -1383,6 +1459,7 @@ local FastMap = {
     
     -- Waypoint Teleport
     ["^gotowp (.+)"] = "gotowp %1", ["^gwp (.+)"] = "gotowp %1", ["^wpgoto (.+)"] = "gotowp %1",
+    ["^swp (.+)"] = "setwaypoint %1", ["^savewp (.+)"] = "setwaypoint %1",
     
     ["^bind (%w+) (.+)"] = "bind %1 %2", ["^unbind (%w+)"] = "unbind %1",
     ["^addalias (.+) (.+)"] = "addalias %1 %2", ["^removealias (.+)"] = "removealias %1", ["^clraliases$"] = "clraliases",
@@ -1414,8 +1491,10 @@ local FastMap = {
     ["^fly$"] = "fly", ["^fly (%d+)$"] = "fly %1", ["^unfly$"] = "unfly",
     ["^flyspeed (%d+)$"] = "flyspeed %1",
     ["^vfly$"] = "vehiclefly", ["^vfly (%d+)$"] = "vehiclefly %1", ["^unvfly$"] = "unvehiclefly",
+    ["^vehiclefly$"] = "vehiclefly", ["^vehiclefly (%d+)$"] = "vehiclefly %1", ["^unvehiclefly$"] = "unvehiclefly",
     ["^vehicleflyspeed (%d+)$"] = "vehicleflyspeed %1",
     ["^cfly$"] = "cframefly", ["^cfly (%d+)$"] = "cframefly %1", ["^uncfly$"] = "uncframefly",
+    ["^cframefly$"] = "cframefly", ["^cframefly (%d+)$"] = "cframefly %1", ["^uncframefly$"] = "uncframefly",
     ["^cframeflyspeed (%d+)$"] = "cframeflyspeed %1",
     ["^qefly$"] = "qefly", ["^vehiclenoclip$"] = "vehiclenoclip", ["^vehicleclip$"] = "vehicleclip",
     ["^float$"] = "float", ["^unfloat$"] = "unfloat",
@@ -1442,7 +1521,7 @@ local FastMap = {
     ["^firstp$"] = "firstp", ["^thirdp$"] = "thirdp", ["^noclipcam$"] = "noclipcam",
     ["^maxzoom (%d+)"] = "maxzoom %1", ["^minzoom (%d+)"] = "minzoom %1", ["^fov (%d+)"] = "fov %1", ["^fixcam$"] = "fixcam",
     ["^lookat (.+)"] = "lookat %1",
-    ["^fullbright$"] = "fullbright", ["^loopfullbright$"] = "loopfullbright", ["^unloopfullbright$"] = "unloopfullbright",
+    ["^fullbright$"] = "fullbright", ["^nofullbright$"] = "nofullbright", ["^loopfullbright$"] = "loopfullbright", ["^unloopfullbright$"] = "unloopfullbright",
     ["^day$"] = "day", ["^night$"] = "night", ["^nofog$"] = "nofog", ["^globalshadows$"] = "globalshadows", ["^noglobalshadows$"] = "noglobalshadows",
     ["^light$"] = "light", ["^nolight$"] = "nolight", ["^hovername$"] = "hovername", ["^unhovername$"] = "unhovername",
 
@@ -1480,14 +1559,16 @@ local FastMap = {
     ["^btools$"] = "btools", ["^f3x$"] = "f3x", ["^delete (.+)"] = "delete %1",
     ["^lockworkspace$"] = "lockworkspace", ["^unlockworkspace$"] = "unlockworkspace",
     ["^gotopart (.+)"] = "gotopart %1", ["^bringpart (.+)"] = "bringpart %1",
+    ["^partpath$"] = "partpath",
     ["^fireclickdetectors$"] = "fireclickdetectors", ["^firetouchinterests$"] = "firetouchinterests",
+    ["^noclickdetectorlimits$"] = "noclickdetectorlimits",
     ["^removeterrain$"] = "removeterrain", ["^destroyheight (%d+)"] = "destroyheight %1",
     ["^antivoid$"] = "antivoid", ["^unantivoid$"] = "unantivoid",
 
     -- Animation
     ["^animation (.+)"] = "animation %1", ["^emote (.+)"] = "emote %1", ["^dance$"] = "dance", ["^undance$"] = "undance",
     ["^spasm$"] = "spasm", ["^unspasm$"] = "unspasm", ["^noanim$"] = "noanim", ["^reanim$"] = "reanim",
-    ["^stopanimations$"] = "stopanimations",
+    ["^stopanimations$"] = "stopanimations", ["^copyanimation (.+)"] = "copyanimation %1",
 
     -- Tools
     ["^autoclick$"] = "autoclick", ["^unautoclick$"] = "unautoclick", ["^mousesensitivity$"] = "mousesensitivity",
@@ -1497,7 +1578,7 @@ local FastMap = {
 
     -- Server
     ["^serverinfo$"] = "serverinfo", ["^jobid$"] = "jobid", ["^rejoin$"] = "rejoin", ["^autorejoin$"] = "autorejoin",
-    ["^serverhop$"] = "serverhop", ["^gametp (.+)"] = "gametp %1"
+    ["^serverhop$"] = "serverhop", ["^gametp (.+)"] = "gametp %1", ["^exit$"] = "exit"
 }
 
 local Priority = {
@@ -1646,7 +1727,7 @@ local function fuzzyMatchPlayer(partial)
     
     local partialLower = partial:lower()
     local bestMatch, bestScore = nil, math.huge
-    local threshold = math.max(2, math.floor(#partial * 0.5))
+    local threshold = math.max(CONFIG.FuzzyMatchMinThreshold, math.floor(#partial * CONFIG.FuzzyMatchRatio))
     
     for _, player in ipairs(Players:GetPlayers()) do
         local name = player.Name:lower()
@@ -1656,28 +1737,23 @@ local function fuzzyMatchPlayer(partial)
         if name:sub(1, #partialLower) == partialLower then return player.Name end
         if displayName:sub(1, #partialLower) == partialLower then return player.Name end
         
-        -- Contains match
-        if name:find(partialLower, 1, true) then
-            local score = levenshteinDistance(partialLower, name)
-            if score < bestScore then
-                bestScore = score
-                bestMatch = player.Name
-            end
-        end
-        
-        if displayName:find(partialLower, 1, true) then
-            local score = levenshteinDistance(partialLower, displayName)
-            if score < bestScore then
-                bestScore = score
-                bestMatch = player.Name
-            end
-        end
-        
-        -- Fuzzy match
+        -- Calculate Levenshtein distances once per player (optimization)
         local nameScore = levenshteinDistance(partialLower, name)
         local displayScore = levenshteinDistance(partialLower, displayName)
-        local minScore = math.min(nameScore, displayScore)
         
+        -- Contains match with pre-calculated score
+        if name:find(partialLower, 1, true) and nameScore < bestScore then
+            bestScore = nameScore
+            bestMatch = player.Name
+        end
+        
+        if displayName:find(partialLower, 1, true) and displayScore < bestScore then
+            bestScore = displayScore
+            bestMatch = player.Name
+        end
+        
+        -- Fuzzy match using pre-calculated scores
+        local minScore = math.min(nameScore, displayScore)
         if minScore <= threshold and minScore < bestScore then
             bestScore = minScore
             bestMatch = player.Name
@@ -1874,8 +1950,19 @@ end
 --// ============================================
 --// 16. AI QUERY SYSTEM
 --// ============================================
+local lastAIRequestTime = 0
+
 local function queryAI(promptText, retryContext, attemptCount)
+    -- Sanitize input for security
+    promptText = sanitizeInput(promptText)
     if promptText == "" then return end
+    
+    -- Rate limiting for AI requests
+    local currentTime = tick()
+    if not retryContext and (currentTime - lastAIRequestTime) < CONFIG.AIRequestCooldown then
+        updateStatus("Please wait...", Colors.Orange)
+        return
+    end
     
     -- Fast Path (Non-AI)
     if not IS_CHAT_MODE and not retryContext then
@@ -1923,6 +2010,7 @@ local function queryAI(promptText, retryContext, attemptCount)
     end
 
     -- AI Path
+    lastAIRequestTime = tick() -- Update rate limit timestamp
     setThinkingState(false)
     updateStatus("Thinking", Colors.Orange, true)
 
@@ -1973,7 +2061,14 @@ Respond helpfully and concisely (<30 words). Explain commands when asked. No dis
         })
 
         if success and response.StatusCode == 200 then
-            local data = HttpService:JSONDecode(response.Body)
+            local decodeSuccess, data = pcall(HttpService.JSONDecode, HttpService, response.Body)
+            if not decodeSuccess or not data then
+                warn("SIY: Failed to parse AI response")
+                updateStatus("Error: Invalid Response", Colors.Red)
+                task.wait(CONFIG.ErrorDisplayTime)
+                resetVisuals()
+                return
+            end
             local aiOutput = ""
             
             if data.choices and data.choices[1] and data.choices[1].message then
@@ -1990,14 +2085,14 @@ Respond helpfully and concisely (<30 words). Explain commands when asked. No dis
             else
                 if aiOutput == "" or aiOutput:lower():sub(1, 4) == "sure" then
                     updateStatus("AI Uncertain", Colors.Orange)
-                    task.wait(1)
+                    task.wait(CONFIG.ErrorDisplayTime / 2)
                     resetVisuals()
                     return
                 end
 
                 cacheCommand(promptText, aiOutput)
                 showPreview(aiOutput)
-                task.wait(0.3)
+                task.wait(CONFIG.PreviewDelay)
                 
                 executeBridge(aiOutput, "AI")
                 resetVisuals(true)
@@ -2006,7 +2101,7 @@ Respond helpfully and concisely (<30 words). Explain commands when asked. No dis
         else
             warn("SIY Net Error:", response and response.StatusCode or "Unknown")
             updateStatus("Error", Colors.Red, true)
-            task.wait(2)
+            task.wait(CONFIG.ErrorDisplayTime)
             resetVisuals()
         end
     end)
@@ -2278,3 +2373,52 @@ end)
 BridgeReady.Event:Connect(function()
     updateStatus("Connected! Ready to roll", Colors.Green)
 end)
+
+--// ============================================
+--// 19. CLEANUP HANDLERS
+--// ============================================
+local Connections = {}
+
+-- Store all connections for cleanup
+local function registerConnection(connection)
+    table.insert(Connections, connection)
+    return connection
+end
+
+-- Cleanup function to disconnect all connections and save state
+local function cleanup()
+    -- Save cache before cleanup
+    pcall(saveCache)
+    
+    -- Disconnect all registered connections
+    for _, connection in ipairs(Connections) do
+        if connection and connection.Connected then
+            pcall(function() connection:Disconnect() end)
+        end
+    end
+    Connections = {}
+    
+    -- Destroy UI elements
+    pcall(function()
+        if ScreenGui and ScreenGui.Parent then
+            ScreenGui:Destroy()
+        end
+    end)
+end
+
+-- Handle player leaving
+Players.PlayerRemoving:Connect(function(player)
+    if player == LocalPlayer then
+        cleanup()
+    end
+end)
+
+-- Handle game closing
+game:BindToClose(function()
+    cleanup()
+end)
+
+-- Expose cleanup for external use (e.g., script reload)
+setNamespaceValue("Cleanup", cleanup)
+setNamespaceValue("Version", "1.2.1")
+setNamespaceValue("Ready", true)
