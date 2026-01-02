@@ -10,15 +10,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 Features currently in development for the next release.
 
-### Added
+### To be added ASAP
 
-- **Target-Smart Player Context (Dev)**: The dev variant only injects player lists into API payloads when target cues or player names are detected, keeping cache keys stable.
-- **CHAT Memory Buffer (Dev)**: CHAT mode now replays the last six user/assistant exchanges in requests without touching CMD-mode cache keys.
-- **Transcript UI (Dev)**: Mode toggle expansion reveals a scrollable chat log with styled entries, auto-scroll, and transcript-aware placeholders/status text for both PC and mobile layouts.
-
-### Changed
-
-- **CommandPrompt Expansion (Dev)**: Added advanced chaining templates, targeting resolution rules, and error-handling standards to push the static prompt past the 1024-token cache threshold while preserving the manifesto sections.
+- **Target-Smart Player Context**: The dev variant only injects player lists into API payloads when target cues or player names are detected, keeping cache keys stable.
+- **CHAT Memory Buffer**: CHAT mode now replays the last six user/assistant exchanges in requests without touching CMD-mode cache keys.
+- **Transcript UI**: Mode toggle expansion reveals a scrollable chat log with styled entries, auto-scroll, and transcript-aware placeholders/status text for both PC and mobile layouts.
+- **Improve the Chat Mode GUI**: Add chat GUI for chat mode inspired by chatgpt like feels.
+- **Add auto send context to AI**: This made the AI have knowledge to the chat history context.
+- **CommandPrompt Expansion**: Added advanced chaining templates, targeting resolution rules, and error-handling standards to push the static prompt past the 1024-token cache threshold while preserving the manifesto sections.
 
 ---
 
