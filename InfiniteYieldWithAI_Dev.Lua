@@ -1,5 +1,5 @@
 --[[ 
-    SMART INFINITE YIELD - V1.3.0 STABLE
+    SMART INFINITE YIELD - V1.2.1 STABLE
     - Architecture: Context Awareness + Event-Based Bridge
     - Logic: VolQ5 & Pollinations.AI (LLM Model)
     - Status: Stable 
@@ -3075,5 +3075,5 @@ end)
 setNamespaceValue("Cleanup", cleanup)
 setNamespaceValue("ClearChat", clearChatLog)
 setNamespaceValue("GetBridgeStatus", getBridgeStatus)
-setNamespaceValue("Version", "1.3.0")
+setNamespaceValue("Version", "1.2.1")
 setNamespaceValue("Ready", true)

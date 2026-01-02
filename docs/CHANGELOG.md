@@ -18,7 +18,7 @@ Features currently in development for the next release.
 
 ---
 
-## [1.3.0] - 2026-01-03
+## [1.2.1] - 2026-01-03
 
 ### Added
 
@@ -36,52 +36,6 @@ Features currently in development for the next release.
 | **Clear Chat Function** | New `clearChatLog()` function exposed via namespace for programmatic chat clearing |
 | **Mobile UI Scaling** | Dynamic scaling for high-density displays with `MobileQuickActionScale` and `MobileMinCellSize` config |
 | **Chat Mode Container** | Dedicated container for CHAT mode components with proper visibility toggling |
-
-### Changed
-
-| Change | Description |
-|--------|-------------|
-| **Fuzzy Match Precision** | Dynamic threshold based on input length - shorter inputs require stricter matching to prevent false positives |
-| **Minimum Input Length** | New `FuzzyMatchMinInputLength` config (default: 3) prevents 1-2 character inputs from fuzzy matching |
-| **Chat Log Styling** | Increased padding, larger font sizes, and better color contrast for readability |
-| **Mode Switch Animation** | Enhanced mode switch with proper container visibility toggling and status updates |
-| **Bridge Initialization** | Added retry logic during initial connection with periodic reconnection attempts |
-| **Context Injection** | CMD mode now includes minimal game context for better command understanding |
-| **CHAT Mode Prompt** | Enhanced with genre hints and team awareness for more contextual responses |
-| **Quick Action Grid** | Cell size and font now scale based on display density |
-
-### Fixed
-
-| Fix | Description |
-|-----|-------------|
-| **ChatHistoryLimit Declaration** | Fixed forward declaration to prevent nil reference errors |
-| **Duplicate Variable Declaration** | Removed duplicate `ChatHistoryLimit` declaration |
-| **Bridge Validation** | Added proper nil checks for bridge interface and Exec function |
-| **Input Validation** | Enhanced `executeBridge` with input type and empty string validation |
-| **Chat Log Cleanup** | Added pcall protection when destroying chat entries |
-| **Memory Leak Prevention** | `clearChatLog` now properly clears both UI and internal ChatHistory |
-| **Dropdown Persistence** | Fixed issue where suggestions would persist after input focus loss |
-| **Focus Race Condition** | Added focus check ID system to prevent stale hide operations |
-
-### Technical
-
-| Improvement | Description |
-|-------------|-------------|
-| **Config Expansion** | Added 8 new configuration options for bridge, mobile, dropdown, and fuzzy matching |
-| **Color Palette** | Extended Colors table with ChatGPT-like colors for CHAT mode UI |
-| **Namespace Exports** | Added `ClearChat` and `GetBridgeStatus` to namespace for external access |
-| **Version Bump** | Updated to 1.3.0 in both header and namespace |
-| **Code Organization** | Enhanced section headers and comments for better maintainability |
-| **Error Handling** | Improved pcall usage throughout bridge and UI operations |
-
----
-
-## [1.2.1] - 2026-01-02
-
-### Added
-
-| Feature | Description |
-|---------|-------------|
 | **Input Sanitization** | Security layer removes control characters and dangerous Lua patterns from user input |
 | **Namespace Isolation** | Global variables now use `SmartInfiniteYield` namespace to prevent conflicts |
 | **Cleanup Handlers** | Proper cleanup on player leaving or game closing, saves cache and disconnects events |
@@ -114,6 +68,14 @@ Features currently in development for the next release.
 
 | Change | Description |
 |--------|-------------|
+| **Fuzzy Match Precision** | Dynamic threshold based on input length - shorter inputs require stricter matching to prevent false positives |
+| **Minimum Input Length** | New `FuzzyMatchMinInputLength` config (default: 3) prevents 1-2 character inputs from fuzzy matching |
+| **Chat Log Styling** | Increased padding, larger font sizes, and better color contrast for readability |
+| **Mode Switch Animation** | Enhanced mode switch with proper container visibility toggling and status updates |
+| **Bridge Initialization** | Added retry logic during initial connection with periodic reconnection attempts |
+| **Context Injection** | CMD mode now includes minimal game context for better command understanding |
+| **CHAT Mode Prompt** | Enhanced with genre hints and team awareness for more contextual responses |
+| **Quick Action Grid** | Cell size and font now scale based on display density |
 | **Bridge System** | Replaced polling with event-driven architecture |
 | **Cache Cleanup** | LRU-style eviction when max entries reached |
 | **Target Resolution** | Added prefix, contains, and fuzzy matching fallback |
@@ -126,8 +88,17 @@ Features currently in development for the next release.
 | **Command Reference** | CHAT mode now includes curated command reference for better question answering |
 
 ### Fixed
+
 | Fix | Description |
 |-----|-------------|
+| **ChatHistoryLimit Declaration** | Fixed forward declaration to prevent nil reference errors |
+| **Duplicate Variable Declaration** | Removed duplicate `ChatHistoryLimit` declaration |
+| **Bridge Validation** | Added proper nil checks for bridge interface and Exec function |
+| **Input Validation** | Enhanced `executeBridge` with input type and empty string validation |
+| **Chat Log Cleanup** | Added pcall protection when destroying chat entries |
+| **Memory Leak Prevention** | `clearChatLog` now properly clears both UI and internal ChatHistory |
+| **Dropdown Persistence** | Fixed issue where suggestions would persist after input focus loss |
+| **Focus Race Condition** | Added focus check ID system to prevent stale hide operations |
 | **CHAT Mode Refusals** | Resolved issue where AI would refuse to answer questions about commands like "how do I fly?" |
 | **Context Framing** | Added legitimate gaming context to prevent safety guardrail triggers |
 
@@ -135,10 +106,13 @@ Features currently in development for the next release.
 
 | Improvement | Description |
 |-------------|-------------|
+| **Config Expansion** | Added 8 new configuration options for bridge, mobile, dropdown, and fuzzy matching |
+| **Color Palette** | Extended Colors table with ChatGPT-like colors for CHAT mode UI |
+| **Namespace Exports** | Added `ClearChat` and `GetBridgeStatus` to namespace for external access |
 | **Code Structure** | 19 numbered sections with clear headers |
 | **Helper Functions** | Reusable `createInstance()`, `sanitizeInput()`, namespace helpers reduce duplication |
 | **Variable Naming** | Standardized to Roblox conventions |
-| **Error Handling** | Optimized pcall patterns with JSON decode protection |
+| **Error Handling** | Improved pcall usage throughout bridge and UI operations |
 | **Iterators** | ipairs() for arrays, pairs() for dictionaries |
 | **Dynamic Context** | Minimized variable content in API calls; player list only sent when targeting needed |
 | **FastMap Completeness** | Added 11 missing commands (swp, nofullbright, exit, partpath, copyanimation, etc.) |
@@ -148,7 +122,6 @@ Features currently in development for the next release.
 ---
 
 ## [1.2.0] - 2026-01-01
-
 
 ### Added
 
@@ -203,8 +176,7 @@ Features currently in development for the next release.
 
 ---
 
-[Unreleased]: https://github.com/BokX1/InfiniteYieldWithAI/compare/v1.3.0...HEAD
-[1.3.0]: https://github.com/BokX1/InfiniteYieldWithAI/compare/v1.2.1...v1.3.0
+[Unreleased]: https://github.com/BokX1/InfiniteYieldWithAI/compare/v1.2.1...HEAD
 [1.2.1]: https://github.com/BokX1/InfiniteYieldWithAI/compare/v1.2.0...v1.2.1
 [1.2.0]: https://github.com/BokX1/InfiniteYieldWithAI/compare/v1.1.0...v1.2.0
 [1.1.0]: https://github.com/BokX1/InfiniteYieldWithAI/compare/v1.0.0...v1.1.0
