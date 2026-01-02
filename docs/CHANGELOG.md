@@ -16,6 +16,7 @@ Features currently in development for the next release.
 |--------|-------------|
 | **Prompt Cache Alignment (Dev)** | Dev script now keeps the 1900-token static manifesto intact while moving game/user/player context into the user message to preserve provider cache hits |
 | **Player Context Injection** | Player lists are appended to the user payload only when targeting is detected, avoiding cache-breaking system messages |
+| **Expanded Few-Shot Prompt (Dev)** | CommandPrompt now includes advanced chaining patterns, targeting resolution rules, and error-handling standards to exceed 1024-token cache threshold |
 
 ---
 
