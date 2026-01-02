@@ -1756,20 +1756,36 @@ local function executeBridge(text, source)
         end
 
         --// ==========================================
-        --// SMART GOTO - Waypoint First, Then Player
+        --// SMART GOTO - Check Waypoint First, Then Player
         --// ==========================================
-        -- Intercept goto [target] - Try IY waypoint first, fallback to player goto
+        -- Intercept goto [target] - Check if it's a waypoint, otherwise pass to IY for player search
         local gotoTarget = cleanText:match("^goto%s+(.+)")
         if gotoTarget then
-            -- First try IY's native waypoint command
-            updateStatus("Trying waypoint: " .. gotoTarget, Colors.Purple)
-            IY_Interface.Exec("waypoint " .. gotoTarget)
-            -- Also try player goto as fallback (IY handles both gracefully)
-            task.delay(0.3, function()
-                -- If waypoint didn't work, try player goto
-                IY_Interface.Exec("goto " .. gotoTarget)
+            -- Check if target matches a saved waypoint
+            local isWaypoint = false
+            local waypoints = {}
+            
+            -- Try to access IY's waypoint storage
+            pcall(function()
+                local wpTable = getgenv().IYwaypoints or _G.IYwaypoints
+                if wpTable then
+                    for wpName, _ in pairs(wpTable) do
+                        waypoints[wpName:lower()] = wpName
+                    end
+                end
             end)
-            return
+            
+            -- Check if target matches a waypoint (case-insensitive)
+            local targetLower = gotoTarget:lower()
+            if waypoints[targetLower] then
+                -- Target is a waypoint - use waypoint command
+                updateStatus("Waypoint: " .. gotoTarget, Colors.Green)
+                IY_Interface.Exec("waypoint " .. waypoints[targetLower])
+                return
+            end
+            
+            -- Target is not a waypoint - pass through to IY's native goto (player search)
+            -- Don't intercept, let it fall through to chain execution below
         end
         --// ==========================================
 
