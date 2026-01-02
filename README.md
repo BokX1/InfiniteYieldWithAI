@@ -1,4 +1,4 @@
-# SmartInfiniteYield (SIY) - V1.2.1 Stable
+# SmartInfiniteYield (SIY) - V1.2.2 Stable
 
 **Original Idea by [VolQ5](https://github.com/BokX1/RbxLuauLLM) | Powered by Pollinations.AI (LLM Model)**
 
@@ -278,6 +278,8 @@ See the full [ROADMAP.md](docs/ROADMAP.md) for detailed plans.
 See [CHANGELOG.md](docs/CHANGELOG.md) for the complete version history.
 
 ### Recent Updates
+
+**V1.2.2** - Enhanced CHAT mode with improved context framing, safety-compliant command reference, resolved AI refusal issues for command questions
 
 **V1.2.1** - Smart Waypoint System with `gotowp` command, separate player/waypoint dropdowns, token cache optimization, event-based bridge, intelligent caching, fuzzy targeting, visual feedback, mobile quick actions, interactive tutorial, fun messages system, button animations, engaging UX
 

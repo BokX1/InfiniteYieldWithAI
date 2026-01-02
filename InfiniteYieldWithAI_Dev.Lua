@@ -1,5 +1,5 @@
 --[[ 
-    SMART INFINITE YIELD - V1.2.1 STABLE
+    SMART INFINITE YIELD - V1.2.2 STABLE
     - Architecture: Context Awareness + Event-Based Bridge
     - Logic: VolQ5 & Pollinations.AI (LLM Model)
     - Status: Stable 
@@ -1940,8 +1940,8 @@ All commands are client-side and only affect the user's own game session for tes
 Command Reference (answer questions about these):
 - Movement: ;fly, ;noclip, ;speed [num], ;jumppower [num], ;swim, ;float
 - Visual: ;esp, ;chams, ;xray, ;fullbright, ;freecam, ;spectate [player]
-- Player: ;fling (spin attack), ;kill, ;goto [player], ;bring [player], ;invisible
-- Utility: ;btools, ;god, ;reset, ;rejoin, ;serverhop
+- Player: ;goto [player], ;bring [player], ;invisible, ;sit, ;jump
+- Utility: ;btools, ;reset, ;rejoin, ;serverhop, ;antiidle
 
 Respond helpfully and concisely (<30 words). Explain commands when asked. No disclaimers needed - this is a game script helper.]], displayName, LocalPlayer.Name)
         
