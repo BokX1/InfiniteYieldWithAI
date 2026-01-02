@@ -220,7 +220,42 @@ ROLE: You are a Roblox Command Compiler. Convert Natural Language -> Infinite Yi
 ;gametp [id]           : Join different game.
 ;exit                  : Close Roblox.
 
-### SECTION 3: FEW-SHOT TRAINING ###
+### SECTION 3: WAYPOINT & TELEPORT SYSTEM ###
+[IMPORTANT: SEPARATE COMMANDS FOR PLAYERS VS WAYPOINTS]
+
+1. SAVE LOCATION (Waypoint):
+   - If user wants to save/mark/remember a location/position/spot:
+     > Output: ;swp [name]
+     > Example: "save this spot as base" -> ;swp base
+     > Example: "mark this location as farm" -> ;swp farm
+     > Example: "remember here as coffee" -> ;swp coffee
+
+2. GO TO WAYPOINT (Saved Location):
+   - If user wants to go to a SAVED WAYPOINT/LOCATION:
+     > Output: ;gotowp [name]
+     > Example: "go to my base waypoint" -> ;gotowp base
+     > Example: "teleport to coffee waypoint" -> ;gotowp coffee
+     > Example: "take me to the farm spot" -> ;gotowp farm
+   - Use gotowp ONLY for saved waypoints/locations.
+
+3. GO TO PLAYER:
+   - If user wants to go to a PLAYER:
+     > Output: ;goto [player]
+     > Example: "go to John" -> ;goto john
+     > Example: "teleport to that guy" -> ;goto [player]
+     > Example: "tp to Bob" -> ;goto bob
+   - Use goto ONLY for players.
+
+4. LIST WAYPOINTS:
+   - "show waypoints", "list my saved spots" -> ;waypoints
+
+5. DELETE WAYPOINT:
+   - "delete waypoint base" -> ;deletewaypoint base
+
+6. CLEAR ALL WAYPOINTS:
+   - "clear all waypoints" -> ;clearwaypoints
+
+### SECTION 4: FEW-SHOT TRAINING ###
 User: "Stop flying immediately"
 AI: ;unfly
 
@@ -235,6 +270,36 @@ AI: ;antilag ;noesp ;nochams
 
 User: "Don't let me fall in the void"
 AI: ;antivoid
+
+User: "Save this spot as my base"
+AI: ;swp base
+
+User: "Go to my base waypoint"
+AI: ;gotowp base
+
+User: "Remember this location as coffee"
+AI: ;swp coffee
+
+User: "Goto coffee waypoint"
+AI: ;gotowp coffee
+
+User: "Take me to the farm spot I saved"
+AI: ;gotowp farm
+
+User: "Show my saved waypoints"
+AI: ;waypoints
+
+User: "Delete the base waypoint"
+AI: ;deletewaypoint base
+
+User: "Go to John"
+AI: ;goto john
+
+User: "Teleport me to that player"
+AI: ;goto [player]
+
+User: "tp to Bob"
+AI: ;goto bob
 
 [END OF STATIC CONTEXT]
 ]],
@@ -966,6 +1031,12 @@ local TutorialSteps = {
         button = "Next →"
     },
     {
+        title = "Waypoints & Teleporting",
+        icon = "📍",
+        content = "<b>Save & Teleport to Locations:</b>\n\n<font color='#40e682'>swp [name]</font> - Save current spot\n<font color='#969696'>\"swp base\" saves your position as \"base\"</font>\n\n<font color='#40e682'>gotowp [name]</font> - Teleport to waypoint\n<font color='#969696'>\"gotowp base\" takes you back there</font>\n\n<font color='#40e682'>goto [player]</font> - Teleport to player\n<font color='#969696'>\"goto john\" teleports to player John</font>\n\n<font color='#ff9128'>Tip:</font> Type \"gotowp \" to see saved waypoints!",
+        button = "Next →"
+    },
+    {
         title = "Cache Management",
         icon = "🗑️",
         content = "<b>If the AI learns something wrong:</b>\n\n<font color='#40e682'>clearcache</font>\nWipes all learned commands. Fresh start!\n\n<font color='#40e682'>cacheinfo</font>\nShows how many commands are cached.\n<font color='#969696'>\"Cache: 15/100 commands stored\"</font>\n\n<font color='#ff9128'>Tip:</font> Use clearcache if commands behave unexpectedly.",
@@ -1309,6 +1380,10 @@ local FastMap = {
     -- System & Aliases
     ["^help$"] = "help", ["^cmds$"] = "help", ["^commands$"] = "help",
     ["^clearcache$"] = "clearcache", ["^cacheinfo$"] = "cacheinfo",
+    
+    -- Waypoint Teleport
+    ["^gotowp (.+)"] = "gotowp %1", ["^gwp (.+)"] = "gotowp %1", ["^wpgoto (.+)"] = "gotowp %1",
+    
     ["^bind (%w+) (.+)"] = "bind %1 %2", ["^unbind (%w+)"] = "unbind %1",
     ["^addalias (.+) (.+)"] = "addalias %1 %2", ["^removealias (.+)"] = "removealias %1", ["^clraliases$"] = "clraliases",
     ["^addplugin (.+)"] = "addplugin %1", ["^removeplugin (.+)"] = "removeplugin %1",
@@ -1428,7 +1503,7 @@ local FastMap = {
 local Priority = {
     fly = 100, unfly = 100, noclip = 100, clip = 100,
     speed = 95, ws = 95, jumppower = 95, jp = 95,
-    goto = 90, tp = 90, bring = 90,
+    ["goto"] = 90, tp = 90, bring = 90,
     kill = 80, fling = 80, loopkill = 80,
     esp = 75, noesp = 75, xray = 75, spectate = 75,
     btools = 70, f3x = 70, dex = 70,
@@ -1704,6 +1779,19 @@ local function executeBridge(text, source)
             return
         end
 
+        --// ==========================================
+        --// GOTOWP - Waypoint Teleport Command
+        --// ==========================================
+        -- gotowp [name] - Teleport to a saved waypoint
+        local wpTarget = cleanText:match("^gotowp%s+(.+)")
+        if wpTarget then
+            -- Use IY's native waypoint command
+            updateStatus("Waypoint: " .. wpTarget, Colors.Green)
+            IY_Interface.Exec("waypoint " .. wpTarget)
+            return
+        end
+        --// ==========================================
+
         -- Bind Commands
         local bindKey, bindCmd = cleanText:match("^bind (%w+) (.+)")
         if bindKey and bindCmd then
@@ -1950,6 +2038,27 @@ local function buildSuggestions()
 end
 buildSuggestions()
 
+-- Helper: Get IY waypoints from the global IY waypoint list
+local function getIYWaypoints()
+    local waypoints = {}
+    -- Try to access IY's waypoint storage (stored in IY's global)
+    local success, result = pcall(function()
+        if getgenv().IYwaypoints then
+            return getgenv().IYwaypoints
+        elseif _G.IYwaypoints then
+            return _G.IYwaypoints
+        end
+        return nil
+    end)
+    
+    if success and result then
+        for name, _ in pairs(result) do
+            table.insert(waypoints, tostring(name))
+        end
+    end
+    return waypoints
+end
+
 local function updateDropdown(text)
     for _, child in ipairs(SuggestionFrame:GetChildren()) do
         if child:IsA("TextButton") then child:Destroy() end
@@ -1963,9 +2072,56 @@ local function updateDropdown(text)
     
     local matches = {}
     local textLower = text:lower()
-    for _, item in ipairs(SuggestionList) do
-        if item.Key:sub(1, #text):lower() == textLower then
-            table.insert(matches, item)
+    
+    -- Check if user is typing gotowp (waypoint-only command)
+    local wpCmd, wpPartial = text:match("^(gotowp)%s+(.*)")
+    
+    -- Check if user is typing goto/tp commands (player-only)
+    local playerCmd, playerPartial = text:match("^(goto)%s+(.*)")
+    if not playerCmd then playerCmd, playerPartial = text:match("^(go)%s+(.*)" ) end
+    if not playerCmd then playerCmd, playerPartial = text:match("^(tp)%s+(.*)" ) end
+    if not playerCmd then playerCmd, playerPartial = text:match("^(teleport)%s+(.*)" ) end
+    
+    if wpCmd then
+        -- GOTOWP: Show waypoint suggestions only
+        local waypoints = getIYWaypoints()
+        local partialLower = (wpPartial or ""):lower()
+        
+        for _, wpName in ipairs(waypoints) do
+            local wpLower = wpName:lower()
+            if partialLower == "" or wpLower:sub(1, #partialLower) == partialLower or wpLower:find(partialLower, 1, true) then
+                table.insert(matches, {
+                    Key = "gotowp " .. wpName,
+                    Display = "gotowp " .. wpName .. " [waypoint]",
+                    Score = 100,
+                    IsWaypoint = true,
+                    WaypointName = wpName
+                })
+            end
+        end
+    elseif playerCmd then
+        -- GOTO/TP: Show player suggestions only
+        local partialLower = (playerPartial or ""):lower()
+        
+        for _, player in ipairs(Players:GetPlayers()) do
+            local playerName = player.Name
+            local playerLower = playerName:lower()
+            if partialLower == "" or playerLower:sub(1, #partialLower) == partialLower or playerLower:find(partialLower, 1, true) then
+                table.insert(matches, {
+                    Key = playerCmd .. " " .. playerName,
+                    Display = playerCmd .. " " .. playerName .. " [player]",
+                    Score = 100,
+                    IsWaypoint = false,
+                    PlayerName = playerName
+                })
+            end
+        end
+    else
+        -- Standard command suggestions
+        for _, item in ipairs(SuggestionList) do
+            if item.Key:sub(1, #text):lower() == textLower then
+                table.insert(matches, item)
+            end
         end
     end
     
@@ -1981,17 +2137,18 @@ local function updateDropdown(text)
         return a.Key < b.Key
     end)
     
-    local resultCount = math.min(#matches, 5)
+    local resultCount = math.min(#matches, 6)
     
     for i = 1, resultCount do
         local data = matches[i]
+        local displayColor = data.IsWaypoint and Colors.Green or (data.PlayerName and Colors.Blue or Colors.TextDim)
         local btn = createInstance("TextButton", {
             Name = "Match",
             Size = UDim2.new(1, 0, 0, 25),
             BackgroundColor3 = Colors.DropdownBg,
             BorderSizePixel = 0,
             Text = "  " .. data.Display,
-            TextColor3 = Colors.TextDim,
+            TextColor3 = displayColor,
             Font = Enum.Font.Gotham,
             TextSize = 13,
             TextXAlignment = Enum.TextXAlignment.Left,
@@ -2006,12 +2163,17 @@ local function updateDropdown(text)
         
         btn.MouseLeave:Connect(function()
             btn.BackgroundColor3 = Colors.DropdownBg
-            btn.TextColor3 = Colors.TextDim
+            btn.TextColor3 = displayColor
         end)
         
         btn.MouseButton1Click:Connect(function()
-            local cmdOnly = data.Display:match("^([%w_]+)")
-            InputBox.Text = cmdOnly .. " "
+            if data.IsWaypoint or data.PlayerName then
+                -- For waypoint/player suggestions, use the full command
+                InputBox.Text = data.Key
+            else
+                local cmdOnly = data.Display:match("^([%w_]+)")
+                InputBox.Text = cmdOnly .. " "
+            end
             InputBox:CaptureFocus()
             SuggestionFrame.Visible = false
             StatusLabel.Visible = true
