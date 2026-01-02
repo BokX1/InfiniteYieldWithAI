@@ -10,15 +10,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 Features currently in development for the next release.
 
-### Change to implement ASAP
+### Added
 
-| Change | Description |
-|--------|-------------|
-| **Player Context Injection** | Player lists are appended to the user payload only when targeting is detected, avoiding cache-breaking system messages |
-| **Expanded Few-Shot Prompt** | CommandPrompt now includes advanced chaining patterns, targeting resolution rules, and error-handling standards to exceed 1024-token cache threshold |
-| **Contextual Chat Memory** | CHAT mode now stores recent user/assistant exchanges (capped to 6 turns) and replays them in API payloads for coherent follow-ups |
-| **CHAT UI Expansion** | Mode toggle grows the main panel, reveals the chat history log, and updates placeholders/status to signal active transcripts |
-| **Chat Transcript Panel** | Added a scrollable ChatLogFrame with styled entries for user/AI messages and auto-scrolling to the latest reply |
+- **Target-Smart Player Context (Dev)**: The dev variant only injects player lists into API payloads when target cues or player names are detected, keeping cache keys stable.
+- **CHAT Memory Buffer (Dev)**: CHAT mode now replays the last six user/assistant exchanges in requests without touching CMD-mode cache keys.
+- **Transcript UI (Dev)**: Mode toggle expansion reveals a scrollable chat log with styled entries, auto-scroll, and transcript-aware placeholders/status text for both PC and mobile layouts.
+
+### Changed
+
+- **CommandPrompt Expansion (Dev)**: Added advanced chaining templates, targeting resolution rules, and error-handling standards to push the static prompt past the 1024-token cache threshold while preserving the manifesto sections.
 
 ---
 
