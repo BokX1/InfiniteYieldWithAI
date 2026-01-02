@@ -37,6 +37,7 @@ Features currently in development for the next release.
 | **Button Animations** | Hover effects on Help/Minimize buttons, bounce on Mode switch |
 | **Open Button Pulse** | Glowing pulse animation when floating button is visible |
 | **Quick Action Effects** | Hover and press animations for mobile command grid |
+| **Token Cache Optimization** | Optimized API calls to enable OpenAI token caching for reduced costs |
 
 ### Changed
 
@@ -59,6 +60,7 @@ Features currently in development for the next release.
 | **Variable Naming** | Standardized to Roblox conventions |
 | **Error Handling** | Optimized pcall patterns |
 | **Iterators** | ipairs() for arrays, pairs() for dictionaries |
+| **Dynamic Context** | Minimized variable content in API calls; player list only sent when targeting needed |
 
 ---
 
