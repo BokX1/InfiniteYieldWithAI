@@ -128,6 +128,8 @@ Features currently in development for the next release.
 
 | Fix | Description |
 |-----|-------------|
+| **Dropdown Click-Outside** | Mode dropdown now closes reliably when clicking anywhere outside of it |
+| **Cleanup Scope** | Cleanup handler now destroys the correct Smart Infinite Yield screen GUI |
 | **ChatHistoryLimit Declaration** | Fixed forward declaration to prevent nil reference errors |
 | **Duplicate Variable Declaration** | Removed duplicate `ChatHistoryLimit` declaration |
 | **Bridge Validation** | Added proper nil checks for bridge interface and Exec function |
