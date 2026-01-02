@@ -1,4 +1,4 @@
-# SmartInfiniteYield (SIY) - V1.2.1 Stable
+# SmartInfiniteYield (SIY) - V1.2.2 Stable
 
 **Original Idea by [VolQ5](https://github.com/BokX1/RbxLuauLLM) | Powered by Pollinations.AI (LLM Model)**
 
@@ -39,10 +39,12 @@ Key innovations include **Intelligent Caching** that learns your phrases over ti
 
 | Feature | Description |
 |---------|-------------|
+| **Compact Mode Dropdown** | Space-efficient dropdown selector (55px) to switch between CMD and CHAT modes |
 | **Predictive Dropdown** | Google-style suggestions with priority ranking as you type |
 | **Waypoint Suggestions** | Type `gotowp ` to see saved waypoints, `goto ` to see players |
-| **Command Preview** | See exactly what will execute before it runs |
+| **Command Preview** | Tooltip-style preview shows exactly what will execute before it runs |
 | **Visual Processing Indicator** | Animated glow effect shows when AI is thinking |
+| **Temporary Status Display** | Status messages appear briefly (2.5s) then auto-hide for minimal UI clutter |
 | **Mobile Quick Actions** | One-tap grid with 9 common commands for mobile users |
 
 ### Keybinds & Controls
@@ -51,7 +53,7 @@ Key innovations include **Intelligent Caching** that learns your phrases over ti
 |---------|-------------|
 | **Master Toggle** | Press `Right Shift` to instantly show/hide the interface |
 | **Smart Binds** | Bind once, toggle automatically (e.g., `bind f fly` handles both fly and unfly) |
-| **Adaptive UI** | Automatically scales for PC (500px) or Mobile (90% width) |
+| **Adaptive UI** | Compact design: CMD mode (65px height), CHAT mode (300px height), optimized for all screens |
 
 ---
 
@@ -88,7 +90,7 @@ The main interface consists of three primary elements:
 | Element | Function |
 |---------|----------|
 | **Input Box** | Type your command or natural language request |
-| **Mode Button** | Toggle between CMD (orange) and CHAT (blue) modes |
+| **Mode Dropdown** | Click to select between CMD (orange) and CHAT (blue) modes |
 | **Help (?)** | Reopen the interactive tutorial anytime |
 | **Minimize (-)** | Collapse to floating icon |
 
@@ -223,7 +225,7 @@ When you use a phrase like "make me fast" and the AI translates it to `;speed 50
 
 ### Hybrid Dual-Path Engine
 
-SmartInfiniteYield V1.2.1 uses a sophisticated routing system that combines local speed with AI intelligence.
+SmartInfiniteYield V1.2.2 uses a sophisticated routing system that combines local speed with AI intelligence, wrapped in a streamlined compact interface.
 
 **Path A: Fast Path (Local Execution)**
 
@@ -249,9 +251,36 @@ Version 1.2.1 introduced an event-based bridge using BindableEvents, replacing t
 
 ---
 
-## What's New in V1.2.1
+## What's New in V1.2.2
 
-### Features Added
+### GUI Improvements
+
+Version 1.2.2 focuses on streamlining the interface and fixing visual bugs:
+
+| Improvement | Description |
+|-------------|-------------|
+| **Compact Mode Dropdown** | Replaced oversized 95px mode button with space-efficient 55px dropdown selector |
+| **Streamlined Header** | Reduced button sizes from 30px to 26px with consistent 4px corner radius |
+| **Minimal CMD Mode** | Default CMD frame height reduced from 220px to 65px for minimal screen footprint |
+| **Optimized CHAT Mode** | Chat mode width reduced from 560px to 420px for better screen utilization |
+| **Text Collision Fixes** | Eliminated overlap between mode selector, input area, and status elements |
+| **Temporary Status Display** | Status messages now appear briefly (2.5s) then auto-hide to reduce clutter |
+| **Tooltip Preview** | Preview bar repositioned as tooltip-style element below input |
+| **Mobile Quick Actions** | Quick actions toggle relocated to bottom-right corner for better accessibility |
+
+### Technical Enhancements
+
+| Enhancement | Description |
+|-------------|-------------|
+| **Mode Dropdown System** | New dropdown container with CMD/CHAT options and smooth hover effects |
+| **Click-Outside-to-Close** | Dropdown automatically closes when clicking outside its area |
+| **Dynamic Frame Expansion** | Frame temporarily expands to show status messages, then collapses back |
+| **Consistent Sizing** | All header elements now use uniform 26px height for visual harmony |
+| **Dropdown Arrow Indicator** | Added "▾" symbol to mode button to indicate dropdown functionality |
+
+### Previous Features (V1.2.1)
+
+All features from V1.2.1 are retained:
 
 | Feature | Description |
 |---------|-------------|
@@ -259,24 +288,10 @@ Version 1.2.1 introduced an event-based bridge using BindableEvents, replacing t
 | **Intelligent Caching** | Learns phrases and executes without API calls |
 | **Fuzzy Targeting** | Levenshtein distance matching for player names |
 | **Processing Glow** | Animated visual indicator during AI processing |
-| **Command Preview** | See commands before execution |
 | **Quick Actions** | Mobile-optimized one-tap command grid |
 | **Interactive Tutorial** | 8-step onboarding that teaches all features before unlocking GUI |
 | **Input Sanitization** | Security layer removes dangerous patterns from user input |
 | **Namespace Isolation** | Global variables use dedicated namespace to prevent conflicts |
-| **Cleanup Handlers** | Proper resource cleanup on player leaving or game closing |
-
-### UX Enhancements
-
-The interface was enhanced for a more engaging experience:
-
-| Enhancement | Description |
-|-------------|-------------|
-| **Fun Messages** | Varied status messages with personality ("Nailed it!", "Consulting the AI...") |
-| **Random Tips** | Helpful tips shown after 25% of successful commands |
-| **Button Animations** | Hover effects, bounce animations, and visual feedback |
-| **Pulse Effect** | Open button glows to draw attention when visible |
-| **Engaging Placeholders** | "Tell me what to do..." instead of generic text |
 
 ### Code Quality Improvements
 
