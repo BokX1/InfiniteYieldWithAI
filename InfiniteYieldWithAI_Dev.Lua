@@ -3185,7 +3185,24 @@ MainFrame.InputBegan:Connect(function(input)
     end
 end)
 
+-- Helper to determine if a point is inside a frame (used for global dropdown dismiss)
+local function isPointInsideFrame(frame, point)
+    if not frame or not frame:IsDescendantOf(SIY_Screen) then return false end
+    local pos = frame.AbsolutePosition
+    local size = frame.AbsoluteSize
+    return point.X >= pos.X and point.X <= pos.X + size.X and point.Y >= pos.Y and point.Y <= pos.Y + size.Y
+end
+
 UserInputService.InputBegan:Connect(function(input, gameProcessed)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        if modeDropdownOpen then
+            local mousePos = UserInputService:GetMouseLocation()
+            if not isPointInsideFrame(ModeDropdownContainer, mousePos) and not isPointInsideFrame(ModeDropdownFrame, mousePos) then
+                closeModeDropdown()
+            end
+        end
+    end
+
     if gameProcessed then return end
     
     -- Master Toggle
@@ -3237,8 +3254,8 @@ local function cleanup()
     
     -- Destroy UI elements
     pcall(function()
-        if ScreenGui and ScreenGui.Parent then
-            ScreenGui:Destroy()
+        if SIY_Screen and SIY_Screen.Parent then
+            SIY_Screen:Destroy()
         end
     end)
 end
