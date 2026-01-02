@@ -18,6 +18,12 @@ Features currently in development for the next release.
 
 | Feature | Description |
 |---------|-------------|
+| **Input Sanitization** | Security layer removes control characters and dangerous Lua patterns from user input |
+| **Namespace Isolation** | Global variables now use `SmartInfiniteYield` namespace to prevent conflicts |
+| **Cleanup Handlers** | Proper cleanup on player leaving or game closing, saves cache and disconnects events |
+| **Configurable Constants** | All timing values, thresholds, and limits now use CONFIG table |
+| **Rate Limiting** | Prevents rapid successive AI requests with configurable cooldown |
+| **JSON Error Handling** | Safe parsing of AI responses prevents crashes from malformed data |
 | **Smart Waypoint System** | New `gotowp` command for teleporting to saved waypoints |
 | **Waypoint Dropdown** | Type `gotowp ` to see all saved waypoints in dropdown suggestions |
 | **Player Dropdown** | Type `goto ` to see all players in dropdown suggestions |
@@ -65,12 +71,15 @@ Features currently in development for the next release.
 
 | Improvement | Description |
 |-------------|-------------|
-| **Code Structure** | 18 numbered sections with clear headers |
-| **Helper Functions** | Reusable `createInstance()` reduces duplication |
+| **Code Structure** | 19 numbered sections with clear headers |
+| **Helper Functions** | Reusable `createInstance()`, `sanitizeInput()`, namespace helpers reduce duplication |
 | **Variable Naming** | Standardized to Roblox conventions |
-| **Error Handling** | Optimized pcall patterns |
+| **Error Handling** | Optimized pcall patterns with JSON decode protection |
 | **Iterators** | ipairs() for arrays, pairs() for dictionaries |
 | **Dynamic Context** | Minimized variable content in API calls; player list only sent when targeting needed |
+| **FastMap Completeness** | Added 11 missing commands (swp, nofullbright, exit, partpath, copyanimation, etc.) |
+| **Fuzzy Match Optimization** | Levenshtein distance calculated once per player instead of multiple times |
+| **Global Isolation** | All globals use SmartInfiniteYield namespace to prevent pollution |
 
 ---
 

@@ -165,16 +165,33 @@ local CONFIG = {
     Endpoint = "https://...",           -- AI endpoint URL
     Model = "openai",                   -- AI model to use
     MaxRetries = 2,                     -- Retry attempts for failed requests
+    RequestTimeout = 10,                -- Seconds to wait for API response
     
-    -- Cache Settings (NEW in v1.2.1)
+    -- Cache Settings
     CacheEnabled = true,                -- Enable intelligent caching
     CacheFile = "SIY_CommandCache.json", -- Local cache filename
     MaxCacheEntries = 100,              -- Maximum cached commands
+    
+    -- Rate Limiting
+    AIRequestCooldown = 0.5,            -- Minimum seconds between AI requests
+    
+    -- Input Validation
+    MaxInputLength = 500,               -- Maximum characters allowed in input
+    
+    -- UI Timing Constants
+    PreviewDelay = 0.3,                 -- Seconds to show preview before execution
+    ErrorDisplayTime = 2,               -- Seconds to display error messages
+    StatusFadeTime = 3,                 -- Seconds before status text fades
+    
+    -- Fuzzy Matching
+    FuzzyMatchMinThreshold = 2,         -- Minimum Levenshtein distance threshold
+    FuzzyMatchRatio = 0.5,              -- Ratio of input length for threshold
 }
 ```
 
-### Cache System
+### Configuration Categories
 
+#### Cache System
 The intelligent caching system learns your frequently used phrases:
 
 | Setting | Default | Description |
@@ -184,6 +201,21 @@ The intelligent caching system learns your frequently used phrases:
 | `MaxCacheEntries` | `100` | Maximum phrases to remember |
 
 When you use a phrase like "make me fast" and the AI translates it to `;speed 50`, that mapping is cached. Next time you type the same phrase, it executes instantly without an API call.
+
+#### Security & Rate Limiting
+
+| Setting | Default | Description |
+|---------|---------|-------------|
+| `AIRequestCooldown` | `0.5` | Prevents spam by enforcing minimum delay between AI requests |
+| `MaxInputLength` | `500` | Truncates excessively long inputs for security |
+| `RequestTimeout` | `10` | Maximum seconds to wait for API response |
+
+#### Fuzzy Matching
+
+| Setting | Default | Description |
+|---------|---------|-------------|
+| `FuzzyMatchMinThreshold` | `2` | Minimum edit distance to consider a fuzzy match |
+| `FuzzyMatchRatio` | `0.5` | Dynamic threshold = max(MinThreshold, inputLength × Ratio) |.
 
 ---
 
@@ -230,6 +262,9 @@ Version 1.2.1 introduced an event-based bridge using BindableEvents, replacing t
 | **Command Preview** | See commands before execution |
 | **Quick Actions** | Mobile-optimized one-tap command grid |
 | **Interactive Tutorial** | 8-step onboarding that teaches all features before unlocking GUI |
+| **Input Sanitization** | Security layer removes dangerous patterns from user input |
+| **Namespace Isolation** | Global variables use dedicated namespace to prevent conflicts |
+| **Cleanup Handlers** | Proper resource cleanup on player leaving or game closing |
 
 ### UX Enhancements
 
@@ -245,14 +280,18 @@ The interface was enhanced for a more engaging experience:
 
 ### Code Quality Improvements
 
-The codebase was refactored for efficiency and maintainability:
+The codebase was refactored for efficiency, security, and maintainability:
 
 | Improvement | Description |
 |-------------|-------------|
-| **Reorganized Structure** | 18 clearly defined sections with numbered headers |
-| **Helper Functions** | Reusable `createInstance()` reduces code duplication |
+| **Reorganized Structure** | 19 clearly defined sections with numbered headers |
+| **Helper Functions** | Reusable `createInstance()`, `sanitizeInput()`, namespace helpers |
 | **Optimized Patterns** | Improved pcall handling and iterator usage |
 | **Standard Formatting** | Consistent style following Lua/Roblox conventions |
+| **FastMap Completeness** | Added 11 missing commands for instant local execution |
+| **Configurable Constants** | All timing values and thresholds use CONFIG table |
+| **JSON Error Handling** | Safe parsing prevents crashes from malformed API responses |
+| **Rate Limiting** | Prevents API abuse with configurable cooldown |
 
 ---
 
@@ -279,7 +318,7 @@ See [CHANGELOG.md](docs/CHANGELOG.md) for the complete version history.
 
 ### Recent Updates
 
-**V1.2.1** - Smart Waypoint System, token cache optimization, event-based bridge, intelligent caching, fuzzy targeting, visual feedback, mobile quick actions, interactive tutorial, enhanced CHAT mode with safety-compliant context framing
+**V1.2.1** - Smart Waypoint System, token cache optimization, event-based bridge, intelligent caching, fuzzy targeting, visual feedback, mobile quick actions, interactive tutorial, enhanced CHAT mode, input sanitization, namespace isolation, cleanup handlers, configurable constants, FastMap completeness (11 new commands)
 
 **V1.2.0** - Split-context strategy, predictive dropdown, smart keybinds, complete command database
 
