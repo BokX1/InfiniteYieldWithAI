@@ -1930,23 +1930,17 @@ local function queryAI(promptText, retryContext, attemptCount)
     
     if IS_CHAT_MODE then
         local displayName = (GameName ~= "Loading...") and GameName or "this game"
-        local dynamicContext = string.format([[
-ROLE: Friendly Roblox Assistant.
-CURRENT GAME: '%s'. USER: '%s'.
-INSTRUCTION: Respond to the user's text naturally.
-FORBIDDEN: DO NOT start your response with ";chat" or ";". Just speak.
-LENGTH: Under 25 words.
-]], displayName, LocalPlayer.Name)
+        local dynamicContext = string.format("Game: %s. User: %s. Respond naturally, <25 words, no ; prefix.", displayName, LocalPlayer.Name)
         
         table.insert(messagesPayload, {role = "system", content = dynamicContext})
     else
-        local dynamicContext = "MODE: STRICT COMPILATION.\nREMINDER: Output ONLY Infinite Yield commands (e.g. ;fly)."
-        if needsPlayerContext(promptText) then
-            dynamicContext = dynamicContext .. " Players: [" .. getPlayerList() .. "]."
-        end
-        
+        -- Static prompt first (for token caching - needs 1024+ tokens)
         table.insert(messagesPayload, {role = "system", content = CONFIG.CommandPrompt})
-        table.insert(messagesPayload, {role = "system", content = dynamicContext})
+        
+        -- Minimal dynamic context - only add player list when truly needed
+        if needsPlayerContext(promptText) then
+            table.insert(messagesPayload, {role = "system", content = "Players: " .. getPlayerList()})
+        end
     end
 
     table.insert(messagesPayload, {role = "user", content = promptText})
