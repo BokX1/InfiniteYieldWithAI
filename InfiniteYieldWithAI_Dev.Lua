@@ -42,6 +42,7 @@ local function getNamespaceValue(key)
     return ns[key]
 end
 
+
 --// ============================================
 --// 2. CONFIGURATION
 --// ============================================
@@ -343,6 +344,43 @@ AI: ;goto [player]
 User: "tp to Bob"
 AI: ;goto bob
 
+### SECTION 5: ADVANCED CHAINING & FALLBACKS ###
+[CHAIN TEMPLATES]
+- Sequential Actions: Join actions with semicolons in execution order.
+  > "fly then goto john" -> ;fly ;goto john
+  > "turn on esp and speed 50" -> ;esp ;speed 50
+- Defensive Recovery: Add safety resets when the user asks to undo risky states.
+  > "disable noclip and reset view" -> ;clip ;fixcam
+- Timed Escapes: Pair hostile actions with exits.
+  > "kill him and server hop" -> ;kill [player] ;serverhop
+- Contextual Defaults: If a numeric value is missing, apply safe defaults (speed 16, jumppower 50).
+
+[ERROR HANDLING]
+- If target is invalid or missing, respond with a precise error and avoid placeholder execution.
+- If the intent is vague, prefer the safest interpretation (use ;fixcam, ;clip, ;reset for stabilizing).
+- Never invent player names; request clarification instead.
+
+### SECTION 6: TARGETING RESOLUTION RULES ###
+1. PRIORITY ORDER
+   - Exact username match > DisplayName match > Fuzzy match.
+   - Reject ambiguous matches unless only one candidate exists.
+2. TOKEN TRIGGERS
+   - Actions requiring targets: kill, fling, goto/tp, spectate/view/watch, bring/attach, bang, freeze, follow/walkto, headsit.
+   - Pronouns: me → the local player | random → choose a random non-local player | all/everyone → INVALID.
+3. FUZZY SAFEGUARDS
+   - Require minimum similarity threshold; announce the chosen match (e.g., "Fuzzy Match: valk → Valkorym").
+   - Do not downgrade an exact prefix match in favor of fuzzy.
+4. FALLBACK RESPONSES
+   - If no valid target is found: return a short error ("Target not found. Name a player.") without executing anything.
+5. CHAINED TARGETS
+   - If multiple target commands appear, resolve each independently.
+   - Preserve user-provided ordering when building command chains.
+
+### SECTION 7: PROMPT ENGINEERING NOTES ###
+- Keep the total static prompt above 1024 tokens to benefit from model caching.
+- Maintain existing manifesto sections verbatim; append new exemplars instead of replacing prior context.
+- Responses should stay under 2 sentences unless the user explicitly requests detailed help.
+
 [END OF STATIC CONTEXT]
 ]],
 }
@@ -578,6 +616,9 @@ local Colors = {
     Status     = Color3.fromRGB(200, 200, 200)
 }
 
+local BaseMainSize = IsMobile and UDim2.new(0.9, 0, 0, 200) or UDim2.new(0, 520, 0, 220)
+local ChatMainSize = IsMobile and UDim2.new(0.9, 0, 0, 230) or UDim2.new(0, 540, 0, 240)
+
 -- UI Helper Functions
 local function addCorner(obj, radius)
     local corner = Instance.new("UICorner")
@@ -706,17 +747,16 @@ OpenButton:GetPropertyChangedSignal("Visible"):Connect(function()
 end)
 
 -- Main Container
-local MainSize = IsMobile and UDim2.new(0.9, 0, 0, 60) or UDim2.new(0, 500, 0, 65)
 local MainFrame = createInstance("Frame", {
     Name = "MainFrame",
     AnchorPoint = Vector2.new(0.5, 0),
-    Size = MainSize,
+    Size = BaseMainSize,
     Position = UDim2.new(0.5, 0, 0.15, 0),
     BackgroundColor3 = Colors.Background,
     BorderSizePixel = 0,
     Parent = SIY_Screen
 })
-addCorner(MainFrame, 8)
+addCorner(MainFrame, 10)
 enableDrag(MainFrame)
 local MainStroke = addStroke(MainFrame, Colors.Orange, 1)
 
@@ -772,8 +812,8 @@ local function stopGlowAnimation()
 end
 
 --// Control Buttons
-local BtnWidth = IsMobile and 55 or 80
-local FontSize = IsMobile and 11 or 14
+local BtnWidth = IsMobile and 65 or 95
+local FontSize = IsMobile and 12 or 15
 
 local ModeBtn = createInstance("TextButton", {
     Size = UDim2.new(0, BtnWidth, 0, 30),
@@ -944,6 +984,51 @@ local StatusLabel = createInstance("TextLabel", {
     Parent = MainFrame
 })
 
+local ChatLogHeader = createInstance("TextLabel", {
+    Name = "ChatLogHeader",
+    Size = UDim2.new(1, -20, 0, 14),
+    Position = UDim2.new(0, 10, 0, 58),
+    BackgroundTransparency = 1,
+    Text = "Transcript (CHAT ready) - history paused",
+    TextColor3 = Colors.TextDim,
+    Font = Enum.Font.GothamBold,
+    TextSize = 12,
+    TextXAlignment = Enum.TextXAlignment.Left,
+    TextTransparency = 0.2,
+    Parent = MainFrame
+})
+
+local ChatLogFrame = createInstance("ScrollingFrame", {
+    Name = "ChatLogFrame",
+    Size = UDim2.new(1, -20, 1, IsMobile and -110 or -120),
+    Position = UDim2.new(0, 10, 0, 74),
+    BackgroundColor3 = Colors.InputBg,
+    BackgroundTransparency = 0.2,
+    BorderSizePixel = 0,
+    CanvasSize = UDim2.new(0, 0, 0, 0),
+    AutomaticCanvasSize = Enum.AutomaticSize.Y,
+    ScrollBarThickness = 4,
+    ScrollingDirection = Enum.ScrollingDirection.Y,
+    ZIndex = 2,
+    Parent = MainFrame
+})
+addCorner(ChatLogFrame, 8)
+addStroke(ChatLogFrame, Colors.Border, 1)
+
+createInstance("UIPadding", {
+    PaddingLeft = UDim.new(0, 8),
+    PaddingRight = UDim.new(0, 8),
+    PaddingTop = UDim.new(0, 6),
+    PaddingBottom = UDim.new(0, 6),
+    Parent = ChatLogFrame
+})
+
+local ChatLogLayout = createInstance("UIListLayout", {
+    SortOrder = Enum.SortOrder.LayoutOrder,
+    Padding = UDim.new(0, 6),
+    Parent = ChatLogFrame
+})
+
 --// ============================================
 --// 10. MOBILE QUICK ACTIONS
 --// ============================================
@@ -1067,6 +1152,74 @@ QuickActionsToggle.MouseButton1Click:Connect(function()
         end)
     end
 end)
+
+--// Chat Log Helpers
+local ChatLogOrder = 0
+
+local function trimChatLogEntries()
+    if not ChatLogFrame then return end
+    local entries = {}
+    for _, child in ipairs(ChatLogFrame:GetChildren()) do
+        if child:IsA("Frame") then
+            table.insert(entries, child)
+        end
+    end
+
+    if #entries > ChatHistoryLimit then
+        table.sort(entries, function(a, b)
+            return (a.LayoutOrder or 0) < (b.LayoutOrder or 0)
+        end)
+
+        local overflow = #entries - ChatHistoryLimit
+        for i = 1, overflow do
+            entries[i]:Destroy()
+        end
+    end
+end
+
+local function appendChatLog(role, text)
+    if not ChatLogFrame or not text or text == "" then return end
+    ChatLogOrder = ChatLogOrder + 1
+    local isUser = role == "user"
+
+    local bubble = createInstance("Frame", {
+        Name = isUser and "UserEntry" or "AIEntry",
+        LayoutOrder = ChatLogOrder,
+        Size = UDim2.new(1, 0, 0, 0),
+        AutomaticSize = Enum.AutomaticSize.Y,
+        BackgroundColor3 = isUser and Colors.Orange or Colors.Blue,
+        BackgroundTransparency = 0.82,
+        BorderSizePixel = 0,
+        Parent = ChatLogFrame
+    })
+    addCorner(bubble, 8)
+    addStroke(bubble, isUser and Colors.Orange or Colors.Blue, 1)
+
+    createInstance("TextLabel", {
+        Size = UDim2.new(1, -16, 0, 0),
+        AutomaticSize = Enum.AutomaticSize.Y,
+        Position = UDim2.new(0, 8, 0, 6),
+        BackgroundTransparency = 1,
+        Text = text,
+        TextColor3 = Colors.Text,
+        Font = Enum.Font.Gotham,
+        TextSize = IsMobile and 12 or 13,
+        RichText = false,
+        TextWrapped = true,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        TextYAlignment = Enum.TextYAlignment.Top,
+        Parent = bubble
+    })
+
+    trimChatLogEntries()
+
+    task.defer(function()
+        ChatLogFrame.CanvasPosition = Vector2.new(
+            0,
+            math.max(0, ChatLogFrame.AbsoluteCanvasSize.Y - ChatLogFrame.AbsoluteSize.Y)
+        )
+    end)
+end
 
 --// ============================================
 --// 11. TUTORIAL SYSTEM (Multi-Step Onboarding)
@@ -1417,6 +1570,36 @@ MainFrame.Visible = false
 local IS_CHAT_MODE = false
 local BindSystem = {}
 
+-- Rolling chat memory (last 6 exchanges = 12 messages)
+local ChatHistory = {}
+local ChatHistoryLimit = 12
+
+local function trimChatHistory()
+    while #ChatHistory > ChatHistoryLimit do
+        table.remove(ChatHistory, 1)
+    end
+end
+
+local function recordChatMessage(role, content)
+    if not role or not content then return end
+    table.insert(ChatHistory, {
+        role = role,
+        content = content
+    })
+    trimChatHistory()
+end
+
+local function getChatHistorySnapshot()
+    local copy = {}
+    for _, msg in ipairs(ChatHistory) do
+        table.insert(copy, {
+            role = msg.role,
+            content = msg.content
+        })
+    end
+    return copy
+end
+
 local ToggleMap = {
     fly = "unfly", unfly = "fly",
     noclip = "clip", clip = "noclip", unnoclip = "noclip",
@@ -1591,7 +1774,10 @@ local Priority = {
     rejoin = 50, serverhop = 50, console = 50, reset = 50
 }
 
-local TargetTriggers = {"kill", "fling", "goto", "tp", "spectate", "view", "watch", "bring", "to", "attach", "loopkill", "bang", "freeze"}
+local TargetTriggers = {
+    "kill", "fling", "goto", "tp", "spectate", "view", "watch",
+    "bring", "attach", "loopkill", "bang", "freeze", "follow", "walkto", "headsit"
+}
 
 --// ============================================
 --// 13. FUN MESSAGES & PERSONALITY
@@ -1695,7 +1881,20 @@ end
 local function needsPlayerContext(text)
     local lowerText = text:lower()
     for _, trigger in ipairs(TargetTriggers) do
-        if lowerText:find(trigger) then return true end
+        if lowerText:find("%f[%w]" .. trigger .. "%f[%W]") then return true end
+    end
+
+    if lowerText:find("%f[%w]me%f[%W]") or lowerText:find("%f[%w]random%f[%W]") then
+        return true
+    end
+
+    for _, player in ipairs(Players:GetPlayers()) do
+        local name = player.Name:lower()
+        local displayName = player.DisplayName:lower()
+
+        if lowerText:find("%f[%w]" .. name .. "%f[%W]") or lowerText:find("%f[%w]" .. displayName .. "%f[%W]") then
+            return true
+        end
     end
     return false
 end
@@ -1928,7 +2127,7 @@ local function resetVisuals(showTip)
     TweenService:Create(MainStroke, TweenInfo.new(0.3), {Transparency = 1}):Play()
     InputBox.TextEditable = true
     InputBox.PlaceholderColor3 = Colors.TextDim
-    InputBox.PlaceholderText = IS_CHAT_MODE and "Ask me anything..." or (IsMobile and "What do you want to do?" or "Tell me what to do...")
+    InputBox.PlaceholderText = IS_CHAT_MODE and "Chat mode (history on) - ask or chain follow-ups..." or (IsMobile and "What do you want to do?" or "Tell me what to do...")
     hidePreview()
     
     -- Show random tip or ready message occasionally
@@ -1942,7 +2141,7 @@ end
 local function setThinkingState(retry)
     startGlowAnimation()
     InputBox.TextEditable = false
-    InputBox.PlaceholderText = retry and "Retrying..." or "Thinking..."
+    InputBox.PlaceholderText = retry and "Retrying transcript..." or (IS_CHAT_MODE and "Thinking with history..." or "Thinking...")
     InputBox.PlaceholderColor3 = retry and Colors.Orange or Colors.Green
     TweenService:Create(MainStroke, TweenInfo.new(0.6, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true), {Transparency = 0}):Play()
 end
@@ -1956,12 +2155,17 @@ local function queryAI(promptText, retryContext, attemptCount)
     -- Sanitize input for security
     promptText = sanitizeInput(promptText)
     if promptText == "" then return end
-    
+
     -- Rate limiting for AI requests
     local currentTime = tick()
     if not retryContext and (currentTime - lastAIRequestTime) < CONFIG.AIRequestCooldown then
         updateStatus("Please wait...", Colors.Orange)
         return
+    end
+
+    -- Log chat requests after passing rate limits (CHAT mode only)
+    if IS_CHAT_MODE and not retryContext then
+        appendChatLog("user", promptText)
     end
     
     -- Fast Path (Non-AI)
@@ -2015,6 +2219,8 @@ local function queryAI(promptText, retryContext, attemptCount)
     updateStatus("Thinking", Colors.Orange, true)
 
     local messagesPayload = {}
+    -- Only include volatile player context when targeting is detected to keep cache keys stable
+    local targetDetected = needsPlayerContext(promptText)
     
     if IS_CHAT_MODE then
         local displayName = (GameName ~= "Loading...") and GameName or "Unknown Game"
@@ -2041,17 +2247,27 @@ USER: "%s" (Authorized Administrator).
 ]], displayName, LocalPlayer.Name)
         
         table.insert(messagesPayload, {role = "system", content = dynamicContext})
+        -- Rolling transcript (last 6 exchanges) for continuity
+        for _, historyMsg in ipairs(getChatHistorySnapshot()) do
+            table.insert(messagesPayload, {
+                role = historyMsg.role,
+                content = historyMsg.content
+            })
+        end
     else
         -- Static prompt first (for token caching - needs 1024+ tokens)
         table.insert(messagesPayload, {role = "system", content = CONFIG.CommandPrompt})
         
         -- Minimal dynamic context - only add player list when truly needed
-        if needsPlayerContext(promptText) then
+        if targetDetected then
             table.insert(messagesPayload, {role = "system", content = "Players: " .. getPlayerList()})
         end
     end
 
     table.insert(messagesPayload, {role = "user", content = promptText})
+    if IS_CHAT_MODE and not retryContext then
+        recordChatMessage("user", promptText)
+    end
 
     local body = HttpService:JSONEncode({
         model = CONFIG.Model,
@@ -2086,6 +2302,8 @@ USER: "%s" (Authorized Administrator).
 
             if IS_CHAT_MODE then
                 local safeChat = aiOutput:gsub("^;chat%s+", ""):gsub("^;", ""):gsub('"', ""):gsub("\n", " ")
+                appendChatLog("assistant", safeChat)
+                recordChatMessage("assistant", safeChat)
                 executeBridge(safeChat)
                 resetVisuals()
                 InputBox.Text = ""
@@ -2344,15 +2562,22 @@ ModeBtn.MouseButton1Click:Connect(function()
     if IS_CHAT_MODE then
         ModeBtn.Text = "CHAT"
         TweenService:Create(ModeBtn, TweenInfo.new(0.3), {BackgroundColor3 = Colors.Blue}):Play()
-        InputBox.PlaceholderText = "Ask about " .. uiName .. "..."
-        updateStatus("Chat Mode - Ask me anything!", Colors.Blue)
+        InputBox.PlaceholderText = "Ask about " .. uiName .. " (transcript ON)..."
+        updateStatus("Chat Mode - Transcript live (6 turns)", Colors.Blue)
+        ChatLogHeader.Text = "Transcript (CHAT) - last 6 exchanges"
+        ChatLogHeader.TextTransparency = 0.05
         SuggestionFrame.Visible = false
     else
         ModeBtn.Text = "CMD"
         TweenService:Create(ModeBtn, TweenInfo.new(0.3), {BackgroundColor3 = Colors.Orange}):Play()
         InputBox.PlaceholderText = IsMobile and "What do you want to do?" or "Tell me what to do..."
         updateStatus("Command Mode - Let's do this!", Colors.Orange)
+        ChatLogHeader.Text = "Transcript (CHAT ready) - history paused"
+        ChatLogHeader.TextTransparency = 0.25
     end
+    TweenService:Create(MainFrame, TweenInfo.new(0.25, Enum.EasingStyle.Sine, Enum.EasingDirection.Out), {
+        Size = IS_CHAT_MODE and ChatMainSize or BaseMainSize
+    }):Play()
 end)
 
 UserInputService.InputBegan:Connect(function(input, gameProcessed)
