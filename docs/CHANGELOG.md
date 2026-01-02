@@ -22,6 +22,7 @@ Features currently in development for the next release.
 - **Transcript UI**: Developing a scrollable chat log with styled entries, auto-scroll, and transcript-aware placeholders for both PC and mobile layouts.
 - **Improved Chat Mode GUI**: Redesigning the CHAT mode interface to provide a more modern, "ChatGPT-like" feel with distinct message bubbles and better readability.
 - **Auto-Context Injection**: Implementing automatic game-state context injection (Game Name, Player Role, etc.) to give the AI better situational awareness without manual input.
+- **Mode-Specific GUI Visibility**: Ensuring the CHAT mode GUI components (like the transcript and chat bubbles) only appear when CHAT mode is active, keeping the CMD mode interface clean and focused.
 
 ---
 
