@@ -13,16 +13,22 @@ Features currently in development for the next release.
 ### To be added ASAP
 
 - **Overall Overview**: SmartInfiniteYield (SIY) is evolving into a more context-aware and user-friendly wrapper for Infinite Yield. The current focus is on enhancing the AI's understanding of game state and improving the interactive experience through better UI feedback and memory.
-- **Bug Fixes**:
+
+- **💬 Next-Gen CHAT Mode**:
+  - **Improved GUI**: Redesigning the CHAT mode interface to provide a more modern, "ChatGPT-like" feel with distinct message bubbles and better readability.
+  - **Transcript UI**: Developing a scrollable chat log with styled entries, auto-scroll, and transcript-aware placeholders for both PC and mobile layouts.
+  - **Memory Buffer**: Implementing a rolling memory buffer of the last six exchanges to allow for follow-up questions and conversational context.
+  - **Mode-Specific Visibility**: Ensuring CHAT mode GUI components only appear when CHAT mode is active, keeping the CMD mode interface clean and focused.
+
+- **🧠 Intelligence & Context**:
+  - **Auto-Context Injection**: Implementing automatic game-state context injection (Game Name, Player Role, etc.) to give the AI better situational awareness without manual input.
+  - **Target-Smart Context**: Refining the logic to inject player lists into API payloads only when target cues are detected, optimizing token usage.
+
+- **🛠️ Stability & Bug Fixes**:
   - **Bridge Connection Stability**: Implementing a more robust `waitForBridge` helper with configurable retries to eliminate intermittent connection failures.
   - **Dropdown Focus Management**: Resolving issues where suggestions would persist after focus loss; adding a delay-based check to ensure UI cleanliness.
   - **Fuzzy Match Precision**: Refining the Levenshtein threshold logic to prevent short player names from triggering incorrect matches.
   - **Mobile UI Scaling**: Optimizing Quick Action grid scaling for high-density mobile displays.
-- **CHAT Memory Buffer**: Implementing a rolling memory buffer of the last six exchanges to allow for follow-up questions and conversational context within CHAT mode.
-- **Transcript UI**: Developing a scrollable chat log with styled entries, auto-scroll, and transcript-aware placeholders for both PC and mobile layouts.
-- **Improved Chat Mode GUI**: Redesigning the CHAT mode interface to provide a more modern, "ChatGPT-like" feel with distinct message bubbles and better readability.
-- **Auto-Context Injection**: Implementing automatic game-state context injection (Game Name, Player Role, etc.) to give the AI better situational awareness without manual input.
-- **Mode-Specific GUI Visibility**: Ensuring the CHAT mode GUI components (like the transcript and chat bubbles) only appear when CHAT mode is active, keeping the CMD mode interface clean and focused.
 
 ---
 
@@ -48,7 +54,7 @@ Features currently in development for the next release.
 | **Fuzzy Targeting** | Levenshtein distance matching for player names (e.g., "valk" → "Valkorym") |
 | **Processing Indicator** | Animated glowing aura pulses while AI processes requests |
 | **Command Preview** | Status bar shows AI-generated command before execution |
-| **Quick Actions** | Mobile one-tap grid: Fly, Speed, ESP, Noclip, Jump, Teleport, Invisible, Reset, Anti-Lag |
+| **Quick Actions** | Mobile one-tap grid: Fly, Speed, ESP, noclip, Jump, Teleport, Invisible, Reset, Anti-Lag |
 | **Cache Management** | `clearcache` wipes learned commands; `cacheinfo` shows statistics |
 | **Interactive Tutorial** | 8-step onboarding covering all features before GUI unlock |
 | **Help Button** | Reopen tutorial anytime via "?" button in main GUI |
