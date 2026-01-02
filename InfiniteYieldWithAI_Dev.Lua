@@ -231,11 +231,11 @@ ROLE: You are a Roblox Command Compiler. Convert Natural Language -> Infinite Yi
 
 2. GO TO LOCATION OR PLAYER (Smart Routing):
    - If user wants to go/teleport to a waypoint OR player:
-     > Output: ;smartgoto [name]
-     > Example: "go to base" -> ;smartgoto base
-     > Example: "goto coffee" -> ;smartgoto coffee
-     > Example: "teleport to John" -> ;smartgoto john
-   - smartgoto tries waypoint first, then player search automatically.
+     > Output: ;goto [name]
+     > Example: "go to base" -> ;goto base
+     > Example: "goto coffee" -> ;goto coffee
+     > Example: "teleport to John" -> ;goto john
+   - goto automatically tries waypoint first, then player search.
 
 3. LIST WAYPOINTS:
    - "show waypoints", "list my saved spots" -> ;waypoints
@@ -266,13 +266,13 @@ User: "Save this spot as my base"
 AI: ;swp base
 
 User: "Go to my base"
-AI: ;smartgoto base
+AI: ;goto base
 
 User: "Remember this location as coffee"
 AI: ;swp coffee
 
 User: "Goto coffee"
-AI: ;smartgoto coffee
+AI: ;goto coffee
 
 User: "Show my saved waypoints"
 AI: ;waypoints
@@ -281,10 +281,10 @@ User: "Delete the base waypoint"
 AI: ;deletewaypoint base
 
 User: "Go to John"
-AI: ;smartgoto john
+AI: ;goto john
 
 User: "Teleport me to the shop waypoint"
-AI: ;smartgoto shop
+AI: ;goto shop
 
 [END OF STATIC CONTEXT]
 ]],
@@ -1360,8 +1360,6 @@ local FastMap = {
     ["^help$"] = "help", ["^cmds$"] = "help", ["^commands$"] = "help",
     ["^clearcache$"] = "clearcache", ["^cacheinfo$"] = "cacheinfo",
     
-    -- Smart Goto (Waypoint + Player)
-    ["^smartgoto (.+)"] = "smartgoto %1", ["^sgo (.+)"] = "smartgoto %1", ["^sgoto (.+)"] = "smartgoto %1",
     ["^bind (%w+) (.+)"] = "bind %1 %2", ["^unbind (%w+)"] = "unbind %1",
     ["^addalias (.+) (.+)"] = "addalias %1 %2", ["^removealias (.+)"] = "removealias %1", ["^clraliases$"] = "clraliases",
     ["^addplugin (.+)"] = "addplugin %1", ["^removeplugin (.+)"] = "removeplugin %1",
@@ -1760,17 +1758,16 @@ local function executeBridge(text, source)
         --// ==========================================
         --// SMART GOTO - Waypoint First, Then Player
         --// ==========================================
-        -- smartgoto [target] - Try IY waypoint first, fallback to player goto
-        local smartTarget = cleanText:match("^smartgoto%s+(.+)")
-        if smartTarget then
+        -- Intercept goto [target] - Try IY waypoint first, fallback to player goto
+        local gotoTarget = cleanText:match("^goto%s+(.+)")
+        if gotoTarget then
             -- First try IY's native waypoint command
-            updateStatus("Trying waypoint: " .. smartTarget, Colors.Purple)
-            IY_Interface.Exec("waypoint " .. smartTarget)
-            -- IY will handle the fallback notification if waypoint doesn't exist
-            -- Also try goto as fallback (IY handles both gracefully)
+            updateStatus("Trying waypoint: " .. gotoTarget, Colors.Purple)
+            IY_Interface.Exec("waypoint " .. gotoTarget)
+            -- Also try player goto as fallback (IY handles both gracefully)
             task.delay(0.3, function()
                 -- If waypoint didn't work, try player goto
-                IY_Interface.Exec("goto " .. smartTarget)
+                IY_Interface.Exec("goto " .. gotoTarget)
             end)
             return
         end
@@ -2022,6 +2019,27 @@ local function buildSuggestions()
 end
 buildSuggestions()
 
+-- Helper: Get IY waypoints from the global IY waypoint list
+local function getIYWaypoints()
+    local waypoints = {}
+    -- Try to access IY's waypoint storage (stored in IY's global)
+    local success, result = pcall(function()
+        if getgenv().IYwaypoints then
+            return getgenv().IYwaypoints
+        elseif _G.IYwaypoints then
+            return _G.IYwaypoints
+        end
+        return nil
+    end)
+    
+    if success and result then
+        for name, _ in pairs(result) do
+            table.insert(waypoints, tostring(name))
+        end
+    end
+    return waypoints
+end
+
 local function updateDropdown(text)
     for _, child in ipairs(SuggestionFrame:GetChildren()) do
         if child:IsA("TextButton") then child:Destroy() end
@@ -2035,9 +2053,53 @@ local function updateDropdown(text)
     
     local matches = {}
     local textLower = text:lower()
-    for _, item in ipairs(SuggestionList) do
-        if item.Key:sub(1, #text):lower() == textLower then
-            table.insert(matches, item)
+    
+    -- Check if user is typing a goto/teleport command with a partial target
+    local gotoCmd, partialTarget = text:match("^(goto)%s+(.*)")
+    if not gotoCmd then gotoCmd, partialTarget = text:match("^(go)%s+(.*)" ) end
+    if not gotoCmd then gotoCmd, partialTarget = text:match("^(tp)%s+(.*)" ) end
+    if not gotoCmd then gotoCmd, partialTarget = text:match("^(teleport)%s+(.*)" ) end
+    if not gotoCmd then gotoCmd, partialTarget = text:match("^(waypoint)%s+(.*)" ) end
+    if not gotoCmd then gotoCmd, partialTarget = text:match("^(wp)%s+(.*)" ) end
+    
+    if gotoCmd then
+        -- Show waypoint suggestions for goto-type commands
+        local waypoints = getIYWaypoints()
+        local partialLower = (partialTarget or ""):lower()
+        
+        for _, wpName in ipairs(waypoints) do
+            local wpLower = wpName:lower()
+            if partialLower == "" or wpLower:sub(1, #partialLower) == partialLower or wpLower:find(partialLower, 1, true) then
+                table.insert(matches, {
+                    Key = gotoCmd .. " " .. wpName,
+                    Display = gotoCmd .. " " .. wpName .. " [waypoint]",
+                    Score = 100,
+                    IsWaypoint = true,
+                    WaypointName = wpName
+                })
+            end
+        end
+        
+        -- Also add player suggestions
+        for _, player in ipairs(Players:GetPlayers()) do
+            local playerName = player.Name
+            local playerLower = playerName:lower()
+            if partialLower == "" or playerLower:sub(1, #partialLower) == partialLower or playerLower:find(partialLower, 1, true) then
+                table.insert(matches, {
+                    Key = gotoCmd .. " " .. playerName,
+                    Display = gotoCmd .. " " .. playerName .. " [player]",
+                    Score = 50,
+                    IsWaypoint = false,
+                    PlayerName = playerName
+                })
+            end
+        end
+    else
+        -- Standard command suggestions
+        for _, item in ipairs(SuggestionList) do
+            if item.Key:sub(1, #text):lower() == textLower then
+                table.insert(matches, item)
+            end
         end
     end
     
@@ -2053,17 +2115,18 @@ local function updateDropdown(text)
         return a.Key < b.Key
     end)
     
-    local resultCount = math.min(#matches, 5)
+    local resultCount = math.min(#matches, 6)
     
     for i = 1, resultCount do
         local data = matches[i]
+        local displayColor = data.IsWaypoint and Colors.Green or (data.PlayerName and Colors.Blue or Colors.TextDim)
         local btn = createInstance("TextButton", {
             Name = "Match",
             Size = UDim2.new(1, 0, 0, 25),
             BackgroundColor3 = Colors.DropdownBg,
             BorderSizePixel = 0,
             Text = "  " .. data.Display,
-            TextColor3 = Colors.TextDim,
+            TextColor3 = displayColor,
             Font = Enum.Font.Gotham,
             TextSize = 13,
             TextXAlignment = Enum.TextXAlignment.Left,
@@ -2078,12 +2141,17 @@ local function updateDropdown(text)
         
         btn.MouseLeave:Connect(function()
             btn.BackgroundColor3 = Colors.DropdownBg
-            btn.TextColor3 = Colors.TextDim
+            btn.TextColor3 = displayColor
         end)
         
         btn.MouseButton1Click:Connect(function()
-            local cmdOnly = data.Display:match("^([%w_]+)")
-            InputBox.Text = cmdOnly .. " "
+            if data.IsWaypoint or data.PlayerName then
+                -- For waypoint/player suggestions, use the full command
+                InputBox.Text = data.Key
+            else
+                local cmdOnly = data.Display:match("^([%w_]+)")
+                InputBox.Text = cmdOnly .. " "
+            end
             InputBox:CaptureFocus()
             SuggestionFrame.Visible = false
             StatusLabel.Visible = true
