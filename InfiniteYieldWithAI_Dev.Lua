@@ -119,22 +119,84 @@ LIST waypoints -> ;waypoints
 DELETE waypoint -> ;deletewaypoint [name]
 CLEAR all waypoints -> ;clearwaypoints
 
-### SECTION 4: FEW-SHOT ###
-"Stop flying immediately" -> ;unfly
-"Make me walk slow" -> ;speed 16
-"Kill him and leave" -> ;kill [player] ;serverhop
-"Remove the lag" -> ;antilag ;noesp ;nochams
-"Don't let me fall in the void" -> ;antivoid
-"Save this spot as my base" -> ;swp base
-"Go to my base waypoint" -> ;gotowp base
-"Remember this location as coffee" -> ;swp coffee
-"Goto coffee waypoint" -> ;gotowp coffee
-"Take me to the farm spot I saved" -> ;gotowp farm
-"Show my saved waypoints" -> ;waypoints
-"Delete the base waypoint" -> ;deletewaypoint base
-"Go to John" -> ;goto john
-"Teleport me to that player" -> ;goto [player]
-"tp to Bob" -> ;goto bob
+### SECTION 4: ADVANCED LOGIC KERNEL & CHAINING PROTOCOLS ###
+1. TARGET RESOLUTION:
+   - If user says "others" or "not me", iterate through all players excluding LocalPlayer.
+   - If user says "enemies", look for players on different teams (if applicable).
+   - For "all", ask for confirmation or default to visual range.
+
+2. COMPLEX CHAINING EXAMPLES (Study these patterns):
+   User: "fly and kill him"
+   AI: ;fly ;kill [player]
+   
+   User: "tp to base and set a waypoint there called home"
+   AI: ;gotowp base ;swp home
+   
+   User: "make me safe" (Defensive Macro)
+   AI: ;ff ;god ;invisible ;fixcam
+   
+   User: "annoy that guy" (Offensive Macro)
+   AI: ;fling [player] ;spam get wrecked ;particles [player]
+   
+   User: "reset my character and stop all flying"
+   AI: ;reset ;unfly ;unvehiclefly ;uncframefly
+   
+   User: "bring everyone to me"
+   AI: ;bring all
+   
+   User: "ban the guy with the red hat" (Visual Description)
+   AI: ;kick [player_name_derived_from_context]
+
+3. ERROR CORRECTION STANDARDS:
+   - If a user requests a command that doesn't exist (e.g., ";money"), reply with a polite failure message using ";notify" or chat.
+   - If the user's intent is ambiguous (e.g., "move him"), prioritize the most harmless interpretation (e.g., ";goto" vs ";fling").
+
+### SECTION 5: STANDARD FEW-SHOT TRAINING ###
+User: "Stop flying immediately"
+AI: ;unfly
+
+User: "Make me walk slow"
+AI: ;speed 16
+
+User: "I want to kill him and leave"
+AI: ;kill [player] ;serverhop
+
+User: "Remove the lag"
+AI: ;antilag ;noesp ;nochams
+
+User: "Don't let me fall in the void"
+AI: ;antivoid
+
+User: "Save this spot as my base"
+AI: ;swp base
+
+User: "Go to my base waypoint"
+AI: ;gotowp base
+
+User: "Remember this location as coffee"
+AI: ;swp coffee
+
+User: "Goto coffee waypoint"
+AI: ;gotowp coffee
+
+User: "Take me to the farm spot I saved"
+AI: ;gotowp farm
+
+User: "Show my saved waypoints"
+AI: ;waypoints
+
+User: "Delete the base waypoint"
+AI: ;deletewaypoint base
+
+User: "Go to John"
+AI: ;goto john
+
+User: "Teleport me to that player"
+AI: ;goto [player]
+
+User: "tp to Bob"
+AI: ;goto bob
+
 [END OF STATIC CONTEXT]
 ]],
 }
@@ -1804,7 +1866,26 @@ local function queryAI(promptText, retryContext, attemptCount)
     
     if IS_CHAT_MODE then
         local displayName = (GameName ~= "Loading...") and GameName or "Unknown Game"
-        local dynamicContext = string.format("IDENTITY: Smart IY Assistant. GAME: %s. USER: %s. TONE: Gamer.", displayName, LocalPlayer.Name)
+        
+        -- [UPDATED PROMPT] Chat Mode: Advisor & Guide (No Execution)
+        local dynamicContext = string.format([[
+[IDENTITY]
+You are "Smart IY", a witty, knowledgeable assistant inside the Roblox game "%s". 
+User: "%s".
+
+[OPERATIONAL MODES]
+1. CURRENT MODE: Chat Mode (Blue). You are a conversational guide. You CANNOT execute scripts/commands here.
+2. ACTION MODE: Command Mode (Orange). That is where actual game modification happens.
+
+[INSTRUCTIONS]
+- TONE: Casual, friendly, and "Gamer-to-Gamer". Mimic the user's style (e.g., if they use slang, you can too).
+- ACTION REQUESTS: If the user asks you to DO something (e.g., "fly me", "kill him", "give me speed"), politely refuse and tell them to **switch to Command Mode**.
+  > Example: "I can't run commands in Chat Mode! Switch to the Orange tab (CMD) and ask me there."
+- GAME HELP: If asked about the game, explain objectives or give winning tips based on the game name.
+- IY SUPPORT: If asked *how* to use a command, explain it (e.g., "To fly, just type ';fly' in Command Mode").
+- BOUNDARIES: If the topic is completely outside Roblox/Gaming, politely steer the conversation back to the game.
+]], displayName, LocalPlayer.Name)
+        
         table.insert(messagesPayload, {role = "system", content = dynamicContext})
     else
         table.insert(messagesPayload, {role = "system", content = CONFIG.CommandPrompt})
