@@ -1,4 +1,4 @@
-# SmartInfiniteYield (SIY) - V1.2.1 Stable
+# SmartInfiniteYield (SIY) - V1.2.2 Stable
 
 **Original Idea by [VolQ5](https://github.com/BokX1/RbxLuauLLM) | Powered by Pollinations.AI (LLM Model)**
 
@@ -13,9 +13,10 @@ At its core, SIY features a **Hybrid Dual-Path Execution Engine** that intellige
 Key innovations include **Intelligent Caching** that learns your phrases over time for instant execution, **Fuzzy Player Targeting** using Levenshtein distance matching, and a **Mobile-First Design** with one-tap Quick Actions. Whether you're a power user seeking efficiency or a newcomer who doesn't want to memorize commands, SIY adapts to your workflow.
 
 ```
-"Make me fly"           →  ;fly
-"Teleport to that guy"  →  ;goto PlayerName  
-"Make me super fast"    →  ;speed 100
+"Make me fly"              →  ;fly
+"Teleport to that guy"     →  ;goto PlayerName  
+"Go to my base waypoint"   →  ;gotowp base
+"Make me super fast"       →  ;speed 100
 ```
 
 ---
@@ -31,12 +32,14 @@ Key innovations include **Intelligent Caching** that learns your phrases over ti
 | **Cache Management** | Use `clearcache` to reset learned commands, `cacheinfo` to view cache status |
 | **Fuzzy Player Targeting** | Type partial names like "kill valk" and it resolves to "Valkorym" automatically |
 | **Natural Chain Detection** | Understands requests like "fly and goto random" and splits them correctly |
+| **Smart Waypoint System** | Save locations with `swp`, teleport with `gotowp` - dropdown shows saved waypoints |
 
 ### Smart Interface
 
 | Feature | Description |
 |---------|-------------|
 | **Predictive Dropdown** | Google-style suggestions with priority ranking as you type |
+| **Waypoint Suggestions** | Type `gotowp ` to see saved waypoints, `goto ` to see players |
 | **Command Preview** | See exactly what will execute before it runs |
 | **Visual Processing Indicator** | Animated glow effect shows when AI is thinking |
 | **Mobile Quick Actions** | One-tap grid with 9 common commands for mobile users |
@@ -121,6 +124,32 @@ Mobile users can tap the ⚡ button to reveal a 3x3 grid of common commands:
 | Fly | Speed | ESP |
 | Noclip | Jump | Teleport |
 | Invisible | Reset | Anti-Lag |
+
+### Waypoint System
+
+Save and teleport to locations using the waypoint system:
+
+| Command | Description | Example |
+|---------|-------------|----------|
+| `swp [name]` | Save current position as waypoint | `swp base` |
+| `gotowp [name]` | Teleport to saved waypoint | `gotowp base` |
+| `goto [player]` | Teleport to a player | `goto john` |
+| `waypoints` | List all saved waypoints | `waypoints` |
+| `deletewaypoint [name]` | Delete a waypoint | `deletewaypoint base` |
+
+**Dropdown Suggestions:**
+- Type `gotowp ` to see all your saved waypoints
+- Type `goto ` to see all players in the server
+
+**Natural Language Examples:**
+> **You:** "Save this spot as my farm"
+> **SIY:** Executes `;swp farm`
+
+> **You:** "Take me to the farm waypoint"
+> **SIY:** Executes `;gotowp farm`
+
+> **You:** "Go to John"
+> **SIY:** Executes `;goto john`
 
 ---
 
@@ -248,6 +277,8 @@ See the full [ROADMAP.md](docs/ROADMAP.md) for detailed plans.
 See [CHANGELOG.md](docs/CHANGELOG.md) for the complete version history.
 
 ### Recent Updates
+
+**V1.2.2** - Smart Waypoint System with `gotowp` command, separate player/waypoint dropdowns, new tutorial step for waypoints
 
 **V1.2.1** - Event-based bridge, intelligent caching, fuzzy targeting, visual feedback, mobile quick actions, interactive tutorial, fun messages system, button animations, engaging UX
 

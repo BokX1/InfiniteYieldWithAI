@@ -12,6 +12,35 @@ Features currently in development for the next release.
 
 ---
 
+## [1.2.2] - 2026-01-02
+
+### Added
+
+| Feature | Description |
+|---------|-------------|
+| **Smart Waypoint System** | New `gotowp` command for teleporting to saved waypoints |
+| **Waypoint Dropdown** | Type `gotowp ` to see all saved waypoints in dropdown suggestions |
+| **Player Dropdown** | Type `goto ` to see all players in dropdown suggestions |
+| **Waypoint Tutorial** | New tutorial step explaining waypoint commands (swp, gotowp, goto) |
+| **Command Aliases** | Added `gwp` and `wpgoto` as aliases for `gotowp` |
+
+### Changed
+
+| Change | Description |
+|--------|-------------|
+| **Command Separation** | `goto` now exclusively for players, `gotowp` for waypoints |
+| **System Prompt** | Updated AI instructions to use correct waypoint vs player commands |
+| **Dropdown Logic** | Separated player and waypoint suggestions for cleaner UX |
+
+### Fixed
+
+| Fix | Description |
+|-----|-------------|
+| **Goto Bug** | Fixed issue where `goto player` was broken due to waypoint interception |
+| **Command Conflict** | Resolved conflict between waypoint and player teleportation |
+
+---
+
 ## [1.2.1] - 2026-01-02
 
 ### Added
@@ -112,7 +141,8 @@ Features currently in development for the next release.
 
 ---
 
-[Unreleased]: https://github.com/BokX1/InfiniteYieldWithAI/compare/v1.2.1...HEAD
+[Unreleased]: https://github.com/BokX1/InfiniteYieldWithAI/compare/v1.2.2...HEAD
+[1.2.2]: https://github.com/BokX1/InfiniteYieldWithAI/compare/v1.2.1...v1.2.2
 [1.2.1]: https://github.com/BokX1/InfiniteYieldWithAI/compare/v1.2.0...v1.2.1
 [1.2.0]: https://github.com/BokX1/InfiniteYieldWithAI/compare/v1.1.0...v1.2.0
 [1.1.0]: https://github.com/BokX1/InfiniteYieldWithAI/compare/v1.0.0...v1.1.0
