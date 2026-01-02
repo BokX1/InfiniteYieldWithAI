@@ -220,30 +220,39 @@ ROLE: You are a Roblox Command Compiler. Convert Natural Language -> Infinite Yi
 ;gametp [id]           : Join different game.
 ;exit                  : Close Roblox.
 
-### SECTION 3: SMART WAYPOINT & GOTO SYSTEM ###
-[WAYPOINT RULES - Uses Infinite Yield Native Commands]
-1. SAVE LOCATION:
+### SECTION 3: WAYPOINT & TELEPORT SYSTEM ###
+[IMPORTANT: SEPARATE COMMANDS FOR PLAYERS VS WAYPOINTS]
+
+1. SAVE LOCATION (Waypoint):
    - If user wants to save/mark/remember a location/position/spot:
-     > Output: ;setwaypoint [name] OR ;swp [name]
+     > Output: ;swp [name]
      > Example: "save this spot as base" -> ;swp base
      > Example: "mark this location as farm" -> ;swp farm
      > Example: "remember here as coffee" -> ;swp coffee
 
-2. GO TO LOCATION OR PLAYER (Smart Routing):
-   - If user wants to go/teleport to a waypoint OR player:
-     > Output: ;goto [name]
-     > Example: "go to base" -> ;goto base
-     > Example: "goto coffee" -> ;goto coffee
-     > Example: "teleport to John" -> ;goto john
-   - goto automatically tries waypoint first, then player search.
+2. GO TO WAYPOINT (Saved Location):
+   - If user wants to go to a SAVED WAYPOINT/LOCATION:
+     > Output: ;gotowp [name]
+     > Example: "go to my base waypoint" -> ;gotowp base
+     > Example: "teleport to coffee waypoint" -> ;gotowp coffee
+     > Example: "take me to the farm spot" -> ;gotowp farm
+   - Use gotowp ONLY for saved waypoints/locations.
 
-3. LIST WAYPOINTS:
+3. GO TO PLAYER:
+   - If user wants to go to a PLAYER:
+     > Output: ;goto [player]
+     > Example: "go to John" -> ;goto john
+     > Example: "teleport to that guy" -> ;goto [player]
+     > Example: "tp to Bob" -> ;goto bob
+   - Use goto ONLY for players.
+
+4. LIST WAYPOINTS:
    - "show waypoints", "list my saved spots" -> ;waypoints
 
-4. DELETE WAYPOINT:
+5. DELETE WAYPOINT:
    - "delete waypoint base" -> ;deletewaypoint base
 
-5. CLEAR ALL WAYPOINTS:
+6. CLEAR ALL WAYPOINTS:
    - "clear all waypoints" -> ;clearwaypoints
 
 ### SECTION 4: FEW-SHOT TRAINING ###
@@ -265,14 +274,17 @@ AI: ;antivoid
 User: "Save this spot as my base"
 AI: ;swp base
 
-User: "Go to my base"
-AI: ;goto base
+User: "Go to my base waypoint"
+AI: ;gotowp base
 
 User: "Remember this location as coffee"
 AI: ;swp coffee
 
-User: "Goto coffee"
-AI: ;goto coffee
+User: "Goto coffee waypoint"
+AI: ;gotowp coffee
+
+User: "Take me to the farm spot I saved"
+AI: ;gotowp farm
 
 User: "Show my saved waypoints"
 AI: ;waypoints
@@ -283,8 +295,11 @@ AI: ;deletewaypoint base
 User: "Go to John"
 AI: ;goto john
 
-User: "Teleport me to the shop waypoint"
-AI: ;goto shop
+User: "Teleport me to that player"
+AI: ;goto [player]
+
+User: "tp to Bob"
+AI: ;goto bob
 
 [END OF STATIC CONTEXT]
 ]],
@@ -1016,6 +1031,12 @@ local TutorialSteps = {
         button = "Next →"
     },
     {
+        title = "Waypoints & Teleporting",
+        icon = "📍",
+        content = "<b>Save & Teleport to Locations:</b>\n\n<font color='#40e682'>swp [name]</font> - Save current spot\n<font color='#969696'>\"swp base\" saves your position as \"base\"</font>\n\n<font color='#40e682'>gotowp [name]</font> - Teleport to waypoint\n<font color='#969696'>\"gotowp base\" takes you back there</font>\n\n<font color='#40e682'>goto [player]</font> - Teleport to player\n<font color='#969696'>\"goto john\" teleports to player John</font>\n\n<font color='#ff9128'>Tip:</font> Type \"gotowp \" to see saved waypoints!",
+        button = "Next →"
+    },
+    {
         title = "Cache Management",
         icon = "🗑️",
         content = "<b>If the AI learns something wrong:</b>\n\n<font color='#40e682'>clearcache</font>\nWipes all learned commands. Fresh start!\n\n<font color='#40e682'>cacheinfo</font>\nShows how many commands are cached.\n<font color='#969696'>\"Cache: 15/100 commands stored\"</font>\n\n<font color='#ff9128'>Tip:</font> Use clearcache if commands behave unexpectedly.",
@@ -1359,6 +1380,9 @@ local FastMap = {
     -- System & Aliases
     ["^help$"] = "help", ["^cmds$"] = "help", ["^commands$"] = "help",
     ["^clearcache$"] = "clearcache", ["^cacheinfo$"] = "cacheinfo",
+    
+    -- Waypoint Teleport
+    ["^gotowp (.+)"] = "gotowp %1", ["^gwp (.+)"] = "gotowp %1", ["^wpgoto (.+)"] = "gotowp %1",
     
     ["^bind (%w+) (.+)"] = "bind %1 %2", ["^unbind (%w+)"] = "unbind %1",
     ["^addalias (.+) (.+)"] = "addalias %1 %2", ["^removealias (.+)"] = "removealias %1", ["^clraliases$"] = "clraliases",
@@ -1756,36 +1780,15 @@ local function executeBridge(text, source)
         end
 
         --// ==========================================
-        --// SMART GOTO - Check Waypoint First, Then Player
+        --// GOTOWP - Waypoint Teleport Command
         --// ==========================================
-        -- Intercept goto [target] - Check if it's a waypoint, otherwise pass to IY for player search
-        local gotoTarget = cleanText:match("^goto%s+(.+)")
-        if gotoTarget then
-            -- Check if target matches a saved waypoint
-            local isWaypoint = false
-            local waypoints = {}
-            
-            -- Try to access IY's waypoint storage
-            pcall(function()
-                local wpTable = getgenv().IYwaypoints or _G.IYwaypoints
-                if wpTable then
-                    for wpName, _ in pairs(wpTable) do
-                        waypoints[wpName:lower()] = wpName
-                    end
-                end
-            end)
-            
-            -- Check if target matches a waypoint (case-insensitive)
-            local targetLower = gotoTarget:lower()
-            if waypoints[targetLower] then
-                -- Target is a waypoint - use waypoint command
-                updateStatus("Waypoint: " .. gotoTarget, Colors.Green)
-                IY_Interface.Exec("waypoint " .. waypoints[targetLower])
-                return
-            end
-            
-            -- Target is not a waypoint - pass through to IY's native goto (player search)
-            -- Don't intercept, let it fall through to chain execution below
+        -- gotowp [name] - Teleport to a saved waypoint
+        local wpTarget = cleanText:match("^gotowp%s+(.+)")
+        if wpTarget then
+            -- Use IY's native waypoint command
+            updateStatus("Waypoint: " .. wpTarget, Colors.Green)
+            IY_Interface.Exec("waypoint " .. wpTarget)
+            return
         end
         --// ==========================================
 
@@ -2070,41 +2073,44 @@ local function updateDropdown(text)
     local matches = {}
     local textLower = text:lower()
     
-    -- Check if user is typing a goto/teleport command with a partial target
-    local gotoCmd, partialTarget = text:match("^(goto)%s+(.*)")
-    if not gotoCmd then gotoCmd, partialTarget = text:match("^(go)%s+(.*)" ) end
-    if not gotoCmd then gotoCmd, partialTarget = text:match("^(tp)%s+(.*)" ) end
-    if not gotoCmd then gotoCmd, partialTarget = text:match("^(teleport)%s+(.*)" ) end
-    if not gotoCmd then gotoCmd, partialTarget = text:match("^(waypoint)%s+(.*)" ) end
-    if not gotoCmd then gotoCmd, partialTarget = text:match("^(wp)%s+(.*)" ) end
+    -- Check if user is typing gotowp (waypoint-only command)
+    local wpCmd, wpPartial = text:match("^(gotowp)%s+(.*)")
     
-    if gotoCmd then
-        -- Show waypoint suggestions for goto-type commands
+    -- Check if user is typing goto/tp commands (player-only)
+    local playerCmd, playerPartial = text:match("^(goto)%s+(.*)")
+    if not playerCmd then playerCmd, playerPartial = text:match("^(go)%s+(.*)" ) end
+    if not playerCmd then playerCmd, playerPartial = text:match("^(tp)%s+(.*)" ) end
+    if not playerCmd then playerCmd, playerPartial = text:match("^(teleport)%s+(.*)" ) end
+    
+    if wpCmd then
+        -- GOTOWP: Show waypoint suggestions only
         local waypoints = getIYWaypoints()
-        local partialLower = (partialTarget or ""):lower()
+        local partialLower = (wpPartial or ""):lower()
         
         for _, wpName in ipairs(waypoints) do
             local wpLower = wpName:lower()
             if partialLower == "" or wpLower:sub(1, #partialLower) == partialLower or wpLower:find(partialLower, 1, true) then
                 table.insert(matches, {
-                    Key = gotoCmd .. " " .. wpName,
-                    Display = gotoCmd .. " " .. wpName .. " [waypoint]",
+                    Key = "gotowp " .. wpName,
+                    Display = "gotowp " .. wpName .. " [waypoint]",
                     Score = 100,
                     IsWaypoint = true,
                     WaypointName = wpName
                 })
             end
         end
+    elseif playerCmd then
+        -- GOTO/TP: Show player suggestions only
+        local partialLower = (playerPartial or ""):lower()
         
-        -- Also add player suggestions
         for _, player in ipairs(Players:GetPlayers()) do
             local playerName = player.Name
             local playerLower = playerName:lower()
             if partialLower == "" or playerLower:sub(1, #partialLower) == partialLower or playerLower:find(partialLower, 1, true) then
                 table.insert(matches, {
-                    Key = gotoCmd .. " " .. playerName,
-                    Display = gotoCmd .. " " .. playerName .. " [player]",
-                    Score = 50,
+                    Key = playerCmd .. " " .. playerName,
+                    Display = playerCmd .. " " .. playerName .. " [player]",
+                    Score = 100,
                     IsWaypoint = false,
                     PlayerName = playerName
                 })
