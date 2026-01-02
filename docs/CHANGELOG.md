@@ -12,25 +12,6 @@ Features currently in development for the next release.
 
 ---
 
-## [1.2.2] - 2026-01-02
-
-### Changed
-
-| Change | Description |
-|--------|-------------|
-| **CHAT Mode Context** | Enhanced dynamic context with proper framing for game script assistance |
-| **Safety Compliance** | Removed potentially triggering terms from CHAT mode prompt to prevent AI refusals |
-| **Command Reference** | CHAT mode now includes curated command reference for better question answering |
-
-### Fixed
-
-| Fix | Description |
-|-----|-------------|
-| **CHAT Mode Refusals** | Resolved issue where AI would refuse to answer questions about commands like "how do I fly?" |
-| **Context Framing** | Added legitimate gaming context to prevent safety guardrail triggers |
-
----
-
 ## [1.2.1] - 2026-01-02
 
 ### Added
@@ -69,6 +50,16 @@ Features currently in development for the next release.
 | **Quick Actions** | Replaced God/Kill with Jump/Invisible for universal compatibility |
 | **Placeholder Text** | More engaging prompts ("Tell me what to do..." instead of "Enter command...") |
 | **Status Messages** | Friendlier, more varied feedback with personality |
+| **CHAT Mode Context** | Enhanced dynamic context with proper framing for game script assistance |
+| **Safety Compliance** | Removed potentially triggering terms from CHAT mode prompt to prevent AI refusals |
+| **Command Reference** | CHAT mode now includes curated command reference for better question answering |
+
+### Fixed
+
+| Fix | Description |
+|-----|-------------|
+| **CHAT Mode Refusals** | Resolved issue where AI would refuse to answer questions about commands like "how do I fly?" |
+| **Context Framing** | Added legitimate gaming context to prevent safety guardrail triggers |
 
 ### Technical
 
@@ -138,8 +129,7 @@ Features currently in development for the next release.
 
 ---
 
-[Unreleased]: https://github.com/BokX1/InfiniteYieldWithAI/compare/v1.2.2...HEAD
-[1.2.2]: https://github.com/BokX1/InfiniteYieldWithAI/compare/v1.2.1...v1.2.2
+[Unreleased]: https://github.com/BokX1/InfiniteYieldWithAI/compare/v1.2.1...HEAD
 [1.2.1]: https://github.com/BokX1/InfiniteYieldWithAI/compare/v1.2.0...v1.2.1
 [1.2.0]: https://github.com/BokX1/InfiniteYieldWithAI/compare/v1.1.0...v1.2.0
 [1.1.0]: https://github.com/BokX1/InfiniteYieldWithAI/compare/v1.0.0...v1.1.0
