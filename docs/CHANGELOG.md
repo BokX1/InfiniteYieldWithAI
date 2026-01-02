@@ -14,25 +14,14 @@ Features currently in development for the next release.
 
 - **Overall Overview**: SmartInfiniteYield (SIY) is evolving into a more context-aware and user-friendly wrapper for Infinite Yield. The current focus is on enhancing the AI's understanding of game state and improving the interactive experience through better UI feedback and memory.
 - **Bug Fixes**:
-  - Fixed **Bridge Connection Timeouts** by implementing a robust `waitForBridge` helper with configurable retries.
-  - Resolved **Dropdown Ghosting** where suggestions would persist after focus loss; added a delay-based check to ensure UI cleanliness.
-  - Patched **Fuzzy Match Overlap** where short player names would sometimes trigger incorrect matches; refined the Levenshtein threshold logic.
-  - Fixed **Mobile Quick Action Scaling** issues on high-density displays.
-- **Target-Smart Player Context**: The system now intelligently injects player lists into API payloads only when target cues (like "him", "them", or specific names) are detected, significantly reducing token usage and keeping cache keys stable.
-- **CHAT Memory Buffer**: Implementing a rolling memory buffer of the last six exchanges to allow for follow-up questions without losing context.
-- **Transcript UI**: A new scrollable chat log is in development, featuring styled entries, auto-scroll, and transcript-aware placeholders for both PC and mobile layouts.
+  - **Bridge Connection Stability**: Implementing a more robust `waitForBridge` helper with configurable retries to eliminate intermittent connection failures.
+  - **Dropdown Focus Management**: Resolving issues where suggestions would persist after focus loss; adding a delay-based check to ensure UI cleanliness.
+  - **Fuzzy Match Precision**: Refining the Levenshtein threshold logic to prevent short player names from triggering incorrect matches.
+  - **Mobile UI Scaling**: Optimizing Quick Action grid scaling for high-density mobile displays.
+- **CHAT Memory Buffer**: Implementing a rolling memory buffer of the last six exchanges to allow for follow-up questions and conversational context within CHAT mode.
+- **Transcript UI**: Developing a scrollable chat log with styled entries, auto-scroll, and transcript-aware placeholders for both PC and mobile layouts.
 - **Improved Chat Mode GUI**: Redesigning the CHAT mode interface to provide a more modern, "ChatGPT-like" feel with distinct message bubbles and better readability.
-- **Auto-Context Injection**: Implementing automatic game-state context injection (Game Name, Player Role, etc.) to give the AI better situational awareness.
-
-### To be added
-
-- **Multi-Model Support**: Integration for Gemini, Claude, and Local LLMs to provide users with more choices and offline capabilities.
-- **Plugin Ecosystem**: A dedicated API for community-created commands and UI extensions.
-- **Custom Quick Actions**: An in-game editor to allow users to customize their mobile command grid.
-- **Theme System**: Support for custom color schemes and UI presets (OLED, Light, High Contrast).
-- **Command Macros**: Ability to record and playback sequences of commands with a single trigger.
-- **Advanced Settings Panel**: A comprehensive GUI for all `CONFIG` options, removing the need for manual script editing.
-- **Voice Command Integration**: Experimental speech-to-text support for hands-free command execution.
+- **Auto-Context Injection**: Implementing automatic game-state context injection (Game Name, Player Role, etc.) to give the AI better situational awareness without manual input.
 
 ---
 
@@ -68,6 +57,7 @@ Features currently in development for the next release.
 | **Open Button Pulse** | Glowing pulse animation when floating button is visible |
 | **Quick Action Effects** | Hover and press animations for mobile command grid |
 | **Token Cache Optimization** | Optimized API calls to enable OpenAI token caching for reduced costs |
+| **Target-Smart Context** | Player list is only injected into API payloads when target cues are detected |
 
 ### Changed
 
