@@ -16,6 +16,13 @@ Features currently in development for the next release.
 - Voice command integration exploration
 - Plugin system for custom command handlers
 
+### Changed
+
+| Change | Description |
+|--------|-------------|
+| **API Request Authorization** | AI requests now include the configured `ApiKey` as a Bearer token when provided |
+| **AI Request Resilience** | Endpoint calls honor `RequestTimeout`, retry up to `MaxRetries`, and surface clearer errors (e.g., invalid API keys) |
+
 ### Fixed
 
 | Fix | Description |
