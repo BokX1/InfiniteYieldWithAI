@@ -52,6 +52,12 @@ local function registerConnection(connection)
     return connection
 end
 
+local function ConnectPersistent(signal, callback)
+    local connection = signal:Connect(callback)
+    registerConnection(connection)
+    return connection
+end
+
 local function removeConnection(target)
     for index = #Connections, 1, -1 do
         if Connections[index] == target then
@@ -503,7 +509,7 @@ task.spawn(function()
     end
     
     updateTeam()
-registerConnection(LocalPlayer:GetPropertyChangedSignal("Team"):Connect(updateTeam))
+ConnectPersistent(LocalPlayer:GetPropertyChangedSignal("Team"):Connect(updateTeam))
 end)
 
 -- Auto-context injection helper
@@ -870,8 +876,43 @@ end
 --// ============================================
 --// 8. DRAG SYSTEM
 --// ============================================
+local DragRegistrations = setmetatable({}, {__mode = "k"})
+
+local function disconnectDragConnections(frame)
+    local tracked = DragRegistrations[frame]
+    if not tracked or not tracked.connections then return end
+
+    for _, connection in pairs(tracked.connections) do
+        if connection then
+            pcall(function()
+                connection:Disconnect()
+            end)
+            removeConnection(connection)
+        end
+    end
+    DragRegistrations[frame] = nil
+end
+
 local function enableDrag(frame)
+    if not frame then return end
+
+    local tracked = DragRegistrations[frame]
+    if tracked and tracked.connections then
+        local allConnected = true
+        for _, connection in pairs(tracked.connections) do
+            if not (connection and connection.Connected) then
+                allConnected = false
+                break
+            end
+        end
+        if allConnected then
+            return
+        end
+        disconnectDragConnections(frame)
+    end
+
     local dragToggle, dragStart, startPos, dragInput
+    local connections = {}
     
     local function updateInput(input)
         local delta = input.Position - dragStart
@@ -882,7 +923,7 @@ local function enableDrag(frame)
         TweenService:Create(frame, TweenInfo.new(0.08), {Position = position}):Play()
     end
     
-    local frameInputBeganConnection = registerConnection(frame.InputBegan:Connect(function(input)
+    connections.frameInputBeganConnection = ConnectPersistent(frame.InputBegan:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 
         or input.UserInputType == Enum.UserInputType.Touch then
             dragToggle = true
@@ -897,19 +938,22 @@ local function enableDrag(frame)
         end
     end))
     
-    local frameInputChangedConnection = registerConnection(frame.InputChanged:Connect(function(input)
+    connections.frameInputChangedConnection = ConnectPersistent(frame.InputChanged:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseMovement 
         or input.UserInputType == Enum.UserInputType.Touch then
             dragInput = input
         end
     end))
     
-    local inputChangedConnection
-    inputChangedConnection = registerConnection(UserInputService.InputChanged:Connect(function(input)
+    connections.inputChangedConnection = ConnectPersistent(UserInputService.InputChanged:Connect(function(input)
         if input == dragInput and dragToggle then
             updateInput(input)
         end
     end))
+
+    DragRegistrations[frame] = {
+        connections = connections
+    }
 end
 
 --// ============================================
@@ -960,7 +1004,7 @@ local function startOpenButtonPulse()
     end))
 end
 
-registerConnection(OpenButton:GetPropertyChangedSignal("Visible"):Connect(function()
+ConnectPersistent(OpenButton:GetPropertyChangedSignal("Visible"):Connect(function()
     if OpenButton.Visible then
         startOpenButtonPulse()
     else
@@ -1020,11 +1064,12 @@ local glowConnection = nil
 local function startGlowAnimation()
     if glowConnection and glowConnection.Connected then return end
     if glowConnection and not glowConnection.Connected then
+        removeConnection(glowConnection)
         glowConnection = nil
     end
     GlowStroke.Transparency = 0
     local rotation = 0
-    glowConnection = registerConnection(RunService.Heartbeat:Connect(function(dt)
+    glowConnection = ConnectPersistent(RunService.Heartbeat:Connect(function(dt)
         rotation = (rotation + dt * 100) % 360
         GlowGradient.Rotation = rotation
         GlowStroke.Transparency = math.sin(tick() * 3) * 0.3 + 0.5
@@ -1120,26 +1165,26 @@ local ChatOption = createInstance("TextButton", {
 local modeDropdownOpen = false
 
 -- Hover effects for dropdown options
-registerConnection(CmdOption.MouseEnter:Connect(function()
+ConnectPersistent(CmdOption.MouseEnter:Connect(function()
     TweenService:Create(CmdOption, TweenInfo.new(0.1), {
         BackgroundColor3 = Colors.InputBg,
         TextColor3 = Colors.Text
     }):Play()
 end))
-registerConnection(CmdOption.MouseLeave:Connect(function()
+ConnectPersistent(CmdOption.MouseLeave:Connect(function()
     TweenService:Create(CmdOption, TweenInfo.new(0.1), {
         BackgroundColor3 = Colors.DropdownBg,
         TextColor3 = Colors.Orange
     }):Play()
 end))
 
-registerConnection(ChatOption.MouseEnter:Connect(function()
+ConnectPersistent(ChatOption.MouseEnter:Connect(function()
     TweenService:Create(ChatOption, TweenInfo.new(0.1), {
         BackgroundColor3 = Colors.InputBg,
         TextColor3 = Colors.Text
     }):Play()
 end))
-registerConnection(ChatOption.MouseLeave:Connect(function()
+ConnectPersistent(ChatOption.MouseLeave:Connect(function()
     TweenService:Create(ChatOption, TweenInfo.new(0.1), {
         BackgroundColor3 = Colors.DropdownBg,
         TextColor3 = Colors.Blue
@@ -1193,13 +1238,13 @@ local HelpBtn = createInstance("TextButton", {
 addCorner(HelpBtn, 4)
 
 -- Help button hover effect
-registerConnection(HelpBtn.MouseEnter:Connect(function()
+ConnectPersistent(HelpBtn.MouseEnter:Connect(function()
     TweenService:Create(HelpBtn, TweenInfo.new(0.15), {
         BackgroundColor3 = Colors.Blue,
         TextColor3 = Color3.new(1, 1, 1)
     }):Play()
 end))
-registerConnection(HelpBtn.MouseLeave:Connect(function()
+ConnectPersistent(HelpBtn.MouseLeave:Connect(function()
     TweenService:Create(HelpBtn, TweenInfo.new(0.15), {
         BackgroundColor3 = Colors.InputBg,
         TextColor3 = Colors.Blue
@@ -1220,13 +1265,13 @@ local MinBtn = createInstance("TextButton", {
 addCorner(MinBtn, 4)
 
 -- Minimize button hover effect
-registerConnection(MinBtn.MouseEnter:Connect(function()
+ConnectPersistent(MinBtn.MouseEnter:Connect(function()
     TweenService:Create(MinBtn, TweenInfo.new(0.15), {
         BackgroundColor3 = Colors.Orange,
         TextColor3 = Color3.new(0, 0, 0)
     }):Play()
 end))
-registerConnection(MinBtn.MouseLeave:Connect(function()
+ConnectPersistent(MinBtn.MouseLeave:Connect(function()
     TweenService:Create(MinBtn, TweenInfo.new(0.15), {
         BackgroundColor3 = Colors.InputBg,
         TextColor3 = Colors.TextDim
@@ -1487,13 +1532,13 @@ for i, action in ipairs(QuickActions) do
     addCorner(btn, 4)
     
     -- Hover effect
-    registerConnection(btn.MouseEnter:Connect(function()
+    ConnectPersistent(btn.MouseEnter:Connect(function()
         TweenService:Create(btn, TweenInfo.new(0.1), {
             BackgroundTransparency = 0.3,
             TextColor3 = Color3.new(1, 1, 1)
         }):Play()
     end))
-    registerConnection(btn.MouseLeave:Connect(function()
+    ConnectPersistent(btn.MouseLeave:Connect(function()
         TweenService:Create(btn, TweenInfo.new(0.1), {
             BackgroundTransparency = 0.7,
             TextColor3 = Colors.Text
@@ -1501,18 +1546,18 @@ for i, action in ipairs(QuickActions) do
     end))
     
     -- Press effect with scale animation
-    registerConnection(btn.MouseButton1Down:Connect(function()
+    ConnectPersistent(btn.MouseButton1Down:Connect(function()
         TweenService:Create(btn, TweenInfo.new(0.05), {
             BackgroundTransparency = 0
         }):Play()
     end))
-    registerConnection(btn.MouseButton1Up:Connect(function()
+    ConnectPersistent(btn.MouseButton1Up:Connect(function()
         TweenService:Create(btn, TweenInfo.new(0.1), {
             BackgroundTransparency = 0.3
         }):Play()
     end))
     
-    registerConnection(btn.MouseButton1Click:Connect(function()
+    ConnectPersistent(btn.MouseButton1Click:Connect(function()
         InputBox.Text = action.prompt
         InputBox:CaptureFocus()
         task.wait(0.1)
@@ -1542,7 +1587,7 @@ local QuickActionsToggle = createInstance("TextButton", {
 addCorner(QuickActionsToggle, 4)
 
 local quickActionsOpen = false
-registerConnection(QuickActionsToggle.MouseButton1Click:Connect(function()
+ConnectPersistent(QuickActionsToggle.MouseButton1Click:Connect(function()
     quickActionsOpen = not quickActionsOpen
     if quickActionsOpen then
         QuickActionsFrame.Visible = true
@@ -2011,7 +2056,7 @@ local function completeTutorial()
 end
 
 -- Button connections
-registerConnection(NextBtn.MouseButton1Click:Connect(function()
+ConnectPersistent(NextBtn.MouseButton1Click:Connect(function()
     if CurrentStep < TotalSteps then
         updateTutorialStep(CurrentStep + 1)
     else
@@ -2019,13 +2064,13 @@ registerConnection(NextBtn.MouseButton1Click:Connect(function()
     end
 end))
 
-registerConnection(BackBtn.MouseButton1Click:Connect(function()
+ConnectPersistent(BackBtn.MouseButton1Click:Connect(function()
     if CurrentStep > 1 then
         updateTutorialStep(CurrentStep - 1)
     end
 end))
 
-registerConnection(SkipBtn.MouseButton1Click:Connect(function()
+ConnectPersistent(SkipBtn.MouseButton1Click:Connect(function()
     completeTutorial()
 end))
 
@@ -2068,7 +2113,7 @@ local function showTutorial()
 end
 
 -- Help button shows tutorial
-registerConnection(HelpBtn.MouseButton1Click:Connect(function()
+ConnectPersistent(HelpBtn.MouseButton1Click:Connect(function()
     showTutorial()
 end))
 
@@ -2458,6 +2503,8 @@ local function levenshteinDistance(s1, s2)
     end
     local lower1, lower2 = s1:lower(), s2:lower()
 
+    table.clear(levRowA)
+    table.clear(levRowB)
     ensureRowSize(levRowA, len2 + 1)
     ensureRowSize(levRowB, len2 + 1)
 
@@ -2470,10 +2517,10 @@ local function levenshteinDistance(s1, s2)
 
     for i = 1, len1 do
         current[1] = i
-        local c1 = lower1:sub(i, i)
+        local c1 = lower1:byte(i)
 
         for j = 1, len2 do
-            local cost = (c1 == lower2:sub(j, j)) and 0 or 1
+            local cost = (c1 == lower2:byte(j)) and 0 or 1
             local insertion = current[j] + 1
             local deletion = previous[j + 1] + 1
             local substitution = previous[j] + cost
@@ -3174,11 +3221,11 @@ local function hideDropdownWithDelay()
     end)
 end
 
-registerConnection(InputBox:GetPropertyChangedSignal("Text"):Connect(function()
+ConnectPersistent(InputBox:GetPropertyChangedSignal("Text"):Connect(function()
     updateDropdown(InputBox.Text)
 end))
 
-registerConnection(InputBox.FocusLost:Connect(function(enterPressed)
+ConnectPersistent(InputBox.FocusLost:Connect(function(enterPressed)
     if enterPressed then
         if InputBox.Text ~= "" then
             queryAI(InputBox.Text)
@@ -3192,7 +3239,7 @@ registerConnection(InputBox.FocusLost:Connect(function(enterPressed)
 end))
 
 -- Additional focus management: hide dropdown when clicking elsewhere
-registerConnection(InputBox.Focused:Connect(function()
+ConnectPersistent(InputBox.Focused:Connect(function()
     -- Cancel any pending hide operations when input regains focus
     dropdownFocusCheckId = dropdownFocusCheckId + 1
     if InputBox.Text ~= "" and not IS_CHAT_MODE then
@@ -3200,12 +3247,12 @@ registerConnection(InputBox.Focused:Connect(function()
     end
 end))
 
-registerConnection(MinBtn.MouseButton1Click:Connect(function()
+ConnectPersistent(MinBtn.MouseButton1Click:Connect(function()
     MainFrame.Visible = false
     OpenButton.Visible = true
 end))
 
-registerConnection(OpenButton.MouseButton1Click:Connect(function()
+ConnectPersistent(OpenButton.MouseButton1Click:Connect(function()
     OpenButton.Visible = false
     MainFrame.Visible = true
 end))
@@ -3267,21 +3314,21 @@ local function switchMode(toChatMode)
 end
 
 -- Mode button click toggles dropdown
-registerConnection(ModeBtn.MouseButton1Click:Connect(function()
+ConnectPersistent(ModeBtn.MouseButton1Click:Connect(function()
     toggleModeDropdown()
 end))
 
 -- Dropdown option click handlers
-registerConnection(CmdOption.MouseButton1Click:Connect(function()
+ConnectPersistent(CmdOption.MouseButton1Click:Connect(function()
     switchMode(false) -- Switch to CMD mode
 end))
 
-registerConnection(ChatOption.MouseButton1Click:Connect(function()
+ConnectPersistent(ChatOption.MouseButton1Click:Connect(function()
     switchMode(true) -- Switch to CHAT mode
 end))
 
 -- Close dropdown when clicking elsewhere on MainFrame
-registerConnection(MainFrame.InputBegan:Connect(function(input)
+ConnectPersistent(MainFrame.InputBegan:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
         -- Check if click is outside dropdown area
         task.defer(function()
@@ -3308,7 +3355,7 @@ local function isPointInsideFrame(frame, point)
     return point.X >= pos.X and point.X <= pos.X + size.X and point.Y >= pos.Y and point.Y <= pos.Y + size.Y
 end
 
-registerConnection(UserInputService.InputBegan:Connect(function(input, gameProcessed)
+ConnectPersistent(UserInputService.InputBegan:Connect(function(input, gameProcessed)
     if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
         if modeDropdownOpen then
             local mousePos = UserInputService:GetMouseLocation()
@@ -3339,7 +3386,7 @@ registerConnection(UserInputService.InputBegan:Connect(function(input, gameProce
 end))
 
 -- Bridge Ready Notification
-registerConnection(BridgeReady.Event:Connect(function()
+ConnectPersistent(BridgeReady.Event:Connect(function()
     updateStatus("Connected! Ready to roll", Colors.Green)
 end))
 
@@ -3352,17 +3399,22 @@ local function cleanup()
     stopGlowAnimation()
     cancelPersistentTasks()
     openButtonPulse = nil
+
+    for frame in pairs(DragRegistrations) do
+        disconnectDragConnections(frame)
+    end
     
     -- Disconnect all registered connections
     for index = #Connections, 1, -1 do
         local connection = Connections[index]
-        if connection and connection.Connected then
+        if connection then
             pcall(function()
                 connection:Disconnect()
             end)
         end
         Connections[index] = nil
     end
+    table.clear(Connections)
     
     -- Destroy UI elements
     pcall(function()
@@ -3370,10 +3422,21 @@ local function cleanup()
             SIY_Screen:Destroy()
         end
     end)
+
+    BridgeConnected = false
+    IY_Interface = nil
+    modeDropdownOpen = false
+    quickActionsOpen = false
+    IS_CHAT_MODE = false
+    ChatHistory = {}
+    ChatLogOrder = 0
+    ChatMessageCount = 0
+    dropdownFocusCheckId = 0
+    setNamespaceValue("Ready", false)
 end
 
 -- Handle player leaving
-registerConnection(Players.PlayerRemoving:Connect(function(player)
+ConnectPersistent(Players.PlayerRemoving:Connect(function(player)
     if player == LocalPlayer then
         cleanup()
     end
