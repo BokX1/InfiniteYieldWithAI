@@ -52,9 +52,11 @@ local function registerConnection(connection)
     return connection
 end
 
-local function ConnectPersistent(signal, callback)
-    local connection = signal:Connect(callback)
-    registerConnection(connection)
+local function ConnectPersistent(signalOrConnection, callback)
+    local connection = callback and signalOrConnection:Connect(callback) or signalOrConnection
+    if connection then
+        registerConnection(connection)
+    end
     return connection
 end
 
