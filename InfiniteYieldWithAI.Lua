@@ -2972,7 +2972,6 @@ CONTEXT: %s
     if apiKey and type(apiKey) == "string" then
         local trimmedKey = trim(apiKey)
         if trimmedKey ~= "" and trimmedKey:lower() ~= "null" then
-            -- Send executor-configured API key as a standard Bearer token when available
             headers["Authorization"] = "Bearer " .. trimmedKey
         end
     end
