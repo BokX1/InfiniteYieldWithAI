@@ -2681,12 +2681,6 @@ local function queryAI(promptText, retryContext, attemptCount)
     promptText = sanitizeInput(promptText)
     if promptText == "" then return end
 
-    if not httpRequest then
-        warn("SIY: HTTP requests unavailable - cannot reach AI endpoint.")
-        updateStatus("HTTP not supported by executor", Colors.Red)
-        return
-    end
-
     -- Rate limiting for AI requests
     local currentTime = tick()
     if not retryContext and (currentTime - lastAIRequestTime) < CONFIG.AIRequestCooldown then
@@ -2742,6 +2736,12 @@ local function queryAI(promptText, retryContext, attemptCount)
                 end
             end
         end
+    end
+
+    if not httpRequest then
+        warn("SIY: HTTP requests unavailable - cannot reach AI endpoint.")
+        updateStatus("HTTP not supported by executor", Colors.Red)
+        return
     end
 
     -- AI Path
@@ -2908,7 +2908,19 @@ buildSuggestions()
 -- Helper: Get IY waypoints from the global IY waypoint list
 local function getIYWaypoints()
     local waypoints = {}
-    local env = (type(getgenv) == "function" and getgenv()) or _G
+    local env
+
+    if type(getgenv) == "function" then
+        local ok, result = pcall(getgenv)
+        if ok and type(result) == "table" then
+            env = result
+        end
+    end
+
+    if not env then
+        env = _G
+    end
+
     local store = (type(env) == "table") and env.IYwaypoints
     if type(store) == "table" then
         for name, _ in pairs(store) do
