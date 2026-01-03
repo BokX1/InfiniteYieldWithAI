@@ -163,11 +163,11 @@ Customize SIY by modifying the `CONFIG` table at the top of the script:
 ```lua
 local CONFIG = {
     -- API Settings
-    ApiKey = "Null",                    -- Your API key (if required)
+    ApiKey = "Null",                    -- If set, sent as Authorization: Bearer <key> for AI requests
     Endpoint = "https://...",           -- AI endpoint URL
     Model = "openai",                   -- AI model to use
-    MaxRetries = 2,                     -- Retry attempts for failed requests
-    RequestTimeout = 10,                -- Seconds to wait for API response
+    MaxRetries = 2,                     -- Retry attempts for failed requests (HTTP 4xx/5xx or executor errors)
+    RequestTimeout = 10,                -- Seconds to wait for API response before failing the request
     
     -- Cache Settings
     CacheEnabled = true,                -- Enable intelligent caching
