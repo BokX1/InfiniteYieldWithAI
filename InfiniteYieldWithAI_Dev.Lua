@@ -2580,6 +2580,11 @@ local function executeBridge(text, source)
         -- gotowp [name] - Teleport to a saved waypoint
         local wpTarget = cleanText:match("^gotowp%s+(.+)")
         if wpTarget then
+            wpTarget = trim(wpTarget)
+            if wpTarget == "" then
+                updateStatus("Waypoint name required", Colors.Red)
+                return
+            end
             -- Use IY's native waypoint command
             updateStatus("Waypoint: " .. wpTarget, Colors.Green)
             IY_Interface.Exec("waypoint " .. wpTarget)
@@ -2675,6 +2680,12 @@ local function queryAI(promptText, retryContext, attemptCount)
     -- Sanitize input for security
     promptText = sanitizeInput(promptText)
     if promptText == "" then return end
+
+    if not httpRequest then
+        warn("SIY: HTTP requests unavailable - cannot reach AI endpoint.")
+        updateStatus("HTTP not supported by executor", Colors.Red)
+        return
+    end
 
     -- Rate limiting for AI requests
     local currentTime = tick()
@@ -2897,18 +2908,10 @@ buildSuggestions()
 -- Helper: Get IY waypoints from the global IY waypoint list
 local function getIYWaypoints()
     local waypoints = {}
-    -- Try to access IY's waypoint storage (stored in IY's global)
-    local success, result = pcall(function()
-        if getgenv().IYwaypoints then
-            return getgenv().IYwaypoints
-        elseif _G.IYwaypoints then
-            return _G.IYwaypoints
-        end
-        return nil
-    end)
-    
-    if success and result then
-        for name, _ in pairs(result) do
+    local env = (type(getgenv) == "function" and getgenv()) or _G
+    local store = (type(env) == "table") and env.IYwaypoints
+    if type(store) == "table" then
+        for name, _ in pairs(store) do
             table.insert(waypoints, tostring(name))
         end
     end
