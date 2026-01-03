@@ -2681,12 +2681,6 @@ local function queryAI(promptText, retryContext, attemptCount)
     promptText = sanitizeInput(promptText)
     if promptText == "" then return end
 
-    if not httpRequest then
-        warn("SIY: HTTP requests unavailable - cannot reach AI endpoint.")
-        updateStatus("HTTP not supported by executor", Colors.Red)
-        return
-    end
-
     -- Rate limiting for AI requests
     local currentTime = tick()
     if not retryContext and (currentTime - lastAIRequestTime) < CONFIG.AIRequestCooldown then
@@ -2742,6 +2736,12 @@ local function queryAI(promptText, retryContext, attemptCount)
                 end
             end
         end
+    end
+
+    if not httpRequest then
+        warn("SIY: HTTP requests unavailable - cannot reach AI endpoint.")
+        updateStatus("HTTP not supported by executor", Colors.Red)
+        return
     end
 
     -- AI Path
