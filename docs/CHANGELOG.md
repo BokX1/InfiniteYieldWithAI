@@ -16,14 +16,6 @@ Features currently in development for the next release.
 - Voice command integration exploration
 - Plugin system for custom command handlers
 
-### Fixed
-
-| Fix | Description |
-|-----|-------------|
-| **HTTP Capability Guard** | Blocks AI requests when executor HTTP support is unavailable, showing a clear status instead of failing silently |
-| **Waypoint Validation** | Trims and validates `gotowp` waypoint names before running waypoint teleports |
-| **Safe Waypoint Discovery** | Accesses Infinite Yield waypoint storage defensively to avoid errors on executors without `getgenv` support |
-
 ---
 
 ## [1.2.2] - 2026-01-03
