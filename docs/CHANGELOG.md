@@ -20,9 +20,9 @@ Features currently in development for the next release.
 
 | Fix | Description |
 |-----|-------------|
-| **HTTP Capability Guard** | Blocks AI requests when executor HTTP support is unavailable, showing a clear status instead of failing silently |
+| **HTTP Capability Guard** | Blocks only the AI request section when executor HTTP support is unavailable, preserving offline command chains and cache execution |
 | **Waypoint Validation** | Trims and validates `gotowp` waypoint names before running waypoint teleports |
-| **Safe Waypoint Discovery** | Accesses Infinite Yield waypoint storage defensively to avoid errors on executors without `getgenv` support |
+| **Safe Waypoint Discovery** | Falls back to `_G` waypoints when `getgenv` is missing or inaccessible instead of returning an empty list |
 
 ---
 
