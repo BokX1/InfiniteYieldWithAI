@@ -45,10 +45,45 @@ end
 
 -- Centralized connection management
 local Connections = {}
+local PersistentTasks = {}
 
 local function registerConnection(connection)
     table.insert(Connections, connection)
     return connection
+end
+
+local function removeConnection(target)
+    for index = #Connections, 1, -1 do
+        if Connections[index] == target then
+            table.remove(Connections, index)
+            break
+        end
+    end
+end
+
+local function registerTask(thread)
+    if thread then
+        table.insert(PersistentTasks, thread)
+    end
+    return thread
+end
+
+local function cancelTask(thread)
+    if not thread then return end
+    pcall(task.cancel, thread)
+    for index = #PersistentTasks, 1, -1 do
+        if PersistentTasks[index] == thread then
+            table.remove(PersistentTasks, index)
+            break
+        end
+    end
+end
+
+local function cancelPersistentTasks()
+    for index = #PersistentTasks, 1, -1 do
+        cancelTask(PersistentTasks[index])
+        PersistentTasks[index] = nil
+    end
 end
 
 
@@ -514,6 +549,16 @@ local function normalizeInput(text)
     return text:lower():gsub("^%s+", ""):gsub("%s+$", ""):gsub("%s+", " ")
 end
 
+local DangerousTokens = {
+    loadstring = true,
+    require = true,
+    getfenv = true,
+    setfenv = true,
+    rawget = true,
+    rawset = true,
+    debug = true
+}
+
 -- Input sanitization for security
 local function sanitizeInput(text)
     if not text or type(text) ~= "string" then return "" end
@@ -529,11 +574,21 @@ local function sanitizeInput(text)
         text = text:sub(1, CONFIG.MaxInputLength)
     end
     
-    -- Remove potentially dangerous Lua patterns (security)
-    text = text:gsub("%f[%w]loadstring%f[%W]", ""):gsub("%f[%w]require%f[%W]", "")
-    text = text:gsub("%f[%w]getfenv%f[%W]", ""):gsub("%f[%w]setfenv%f[%W]", "")
-    text = text:gsub("%f[%w]rawget%f[%W]", ""):gsub("%f[%w]rawset%f[%W]", "")
-    text = text:gsub("%f[%w]debug%f[%W]%.?", "")
+    -- Remove potentially dangerous Lua patterns (security) using whole-word, case-insensitive checks
+    text = text:gsub("(%f[%w]%w+[%.:]?)", function(token)
+        local trimmedToken = token
+        local lastChar = trimmedToken:sub(-1)
+        if lastChar == "." or lastChar == ":" then
+            trimmedToken = trimmedToken:sub(1, -2)
+        end
+
+        local lowered = trimmedToken:lower()
+        if DangerousTokens[lowered] then
+            return ""
+        end
+
+        return token
+    end)
     
     -- Normalize whitespace
     text = text:gsub("%s+", " ")
@@ -827,7 +882,7 @@ local function enableDrag(frame)
         TweenService:Create(frame, TweenInfo.new(0.08), {Position = position}):Play()
     end
     
-    registerConnection(frame.InputBegan:Connect(function(input)
+    local frameInputBeganConnection = registerConnection(frame.InputBegan:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 
         or input.UserInputType == Enum.UserInputType.Touch then
             dragToggle = true
@@ -842,7 +897,7 @@ local function enableDrag(frame)
         end
     end))
     
-    registerConnection(frame.InputChanged:Connect(function(input)
+    local frameInputChangedConnection = registerConnection(frame.InputChanged:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseMovement 
         or input.UserInputType == Enum.UserInputType.Touch then
             dragInput = input
@@ -891,7 +946,7 @@ enableDrag(OpenButton)
 local openButtonPulse = nil
 local function startOpenButtonPulse()
     if openButtonPulse then return end
-    openButtonPulse = task.spawn(function()
+    openButtonPulse = registerTask(task.spawn(function()
         while OpenButton.Visible do
             TweenService:Create(OpenButtonStroke, TweenInfo.new(0.8, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), {
                 Transparency = 0.7
@@ -902,7 +957,7 @@ local function startOpenButtonPulse()
             }):Play()
             task.wait(0.8)
         end
-    end)
+    end))
 end
 
 registerConnection(OpenButton:GetPropertyChangedSignal("Visible"):Connect(function()
@@ -910,7 +965,7 @@ registerConnection(OpenButton:GetPropertyChangedSignal("Visible"):Connect(functi
         startOpenButtonPulse()
     else
         if openButtonPulse then
-            task.cancel(openButtonPulse)
+            cancelTask(openButtonPulse)
             openButtonPulse = nil
         end
     end
@@ -963,7 +1018,10 @@ local GlowStroke = createInstance("UIStroke", {
 local glowConnection = nil
 
 local function startGlowAnimation()
-    if glowConnection then return end
+    if glowConnection and glowConnection.Connected then return end
+    if glowConnection and not glowConnection.Connected then
+        glowConnection = nil
+    end
     GlowStroke.Transparency = 0
     local rotation = 0
     glowConnection = registerConnection(RunService.Heartbeat:Connect(function(dt)
@@ -975,7 +1033,10 @@ end
 
 local function stopGlowAnimation()
     if glowConnection then
-        glowConnection:Disconnect()
+        pcall(function()
+            glowConnection:Disconnect()
+        end)
+        removeConnection(glowConnection)
         glowConnection = nil
     end
     GlowStroke.Transparency = 1
@@ -2374,6 +2435,17 @@ local function needsPlayerContext(text)
 end
 
 --// Levenshtein Distance for Fuzzy Matching
+local levRowA = {}
+local levRowB = {}
+
+local function ensureRowSize(row, size)
+    if #row < size then
+        for i = #row + 1, size do
+            row[i] = 0
+        end
+    end
+end
+
 local function levenshteinDistance(s1, s2)
     local len1, len2 = #s1, #s2
     if len1 == 0 then return len2 end
@@ -2384,9 +2456,13 @@ local function levenshteinDistance(s1, s2)
         s1, s2 = s2, s1
         len1, len2 = len2, len1
     end
+    local lower1, lower2 = s1:lower(), s2:lower()
 
-    local previous = table.create(len2 + 1)
-    local current = table.create(len2 + 1)
+    ensureRowSize(levRowA, len2 + 1)
+    ensureRowSize(levRowB, len2 + 1)
+
+    local previous = levRowA
+    local current = levRowB
 
     for j = 0, len2 do
         previous[j + 1] = j
@@ -2394,10 +2470,10 @@ local function levenshteinDistance(s1, s2)
 
     for i = 1, len1 do
         current[1] = i
-        local c1 = s1:sub(i, i):lower()
+        local c1 = lower1:sub(i, i)
 
         for j = 1, len2 do
-            local cost = (c1 == s2:sub(j, j):lower()) and 0 or 1
+            local cost = (c1 == lower2:sub(j, j)) and 0 or 1
             local insertion = current[j] + 1
             local deletion = previous[j + 1] + 1
             local substitution = previous[j] + cost
@@ -3272,6 +3348,11 @@ local function cleanup()
     -- Save cache before cleanup
     pcall(saveCache)
     
+    -- Stop animations and persistent tasks
+    stopGlowAnimation()
+    cancelPersistentTasks()
+    openButtonPulse = nil
+    
     -- Disconnect all registered connections
     for index = #Connections, 1, -1 do
         local connection = Connections[index]
@@ -3282,7 +3363,6 @@ local function cleanup()
         end
         Connections[index] = nil
     end
-    glowConnection = nil
     
     -- Destroy UI elements
     pcall(function()
