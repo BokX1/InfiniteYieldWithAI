@@ -43,6 +43,14 @@ local function getNamespaceValue(key)
     return ns[key]
 end
 
+-- Centralized connection management
+local Connections = {}
+
+local function registerConnection(connection)
+    table.insert(Connections, connection)
+    return connection
+end
+
 
 --// ============================================
 --// 2. CONFIGURATION
@@ -460,7 +468,7 @@ task.spawn(function()
     end
     
     updateTeam()
-    LocalPlayer:GetPropertyChangedSignal("Team"):Connect(updateTeam)
+registerConnection(LocalPlayer:GetPropertyChangedSignal("Team"):Connect(updateTeam))
 end)
 
 -- Auto-context injection helper
@@ -522,10 +530,10 @@ local function sanitizeInput(text)
     end
     
     -- Remove potentially dangerous Lua patterns (security)
-    text = text:gsub("loadstring", ""):gsub("require", "")
-    text = text:gsub("getfenv", ""):gsub("setfenv", "")
-    text = text:gsub("rawget", ""):gsub("rawset", "")
-    text = text:gsub("debug%.", "")
+    text = text:gsub("%f[%w]loadstring%f[%W]", ""):gsub("%f[%w]require%f[%W]", "")
+    text = text:gsub("%f[%w]getfenv%f[%W]", ""):gsub("%f[%w]setfenv%f[%W]", "")
+    text = text:gsub("%f[%w]rawget%f[%W]", ""):gsub("%f[%w]rawset%f[%W]", "")
+    text = text:gsub("%f[%w]debug%f[%W]%.?", "")
     
     -- Normalize whitespace
     text = text:gsub("%s+", " ")
@@ -819,7 +827,7 @@ local function enableDrag(frame)
         TweenService:Create(frame, TweenInfo.new(0.08), {Position = position}):Play()
     end
     
-    frame.InputBegan:Connect(function(input)
+    registerConnection(frame.InputBegan:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 
         or input.UserInputType == Enum.UserInputType.Touch then
             dragToggle = true
@@ -832,20 +840,21 @@ local function enableDrag(frame)
                 end
             end)
         end
-    end)
+    end))
     
-    frame.InputChanged:Connect(function(input)
+    registerConnection(frame.InputChanged:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseMovement 
         or input.UserInputType == Enum.UserInputType.Touch then
             dragInput = input
         end
-    end)
+    end))
     
-    UserInputService.InputChanged:Connect(function(input)
+    local inputChangedConnection
+    inputChangedConnection = registerConnection(UserInputService.InputChanged:Connect(function(input)
         if input == dragInput and dragToggle then
             updateInput(input)
         end
-    end)
+    end))
 end
 
 --// ============================================
@@ -896,7 +905,7 @@ local function startOpenButtonPulse()
     end)
 end
 
-OpenButton:GetPropertyChangedSignal("Visible"):Connect(function()
+registerConnection(OpenButton:GetPropertyChangedSignal("Visible"):Connect(function()
     if OpenButton.Visible then
         startOpenButtonPulse()
     else
@@ -905,7 +914,7 @@ OpenButton:GetPropertyChangedSignal("Visible"):Connect(function()
             openButtonPulse = nil
         end
     end
-end)
+end))
 
 -- Main Container
 local MainFrame = createInstance("Frame", {
@@ -957,11 +966,11 @@ local function startGlowAnimation()
     if glowConnection then return end
     GlowStroke.Transparency = 0
     local rotation = 0
-    glowConnection = RunService.Heartbeat:Connect(function(dt)
+    glowConnection = registerConnection(RunService.Heartbeat:Connect(function(dt)
         rotation = (rotation + dt * 100) % 360
         GlowGradient.Rotation = rotation
         GlowStroke.Transparency = math.sin(tick() * 3) * 0.3 + 0.5
-    end)
+    end))
 end
 
 local function stopGlowAnimation()
@@ -1050,31 +1059,31 @@ local ChatOption = createInstance("TextButton", {
 local modeDropdownOpen = false
 
 -- Hover effects for dropdown options
-CmdOption.MouseEnter:Connect(function()
+registerConnection(CmdOption.MouseEnter:Connect(function()
     TweenService:Create(CmdOption, TweenInfo.new(0.1), {
         BackgroundColor3 = Colors.InputBg,
         TextColor3 = Colors.Text
     }):Play()
-end)
-CmdOption.MouseLeave:Connect(function()
+end))
+registerConnection(CmdOption.MouseLeave:Connect(function()
     TweenService:Create(CmdOption, TweenInfo.new(0.1), {
         BackgroundColor3 = Colors.DropdownBg,
         TextColor3 = Colors.Orange
     }):Play()
-end)
+end))
 
-ChatOption.MouseEnter:Connect(function()
+registerConnection(ChatOption.MouseEnter:Connect(function()
     TweenService:Create(ChatOption, TweenInfo.new(0.1), {
         BackgroundColor3 = Colors.InputBg,
         TextColor3 = Colors.Text
     }):Play()
-end)
-ChatOption.MouseLeave:Connect(function()
+end))
+registerConnection(ChatOption.MouseLeave:Connect(function()
     TweenService:Create(ChatOption, TweenInfo.new(0.1), {
         BackgroundColor3 = Colors.DropdownBg,
         TextColor3 = Colors.Blue
     }):Play()
-end)
+end))
 
 -- Function to close dropdown
 local function closeModeDropdown()
@@ -1123,18 +1132,18 @@ local HelpBtn = createInstance("TextButton", {
 addCorner(HelpBtn, 4)
 
 -- Help button hover effect
-HelpBtn.MouseEnter:Connect(function()
+registerConnection(HelpBtn.MouseEnter:Connect(function()
     TweenService:Create(HelpBtn, TweenInfo.new(0.15), {
         BackgroundColor3 = Colors.Blue,
         TextColor3 = Color3.new(1, 1, 1)
     }):Play()
-end)
-HelpBtn.MouseLeave:Connect(function()
+end))
+registerConnection(HelpBtn.MouseLeave:Connect(function()
     TweenService:Create(HelpBtn, TweenInfo.new(0.15), {
         BackgroundColor3 = Colors.InputBg,
         TextColor3 = Colors.Blue
     }):Play()
-end)
+end))
 
 local MinBtn = createInstance("TextButton", {
     Size = UDim2.new(0, 26, 0, 26),
@@ -1150,18 +1159,18 @@ local MinBtn = createInstance("TextButton", {
 addCorner(MinBtn, 4)
 
 -- Minimize button hover effect
-MinBtn.MouseEnter:Connect(function()
+registerConnection(MinBtn.MouseEnter:Connect(function()
     TweenService:Create(MinBtn, TweenInfo.new(0.15), {
         BackgroundColor3 = Colors.Orange,
         TextColor3 = Color3.new(0, 0, 0)
     }):Play()
-end)
-MinBtn.MouseLeave:Connect(function()
+end))
+registerConnection(MinBtn.MouseLeave:Connect(function()
     TweenService:Create(MinBtn, TweenInfo.new(0.15), {
         BackgroundColor3 = Colors.InputBg,
         TextColor3 = Colors.TextDim
     }):Play()
-end)
+end))
 
 --// Input Area (optimized spacing for compact layout)
 local LeftPad = 8 + BtnWidth + 6
@@ -1417,37 +1426,37 @@ for i, action in ipairs(QuickActions) do
     addCorner(btn, 4)
     
     -- Hover effect
-    btn.MouseEnter:Connect(function()
+    registerConnection(btn.MouseEnter:Connect(function()
         TweenService:Create(btn, TweenInfo.new(0.1), {
             BackgroundTransparency = 0.3,
             TextColor3 = Color3.new(1, 1, 1)
         }):Play()
-    end)
-    btn.MouseLeave:Connect(function()
+    end))
+    registerConnection(btn.MouseLeave:Connect(function()
         TweenService:Create(btn, TweenInfo.new(0.1), {
             BackgroundTransparency = 0.7,
             TextColor3 = Colors.Text
         }):Play()
-    end)
+    end))
     
     -- Press effect with scale animation
-    btn.MouseButton1Down:Connect(function()
+    registerConnection(btn.MouseButton1Down:Connect(function()
         TweenService:Create(btn, TweenInfo.new(0.05), {
             BackgroundTransparency = 0
         }):Play()
-    end)
-    btn.MouseButton1Up:Connect(function()
+    end))
+    registerConnection(btn.MouseButton1Up:Connect(function()
         TweenService:Create(btn, TweenInfo.new(0.1), {
             BackgroundTransparency = 0.3
         }):Play()
-    end)
+    end))
     
-    btn.MouseButton1Click:Connect(function()
+    registerConnection(btn.MouseButton1Click:Connect(function()
         InputBox.Text = action.prompt
         InputBox:CaptureFocus()
         task.wait(0.1)
         InputBox:ReleaseFocus(true)
-    end)
+    end))
 end
 
 local rows = math.ceil(#QuickActions / 3)
@@ -1472,7 +1481,7 @@ local QuickActionsToggle = createInstance("TextButton", {
 addCorner(QuickActionsToggle, 4)
 
 local quickActionsOpen = false
-QuickActionsToggle.MouseButton1Click:Connect(function()
+registerConnection(QuickActionsToggle.MouseButton1Click:Connect(function()
     quickActionsOpen = not quickActionsOpen
     if quickActionsOpen then
         QuickActionsFrame.Visible = true
@@ -1483,7 +1492,7 @@ QuickActionsToggle.MouseButton1Click:Connect(function()
             if not quickActionsOpen then QuickActionsFrame.Visible = false end
         end)
     end
-end)
+end))
 
 --// Chat Log Helpers (ChatGPT-like Message Bubbles)
 local ChatLogOrder = 0
@@ -1941,23 +1950,23 @@ local function completeTutorial()
 end
 
 -- Button connections
-NextBtn.MouseButton1Click:Connect(function()
+registerConnection(NextBtn.MouseButton1Click:Connect(function()
     if CurrentStep < TotalSteps then
         updateTutorialStep(CurrentStep + 1)
     else
         completeTutorial()
     end
-end)
+end))
 
-BackBtn.MouseButton1Click:Connect(function()
+registerConnection(BackBtn.MouseButton1Click:Connect(function()
     if CurrentStep > 1 then
         updateTutorialStep(CurrentStep - 1)
     end
-end)
+end))
 
-SkipBtn.MouseButton1Click:Connect(function()
+registerConnection(SkipBtn.MouseButton1Click:Connect(function()
     completeTutorial()
-end)
+end))
 
 -- Function to show tutorial (for help button)
 local function showTutorial()
@@ -1998,9 +2007,9 @@ local function showTutorial()
 end
 
 -- Help button shows tutorial
-HelpBtn.MouseButton1Click:Connect(function()
+registerConnection(HelpBtn.MouseButton1Click:Connect(function()
     showTutorial()
-end)
+end))
 
 -- Initially hide main GUI until tutorial is complete
 MainFrame.Visible = false
@@ -2367,23 +2376,38 @@ end
 --// Levenshtein Distance for Fuzzy Matching
 local function levenshteinDistance(s1, s2)
     local len1, len2 = #s1, #s2
-    local matrix = {}
-    
-    for i = 0, len1 do matrix[i] = {[0] = i} end
-    for j = 0, len2 do matrix[0][j] = j end
-    
-    for i = 1, len1 do
-        for j = 1, len2 do
-            local cost = (s1:sub(i, i):lower() == s2:sub(j, j):lower()) and 0 or 1
-            matrix[i][j] = math.min(
-                matrix[i-1][j] + 1,
-                matrix[i][j-1] + 1,
-                matrix[i-1][j-1] + cost
-            )
-        end
+    if len1 == 0 then return len2 end
+    if len2 == 0 then return len1 end
+
+    -- Ensure s2 is the longer string to minimize memory
+    if len1 > len2 then
+        s1, s2 = s2, s1
+        len1, len2 = len2, len1
     end
-    
-    return matrix[len1][len2]
+
+    local previous = table.create(len2 + 1)
+    local current = table.create(len2 + 1)
+
+    for j = 0, len2 do
+        previous[j + 1] = j
+    end
+
+    for i = 1, len1 do
+        current[1] = i
+        local c1 = s1:sub(i, i):lower()
+
+        for j = 1, len2 do
+            local cost = (c1 == s2:sub(j, j):lower()) and 0 or 1
+            local insertion = current[j] + 1
+            local deletion = previous[j + 1] + 1
+            local substitution = previous[j] + cost
+            current[j + 1] = math.min(insertion, deletion, substitution)
+        end
+
+        previous, current = current, previous
+    end
+
+    return previous[len2 + 1]
 end
 
 local function fuzzyMatchPlayer(partial)
@@ -3074,11 +3098,11 @@ local function hideDropdownWithDelay()
     end)
 end
 
-InputBox:GetPropertyChangedSignal("Text"):Connect(function()
+registerConnection(InputBox:GetPropertyChangedSignal("Text"):Connect(function()
     updateDropdown(InputBox.Text)
-end)
+end))
 
-InputBox.FocusLost:Connect(function(enterPressed)
+registerConnection(InputBox.FocusLost:Connect(function(enterPressed)
     if enterPressed then
         if InputBox.Text ~= "" then
             queryAI(InputBox.Text)
@@ -3089,26 +3113,26 @@ InputBox.FocusLost:Connect(function(enterPressed)
         -- Use configurable delay-based check to ensure UI cleanliness
         hideDropdownWithDelay()
     end
-end)
+end))
 
 -- Additional focus management: hide dropdown when clicking elsewhere
-InputBox.Focused:Connect(function()
+registerConnection(InputBox.Focused:Connect(function()
     -- Cancel any pending hide operations when input regains focus
     dropdownFocusCheckId = dropdownFocusCheckId + 1
     if InputBox.Text ~= "" and not IS_CHAT_MODE then
         updateDropdown(InputBox.Text)
     end
-end)
+end))
 
-MinBtn.MouseButton1Click:Connect(function()
+registerConnection(MinBtn.MouseButton1Click:Connect(function()
     MainFrame.Visible = false
     OpenButton.Visible = true
-end)
+end))
 
-OpenButton.MouseButton1Click:Connect(function()
+registerConnection(OpenButton.MouseButton1Click:Connect(function()
     OpenButton.Visible = false
     MainFrame.Visible = true
-end)
+end))
 
 -- Function to switch mode (shared by dropdown options)
 local function switchMode(toChatMode)
@@ -3167,21 +3191,21 @@ local function switchMode(toChatMode)
 end
 
 -- Mode button click toggles dropdown
-ModeBtn.MouseButton1Click:Connect(function()
+registerConnection(ModeBtn.MouseButton1Click:Connect(function()
     toggleModeDropdown()
-end)
+end))
 
 -- Dropdown option click handlers
-CmdOption.MouseButton1Click:Connect(function()
+registerConnection(CmdOption.MouseButton1Click:Connect(function()
     switchMode(false) -- Switch to CMD mode
-end)
+end))
 
-ChatOption.MouseButton1Click:Connect(function()
+registerConnection(ChatOption.MouseButton1Click:Connect(function()
     switchMode(true) -- Switch to CHAT mode
-end)
+end))
 
 -- Close dropdown when clicking elsewhere on MainFrame
-MainFrame.InputBegan:Connect(function(input)
+registerConnection(MainFrame.InputBegan:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
         -- Check if click is outside dropdown area
         task.defer(function()
@@ -3198,7 +3222,7 @@ MainFrame.InputBegan:Connect(function(input)
             end
         end)
     end
-end)
+end))
 
 -- Helper to determine if a point is inside a frame (used for global dropdown dismiss)
 local function isPointInsideFrame(frame, point)
@@ -3208,7 +3232,7 @@ local function isPointInsideFrame(frame, point)
     return point.X >= pos.X and point.X <= pos.X + size.X and point.Y >= pos.Y and point.Y <= pos.Y + size.Y
 end
 
-UserInputService.InputBegan:Connect(function(input, gameProcessed)
+registerConnection(UserInputService.InputBegan:Connect(function(input, gameProcessed)
     if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
         if modeDropdownOpen then
             local mousePos = UserInputService:GetMouseLocation()
@@ -3236,23 +3260,12 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
             bindData.Current, bindData.Next = bindData.Next, bindData.Current
         end
     end
-end)
+end))
 
 -- Bridge Ready Notification
-BridgeReady.Event:Connect(function()
+registerConnection(BridgeReady.Event:Connect(function()
     updateStatus("Connected! Ready to roll", Colors.Green)
-end)
-
---// ============================================
---// 19. CLEANUP HANDLERS
---// ============================================
-local Connections = {}
-
--- Store all connections for cleanup
-local function registerConnection(connection)
-    table.insert(Connections, connection)
-    return connection
-end
+end))
 
 -- Cleanup function to disconnect all connections and save state
 local function cleanup()
@@ -3260,12 +3273,16 @@ local function cleanup()
     pcall(saveCache)
     
     -- Disconnect all registered connections
-    for _, connection in ipairs(Connections) do
+    for index = #Connections, 1, -1 do
+        local connection = Connections[index]
         if connection and connection.Connected then
-            pcall(function() connection:Disconnect() end)
+            pcall(function()
+                connection:Disconnect()
+            end)
         end
+        Connections[index] = nil
     end
-    Connections = {}
+    glowConnection = nil
     
     -- Destroy UI elements
     pcall(function()
@@ -3276,11 +3293,11 @@ local function cleanup()
 end
 
 -- Handle player leaving
-Players.PlayerRemoving:Connect(function(player)
+registerConnection(Players.PlayerRemoving:Connect(function(player)
     if player == LocalPlayer then
         cleanup()
     end
-end)
+end))
 
 -- Handle game closing
 game:BindToClose(function()

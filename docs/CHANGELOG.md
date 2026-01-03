@@ -23,6 +23,11 @@ Features currently in development for the next release.
 | **HTTP Capability Guard** | Blocks only the AI request section when executor HTTP support is unavailable, preserving offline command chains and cache execution |
 | **Waypoint Validation** | Trims and validates `gotowp` waypoint names before running waypoint teleports |
 | **Safe Waypoint Discovery** | Falls back to `_G` waypoints when `getgenv` is missing or inaccessible instead of returning an empty list |
+| **Connection Cleanup** | Centralized connection registry disconnects persistent UI, input, and RunService signals during cleanup to prevent leaks |
+| **Drag Input Leak** | Registers the long-lived `UserInputService.InputChanged` drag listener so repeated GUI spawns no longer accumulate connections |
+| **Input Sanitization Frontiers** | Frontier-pattern filtering removes dangerous functions without corrupting benign words containing similar substrings |
+| **Levenshtein GC Optimization** | Two-row distance calculation avoids large matrices, reducing garbage collection overhead during fuzzy matching |
+| **Glow Reset on Cleanup** | Cleanup now clears the glow animation handle after disconnecting it so future sessions can safely restart the effect |
 
 ---
 
