@@ -2964,16 +2964,51 @@ CONTEXT: %s
         temperature = IS_CHAT_MODE and 0.95 or 0.1
     })
 
-    task.spawn(function()
-        local success, response = pcall(httpRequest, {
-            Url = CONFIG.Endpoint,
-            Method = "POST",
-            Headers = {["Content-Type"] = "application/json"},
-            Body = body
-        })
+    local headers = {
+        ["Content-Type"] = "application/json"
+    }
 
-        if success and response.StatusCode == 200 then
-            local decodeSuccess, data = pcall(HttpService.JSONDecode, HttpService, response.Body)
+    local apiKey = CONFIG.ApiKey
+    if apiKey and type(apiKey) == "string" then
+        local trimmedKey = trim(apiKey)
+        if trimmedKey ~= "" and trimmedKey:lower() ~= "null" then
+            headers["Authorization"] = "Bearer " .. trimmedKey
+        end
+    end
+
+    local requestOptions = {
+        Url = CONFIG.Endpoint,
+        Method = "POST",
+        Headers = headers,
+        Body = body
+    }
+
+    if CONFIG.RequestTimeout and CONFIG.RequestTimeout > 0 then
+        requestOptions.Timeout = CONFIG.RequestTimeout
+    end
+
+    task.spawn(function()
+        local finalResponse = nil
+        local maxAttempts = math.max(1, CONFIG.MaxRetries or 1)
+
+        for attempt = 1, maxAttempts do
+            local success, response = pcall(httpRequest, requestOptions)
+            if success then
+                finalResponse = response
+                if response.StatusCode == 200 then
+                    break
+                end
+            else
+                warn("SIY: HTTP request failed: " .. tostring(response))
+            end
+
+            if attempt < maxAttempts then
+                task.wait(CONFIG.BridgeRetryDelay)
+            end
+        end
+
+        if finalResponse and finalResponse.StatusCode == 200 then
+            local decodeSuccess, data = pcall(HttpService.JSONDecode, HttpService, finalResponse.Body)
             if not decodeSuccess or not data then
                 warn("SIY: Failed to parse AI response")
                 updateStatus("Error: Invalid Response", Colors.Red)
@@ -3013,8 +3048,12 @@ CONTEXT: %s
                 InputBox.Text = ""
             end
         else
-            warn("SIY Net Error:", response and response.StatusCode or "Unknown")
-            updateStatus("Error", Colors.Red, true)
+            warn("SIY Net Error:", finalResponse and finalResponse.StatusCode or "Unknown")
+            if finalResponse and finalResponse.StatusCode == 401 then
+                updateStatus("Error: Invalid API key", Colors.Red, true)
+            else
+                updateStatus("Error", Colors.Red, true)
+            end
             task.wait(CONFIG.ErrorDisplayTime)
             resetVisuals()
         end
