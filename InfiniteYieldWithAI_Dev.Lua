@@ -1,10 +1,10 @@
 --[[ 
-    SMART INFINITE YIELD - V1.2.3 STABLE
+    SMART INFINITE YIELD - V1.2.2 STABLE
     - Architecture: Context Awareness + Event-Based Bridge
     - Logic: VolQ5 & Pollinations.AI (LLM Model)
     - Status: Stable 
-    - Improvements: Enhanced code organization, robust input sanitization, 
-                   improved UI scaling, and industry-standard error handling.
+    - New: Compact Mode Dropdown UI, Streamlined Header Layout, Text Collision Fixes,
+           Optimized Frame Sizing, Temporary Status Display, Industry-Standard GUI
 ]]
 
 --// ============================================
@@ -23,11 +23,14 @@ local NAMESPACE = "SmartInfiniteYield"
 
 -- Safe global access helpers
 local function getNamespace()
-    local env = (getgenv and getgenv()) or _G or {}
-    if not env[NAMESPACE] then
-        env[NAMESPACE] = {}
+    if getgenv then
+        getgenv()[NAMESPACE] = getgenv()[NAMESPACE] or {}
+        return getgenv()[NAMESPACE]
+    elseif _G then
+        _G[NAMESPACE] = _G[NAMESPACE] or {}
+        return _G[NAMESPACE]
     end
-    return env[NAMESPACE]
+    return {}
 end
 
 local function setNamespaceValue(key, value)
@@ -547,8 +550,7 @@ end
 --// 4. UTILITY FUNCTIONS
 --// ============================================
 local function trim(str)
-    if type(str) ~= "string" then return "" end
-    return str:match("^%s*(.-)%s*$")
+    return str:gsub("^%s+", ""):gsub("%s+$", "")
 end
 
 local function normalizeInput(text)
@@ -569,27 +571,36 @@ local DangerousTokens = {
 local function sanitizeInput(text)
     if not text or type(text) ~= "string" then return "" end
     
-    -- Remove control characters and non-printable ASCII
+    -- Remove control characters (except newline and tab)
     text = text:gsub("[%c]", function(c)
-        return (c == "\n" or c == "\t") and " " or ""
+        if c == "\n" or c == "\t" then return " " end
+        return ""
     end)
     
-    -- Enforce strict length limits
+    -- Limit input length to prevent abuse
     if #text > CONFIG.MaxInputLength then
         text = text:sub(1, CONFIG.MaxInputLength)
     end
     
-    -- Robust protection against dangerous Lua patterns
+    -- Remove potentially dangerous Lua patterns (security) using whole-word, case-insensitive checks
     text = text:gsub("(%f[%w]%w+[%.:]?)", function(token)
-        local baseToken = token:gsub("[%.:]$", ""):lower()
-        if DangerousTokens[baseToken] then
-            return "[REDACTED]"
+        local trimmedToken = token
+        local lastChar = trimmedToken:sub(-1)
+        if lastChar == "." or lastChar == ":" then
+            trimmedToken = trimmedToken:sub(1, -2)
         end
+
+        local lowered = trimmedToken:lower()
+        if DangerousTokens[lowered] then
+            return ""
+        end
+
         return token
     end)
     
-    -- Final cleanup
-    text = text:gsub("%s+", " "):match("^%s*(.-)%s*$")
+    -- Normalize whitespace
+    text = text:gsub("%s+", " ")
+    text = trim(text)
     
     return text
 end
@@ -2982,18 +2993,13 @@ CONTEXT: %s
 
         for attempt = 1, maxAttempts do
             local success, response = pcall(httpRequest, requestOptions)
-            if success and response then
+            if success then
                 finalResponse = response
                 if response.StatusCode == 200 then
                     break
-                elseif response.StatusCode == 429 then
-                    warn("SIY: Rate limited by API, waiting before retry...")
-                    task.wait(2)
-                else
-                    warn(string.format("SIY: API returned status %d: %s", response.StatusCode, response.StatusMessage or "No message"))
                 end
             else
-                warn("SIY: HTTP request failed: " .. tostring(response or "Unknown error"))
+                warn("SIY: HTTP request failed: " .. tostring(response))
             end
 
             if attempt < maxAttempts then
@@ -3436,41 +3442,28 @@ local function cleanup()
     openButtonPulse = nil
 
     for frame in pairs(DragRegistrations) do
-        disconnectDragConnectilocal function cleanup()
-    -- Save cache before cleanup
-    pcall(saveCache)
-    
-    -- Stop animations and persistent tasks
-    stopGlowAnimation()
-    cancelPersistentTasks()
-    openButtonPulse = nil
-    for frame in pairs(DragRegistrations) do
         disconnectDragConnections(frame)
     end
     
-    -- Disconnect all registered connections safely
+    -- Disconnect all registered connections
     for index = #Connections, 1, -1 do
         local connection = Connections[index]
         if connection then
             pcall(function()
-                if typeof(connection) == "RBXScriptConnection" and connection.Connected then
-                    connection:Disconnect()
-                end
+                connection:Disconnect()
             end)
         end
         Connections[index] = nil
     end
     table.clear(Connections)
     
-    -- Destroy UI elements and clear references
+    -- Destroy UI elements
     pcall(function()
-        if SIY_Screen then
+        if SIY_Screen and SIY_Screen.Parent then
             SIY_Screen:Destroy()
-            SIY_Screen = nil
         end
     end)
-    
-    -- Reset state variables
+
     BridgeConnected = false
     IY_Interface = nil
     modeDropdownOpen = false
@@ -3480,10 +3473,7 @@ local function cleanup()
     ChatLogOrder = 0
     ChatMessageCount = 0
     dropdownFocusCheckId = 0
-    
-    -- Update namespace status
     setNamespaceValue("Ready", false)
-    setNamespaceValue("Cleanup", nil)
 end
 
 -- Handle player leaving
@@ -3502,5 +3492,5 @@ end)
 setNamespaceValue("Cleanup", cleanup)
 setNamespaceValue("ClearChat", clearChatLog)
 setNamespaceValue("GetBridgeStatus", getBridgeStatus)
-setNamespaceValue("Version", "1.2.3")
+setNamespaceValue("Version", "1.2.2")
 setNamespaceValue("Ready", true)
