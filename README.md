@@ -1,4 +1,4 @@
-# SmartInfiniteYield (SIY) - V1.2.2 Stable
+# SmartInfiniteYield (SIY) - V1.2.3 Stable
 
 **Original Idea by [VolQ5](https://github.com/BokX1/RbxLuauLLM) | Powered by Pollinations.AI (LLM Model)**
 
@@ -250,8 +250,19 @@ The anti-hallucination system prevents errors through recursive validation:
 Version 1.2.1 introduced an event-based bridge using BindableEvents, replacing the previous polling system. This provides instant bridge connection and eliminates "Bridge not connected" errors.
 
 ---
+### What's New in V1.2.3
 
-## What's New in V1.2.2
+Version 1.2.3 focuses on code quality, security, and robustness:
+
+| Improvement | Description |
+|-------------|-------------|
+| **Robust Sanitization** | Enhanced input sanitization to prevent malicious Lua injection and obfuscation |
+| **Error Handling** | Industry-standard error reporting with detailed status messages and rate-limit awareness |
+| **Namespace Safety** | Improved global variable isolation with robust environment detection |
+| **Resource Management** | Comprehensive cleanup system to prevent memory leaks and orphaned connections |
+| **Code Organization** | Refactored utility functions and improved internal documentation |
+
+### What's New in V1.2.2
 
 ### GUI Improvements
 
