@@ -16,32 +16,25 @@ Features currently in development for the next release.
 - Voice command integration exploration
 - Plugin system for custom command handlers
 
----
-
-## [1.2.3] - 2026-01-04
-
-### Added
-
-| Feature | Description |
-|---------|-------------|
-| **Robust Sanitization** | Enhanced input sanitization with non-printable character removal and boundary-aware pattern matching |
-| **Error Reporting** | Detailed API error reporting including 429 rate-limit awareness and status message surfacing |
-| **Namespace Safety** | Robust environment detection for global namespace management and isolation |
-
 ### Changed
 
 | Change | Description |
 |--------|-------------|
-| **Utility Refactor** | Refactored `trim` utility for better performance, type safety, and consistency |
-| **Resource Management** | Improved `cleanup` function to ensure all resources, including threads and UI references, are properly released |
-| **Dev Synchronization** | Synchronized `InfiniteYieldWithAI_Dev.Lua` with the latest stable improvements and versioning |
+| **API Request Authorization** | AI requests now include the configured `ApiKey` as a Bearer token when provided |
+| **AI Request Resilience** | Endpoint calls honor `RequestTimeout`, retry up to `MaxRetries`, and surface clearer errors (e.g., invalid API keys) |
 
 ### Fixed
 
 | Fix | Description |
 |-----|-------------|
-| **Memory Leaks** | Resolved potential memory leaks from orphaned connections and persistent tasks |
-| **Code Typos** | Fixed typos and inconsistent naming conventions in utility functions and sanitization logic |
+| **HTTP Capability Guard** | Blocks only the AI request section when executor HTTP support is unavailable, preserving offline command chains and cache execution |
+| **Waypoint Validation** | Trims and validates `gotowp` waypoint names before running waypoint teleports |
+| **Safe Waypoint Discovery** | Falls back to `_G` waypoints when `getgenv` is missing or inaccessible instead of returning an empty list |
+| **Connection Cleanup** | Centralized connection registry disconnects persistent UI, input, and RunService signals during cleanup to prevent leaks |
+| **Drag Input Leak** | Registers the long-lived `UserInputService.InputChanged` drag listener so repeated GUI spawns no longer accumulate connections |
+| **Input Sanitization Frontiers** | Frontier-pattern filtering removes dangerous functions without corrupting benign words containing similar substrings |
+| **Levenshtein GC Optimization** | Two-row distance calculation avoids large matrices, reducing garbage collection overhead during fuzzy matching |
+| **Glow Reset on Cleanup** | Cleanup now clears the glow animation handle after disconnecting it so future sessions can safely restart the effect |
 
 ---
 
@@ -242,8 +235,7 @@ Features currently in development for the next release.
 
 ---
 
-[Unreleased]: https://github.com/BokX1/InfiniteYieldWithAI/compare/v1.2.3...HEAD
-[1.2.3]: https://github.com/BokX1/InfiniteYieldWithAI/compare/v1.2.2...v1.2.3
+[Unreleased]: https://github.com/BokX1/InfiniteYieldWithAI/compare/v1.2.2...HEAD
 [1.2.2]: https://github.com/BokX1/InfiniteYieldWithAI/compare/v1.2.1...v1.2.2
 [1.2.1]: https://github.com/BokX1/InfiniteYieldWithAI/compare/v1.2.0...v1.2.1
 [1.2.0]: https://github.com/BokX1/InfiniteYieldWithAI/compare/v1.1.0...v1.2.0
