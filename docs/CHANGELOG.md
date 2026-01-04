@@ -21,18 +21,27 @@ Features currently in development for the next release.
 ## [1.2.3] - 2026-01-04
 
 ### Added
-- Enhanced input sanitization with non-printable character removal and boundary-aware pattern matching.
-- Detailed API error reporting including 429 rate-limit awareness and status message surfacing.
-- Robust environment detection for global namespace management.
+
+| Feature | Description |
+|---------|-------------|
+| **Robust Sanitization** | Enhanced input sanitization with non-printable character removal and boundary-aware pattern matching |
+| **Error Reporting** | Detailed API error reporting including 429 rate-limit awareness and status message surfacing |
+| **Namespace Safety** | Robust environment detection for global namespace management and isolation |
 
 ### Changed
-- Refactored `trim` utility for better performance and type safety.
-- Improved `cleanup` function to ensure all resources, including threads and UI references, are properly released.
-- Synchronized `InfiniteYieldWithAI_Dev.Lua` with the latest stable improvements.
+
+| Change | Description |
+|--------|-------------|
+| **Utility Refactor** | Refactored `trim` utility for better performance, type safety, and consistency |
+| **Resource Management** | Improved `cleanup` function to ensure all resources, including threads and UI references, are properly released |
+| **Dev Synchronization** | Synchronized `InfiniteYieldWithAI_Dev.Lua` with the latest stable improvements and versioning |
 
 ### Fixed
-- Potential memory leaks from orphaned connections and threads.
-- Typos and inconsistent naming conventions in utility functions.
+
+| Fix | Description |
+|-----|-------------|
+| **Memory Leaks** | Resolved potential memory leaks from orphaned connections and persistent tasks |
+| **Code Typos** | Fixed typos and inconsistent naming conventions in utility functions and sanitization logic |
 
 ---
 
