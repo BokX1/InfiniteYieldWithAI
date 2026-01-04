@@ -38,31 +38,31 @@ Features currently in development for the next release.
 
 ---
 
-## [1.3.0] - 2026-01-05
+## [1.3.0] - (Planned)
 
-### Added
+### 🚀 Version 1.3 Pipeline Checklist
 
-| Feature | Description |
-|---------|-------------|
-| **Headless Engine Architecture** | Deconstructed monolithic script into a Client-Server model for better modularity |
-| **Virtualization Shim** | New injection layer that mocks the IY GUI, allowing the backend to run headlessly |
-| **Closed-Loop Feedback** | AI now receives direct text feedback (Success/Error) from command execution via `_G.IY_Output` |
-| **Service Architecture** | Reorganized code into `[CONFIG]`, `[SERVICES]`, and `[CONTROLLER]` blocks |
-| **Unified Bridge API** | Formalized `BridgeAPI.Execute(cmd)` and `BridgeAPI.GetOutput()` contracts |
-| **Crash Protection** | Implemented `pcall` wrappers around backend execution to prevent script-wide crashes |
-| **Luau Type Checking** | Added `--!strict` type definitions for more robust development |
-| **Dynamic Loading** | `InfiniteYieldWithAI_dev.lua` now fetches and injects the backend source dynamically |
-| **Metatable Protection** | Ensures UI calls return dummy objects instead of real ScreenGuis |
-| **Concurrency Management** | Automatic cleanup of existing backend instances to prevent memory leaks |
+This version focuses on deconstructing the monolithic script into a **Headless Engine** using a Client-Server model.
 
-### Changed
+#### Part 1: The Injection Layer (The "Shim")
+- [ ] **Dynamic Loading**: Implement `game:HttpGet` to fetch `IYsource.lua` content.
+- [ ] **Virtualization Shim**: Create a block to inject before compilation to mock the GUI.
+- [ ] **Mock GUI**: Dummy tables for `Holder`, `Title`, `Description` to accept API calls without rendering.
+- [ ] **Metatable Protection**: Redirect `Instance.new` calls for UI elements to dummy objects.
+- [ ] **IO Redirection**: Overwrite `notify()` to write `{Title, Text}` to `_G.IY_Output`.
+- [ ] **Input Mocking**: Disable or mock `Chatted` and `UserInputService` listeners.
 
-| Change | Description |
-|--------|-------------|
-| **IO Redirection** | Overwrote `notify()` to write to shared tables instead of displaying UI notifications |
-| **Input Handling** | Mocked `UserInputService` and `Chatted` listeners to prevent manual interference |
-| **Syntax Sanitization** | Enhanced command formatting helper for consistent IY parser compatibility |
-| **Hot-Swap Support** | Decoupled AI logic from IY implementation for easier backend updates |
+#### Part 2: Logic Hardening (The "Feedback Loop")
+- [ ] **Closed-Loop Feedback**: Implement Write (AI command) -> Read (`_G.IY_Output`) -> Report (AI Context) loop.
+- [ ] **Syntax Sanitization**: Helper function for command formatting and prefix consistency.
+- [ ] **Crash Protection**: Wrap execution in `pcall` to catch and report backend errors.
+- [ ] **Concurrency Management**: Automatic cleanup of existing backend instances on load.
+
+#### Part 3: Standardization (The "Service Architecture")
+- [ ] **Service Pattern Separation**: Organize into `[CONFIG]`, `[SERVICES]`, and `[CONTROLLER]`.
+- [ ] **Unified API Contract**: Define `BridgeAPI.Execute(cmd)` and `BridgeAPI.GetOutput()`.
+- [ ] **Type Checking**: Implement Luau `--!strict` definitions throughout the project.
+- [ ] **Hot-Swap Support**: Ensure architecture allows updating `IYsource.lua` independently.
 
 ---
 
@@ -147,62 +147,6 @@ Features currently in development for the next release.
 | **Quick Action Effects** | Hover and press animations for mobile command grid |
 | **Token Cache Optimization** | Optimized API calls to enable OpenAI token caching for reduced costs |
 | **Target-Smart Context** | Player list is only injected into API payloads when target cues are detected |
-
-### Changed
-
-| Change | Description |
-|--------|-------------|
-| **Fuzzy Match Precision** | Dynamic threshold based on input length - shorter inputs require stricter matching to prevent false positives |
-| **Minimum Input Length** | New `FuzzyMatchMinInputLength` config (default: 3) prevents 1-2 character inputs from fuzzy matching |
-| **Chat Log Styling** | Increased padding, larger font sizes, and better color contrast for readability |
-| **Mode Switch Animation** | Enhanced mode switch with proper container visibility toggling and status updates |
-| **Bridge Initialization** | Added retry logic during initial connection with periodic reconnection attempts |
-| **Context Injection** | CMD mode now includes minimal game context for better command understanding |
-| **CHAT Mode Prompt** | Enhanced with genre hints and team awareness for more contextual responses |
-| **Quick Action Grid** | Cell size and font now scale based on display density |
-| **Bridge System** | Replaced polling with event-driven architecture |
-| **Cache Cleanup** | LRU-style eviction when max entries reached |
-| **Target Resolution** | Added prefix, contains, and fuzzy matching fallback |
-| **Tutorial** | Multi-step walkthrough replaces single-screen modal |
-| **Quick Actions** | Replaced God/Kill with Jump/Invisible for universal compatibility |
-| **Placeholder Text** | More engaging prompts ("Tell me what to do..." instead of "Enter command...") |
-| **Status Messages** | Friendlier, more varied feedback with personality |
-| **CHAT Mode Context** | Enhanced dynamic context with proper framing for game script assistance |
-| **Safety Compliance** | Removed potentially triggering terms from CHAT mode prompt to prevent AI refusals |
-| **Command Reference** | CHAT mode now includes curated command reference for better question answering |
-
-### Fixed
-
-| Fix | Description |
-|-----|-------------|
-| **Dropdown Click-Outside** | Mode dropdown now closes reliably when clicking anywhere outside of it |
-| **Cleanup Scope** | Cleanup handler now destroys the correct Smart Infinite Yield screen GUI |
-| **ChatHistoryLimit Declaration** | Fixed forward declaration to prevent nil reference errors |
-| **Duplicate Variable Declaration** | Removed duplicate `ChatHistoryLimit` declaration |
-| **Bridge Validation** | Added proper nil checks for bridge interface and Exec function |
-| **Input Validation** | Enhanced `executeBridge` with input type and empty string validation |
-| **Chat Log Cleanup** | Added pcall protection when destroying chat entries |
-| **Memory Leak Prevention** | `clearChatLog` now properly clears both UI and internal ChatHistory |
-| **Dropdown Persistence** | Fixed issue where suggestions would persist after input focus loss |
-| **Focus Race Condition** | Added focus check ID system to prevent stale hide operations |
-| **CHAT Mode Refusals** | Resolved issue where AI would refuse to answer questions about commands like "how do I fly?" |
-| **Context Framing** | Added legitimate gaming context to prevent safety guardrail triggers |
-
-### Technical
-| Improvement | Description |
-|-------------|-------------|
-| **Config Expansion** | Added 8 new configuration options for bridge, mobile, dropdown, and fuzzy matching |
-| **Color Palette** | Extended Colors table with ChatGPT-like colors for CHAT mode UI |
-| **Namespace Exports** | Added `ClearChat` and `GetBridgeStatus` to namespace for external access |
-| **Code Structure** | 19 numbered sections with clear headers |
-| **Helper Functions** | Reusable `createInstance()`, `sanitizeInput()`, namespace helpers reduce duplication |
-| **Variable Naming** | Standardized to Roblox conventions |
-| **Error Handling** | Improved pcall usage throughout bridge and UI operations |
-| **Iterators** | ipairs() for arrays, pairs() for dictionaries |
-| **Dynamic Context** | Minimized variable content in API calls; player list only sent when targeting needed |
-| **FastMap Completeness** | Added 11 missing commands (swp, nofullbright, exit, partpath, copyanimation, etc.) |
-| **Fuzzy Match Optimization** | Levenshtein distance calculated once per player instead of multiple times |
-| **Global Isolation** | All globals use SmartInfiniteYield namespace to prevent pollution |
 
 ---
 
