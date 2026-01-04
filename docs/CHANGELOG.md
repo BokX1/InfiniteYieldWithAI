@@ -38,6 +38,34 @@ Features currently in development for the next release.
 
 ---
 
+## [1.3.0] - 2026-01-05
+
+### Added
+
+| Feature | Description |
+|---------|-------------|
+| **Headless Engine Architecture** | Deconstructed monolithic script into a Client-Server model for better modularity |
+| **Virtualization Shim** | New injection layer that mocks the IY GUI, allowing the backend to run headlessly |
+| **Closed-Loop Feedback** | AI now receives direct text feedback (Success/Error) from command execution via `_G.IY_Output` |
+| **Service Architecture** | Reorganized code into `[CONFIG]`, `[SERVICES]`, and `[CONTROLLER]` blocks |
+| **Unified Bridge API** | Formalized `BridgeAPI.Execute(cmd)` and `BridgeAPI.GetOutput()` contracts |
+| **Crash Protection** | Implemented `pcall` wrappers around backend execution to prevent script-wide crashes |
+| **Luau Type Checking** | Added `--!strict` type definitions for more robust development |
+| **Dynamic Loading** | `InfiniteYieldWithAI_dev.lua` now fetches and injects the backend source dynamically |
+| **Metatable Protection** | Ensures UI calls return dummy objects instead of real ScreenGuis |
+| **Concurrency Management** | Automatic cleanup of existing backend instances to prevent memory leaks |
+
+### Changed
+
+| Change | Description |
+|--------|-------------|
+| **IO Redirection** | Overwrote `notify()` to write to shared tables instead of displaying UI notifications |
+| **Input Handling** | Mocked `UserInputService` and `Chatted` listeners to prevent manual interference |
+| **Syntax Sanitization** | Enhanced command formatting helper for consistent IY parser compatibility |
+| **Hot-Swap Support** | Decoupled AI logic from IY implementation for easier backend updates |
+
+---
+
 ## [1.2.2] - 2026-01-03
 
 ### Changed
@@ -78,7 +106,6 @@ Features currently in development for the next release.
 ## [1.2.1] - 2026-01-03
 
 ### Added
-
 | Feature | Description |
 |---------|-------------|
 | **ChatGPT-like CHAT Mode UI** | Complete redesign of CHAT mode with modern message bubbles, role indicators (👤 You / 🤖 Assistant), and timestamps |
@@ -162,7 +189,6 @@ Features currently in development for the next release.
 | **Context Framing** | Added legitimate gaming context to prevent safety guardrail triggers |
 
 ### Technical
-
 | Improvement | Description |
 |-------------|-------------|
 | **Config Expansion** | Added 8 new configuration options for bridge, mobile, dropdown, and fuzzy matching |
@@ -191,53 +217,3 @@ Features currently in development for the next release.
 | **Predictive Dropdown** | Dynamic suggestions replace ghost text |
 | **Master Toggle** | Right Shift shows/hides interface |
 | **Smart Binds** | Auto-toggling (e.g., `bind f fly` handles fly/unfly) |
-| **Command Database** | Full Infinite Yield command list for instant local execution |
-
-### Fixed
-
-| Fix | Description |
-|-----|-------------|
-| **AI Model** | Upgraded to OpenAI GPT-5 Mini for better reasoning |
-| **Regex Bugs** | Fixed greedy patterns breaking text arguments |
-| **Chat Mode** | Removed unnecessary `;chat` prefixes |
-| **UI Z-Index** | Resolved layering issues |
-
----
-
-## [1.1.0] - 2025-12-28
-
-### Added
-
-| Feature | Description |
-|---------|-------------|
-| **Cloudflare Security** | API protection against abuse |
-| **Logic Engine v2** | Faster, more accurate translations |
-
-### Fixed
-
-| Fix | Description |
-|-----|-------------|
-| **Responsive UI** | Improved PC and Mobile layouts |
-| **Core Bugs** | Multiple logic engine fixes |
-
----
-
-## [1.0.0] - 2025-11-25
-
-### Added
-
-| Feature | Description |
-|---------|-------------|
-| **Initial Release** | First stable version |
-| **AI Translation** | Natural language to command conversion |
-| **Thinking Bar** | Visual AI processing feedback |
-| **Dual Modes** | CMD for execution, CHAT for advice |
-
----
-
-[Unreleased]: https://github.com/BokX1/InfiniteYieldWithAI/compare/v1.2.2...HEAD
-[1.2.2]: https://github.com/BokX1/InfiniteYieldWithAI/compare/v1.2.1...v1.2.2
-[1.2.1]: https://github.com/BokX1/InfiniteYieldWithAI/compare/v1.2.0...v1.2.1
-[1.2.0]: https://github.com/BokX1/InfiniteYieldWithAI/compare/v1.1.0...v1.2.0
-[1.1.0]: https://github.com/BokX1/InfiniteYieldWithAI/compare/v1.0.0...v1.1.0
-[1.0.0]: https://github.com/BokX1/InfiniteYieldWithAI/releases/tag/v1.0.0
