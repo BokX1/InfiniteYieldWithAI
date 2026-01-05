@@ -160,7 +160,7 @@ local CONFIG = {
     DropdownMaxItems = 6, -- Maximum items to show in dropdown
     
     -- V1.3 Headless Engine Settings
-    HeadlessMode = true, -- Enable headless mode (no GUI rendering)
+    HeadlessMode = false, -- Enable headless mode (suppresses IY GUI rendering, SIY GUI always renders)
     IYSourceURL = "https://raw.githubusercontent.com/BokX1/InfiniteYieldWithAI/main/IYsource.lua", -- URL for dynamic IYsource loading (local repo copy)
     IYSourceCacheFile = "SIY_IYSource_Cache.lua", -- Local cache file for IYsource
     IYSourceCacheExpiry = 86400, -- Cache expiry in seconds (24 hours)
@@ -1009,18 +1009,21 @@ local LastOutputIndex = 0
 local function startFeedbackLoop(callback: ((table) -> ())?)
     if FeedbackLoopConnection then
         pcall(function() FeedbackLoopConnection:Disconnect() end)
+        removeConnection(FeedbackLoopConnection)
     end
     
     FeedbackLoopConnection = RunService.Heartbeat:Connect(function()
-        -- Check for new output entries
-        if #IY_Output > 0 and IY_Output[#IY_Output].Index > LastOutputIndex then
+        -- Check for new output entries using global index counter
+        if IY_OutputIndex > LastOutputIndex then
             local newEntries = {}
+            -- Collect entries with Index > LastOutputIndex
             for _, entry in ipairs(IY_Output) do
-                if entry.Index > LastOutputIndex then
+                if entry.Index and entry.Index > LastOutputIndex then
                     table.insert(newEntries, entry)
                 end
             end
-            LastOutputIndex = IY_Output[#IY_Output].Index
+            -- Update to current global index (handles buffer trimming)
+            LastOutputIndex = IY_OutputIndex
             
             if callback and #newEntries > 0 then
                 callback(newEntries)
@@ -1056,6 +1059,7 @@ local function clearOutput()
     LastOutputIndex = 0
     local ns = getNamespace()
     ns.IY_Output = IY_Output
+    ns.IY_OutputIndex = 0 -- Reset namespace index for shim consistency
     if _G then _G.IY_Output = IY_Output end
 end
 
@@ -1079,10 +1083,11 @@ function BridgeAPI.Execute(cmd: string): (boolean, string?)
     local success, errorMsg = safeExecute(function()
         if IY_Interface and IY_Interface.Exec then
             IY_Interface.Exec(sanitized)
-        elseif execCmd then
+        elseif type(execCmd) == "function" then
+            -- execCmd is a global function defined by IYsource.lua
             execCmd(sanitized)
         else
-            error("No execution interface available")
+            error("No execution interface available - IY not loaded")
         end
     end)
     
@@ -1147,7 +1152,38 @@ function BridgeAPI.HotSwap(): (boolean, string?)
         return false, source
     end
     
-    return true, "IYsource hot-swapped successfully"
+    -- Re-execute the source to apply updates
+    local loadSuccess, loadErr = safeExecute(function()
+        -- Build shim based on current mode
+        local shimCode = ""
+        if HeadlessModeActive then
+            shimCode = buildVirtualizationShim()
+        else
+            shimCode = string.format([[
+                local ns = getgenv()["%s"] or {}
+                getgenv()["%s"] = ns
+                ns.PseudoBridge = {
+                    Exec = function(cmd) if type(execCmd) == "function" then execCmd(cmd) end end,
+                    Ready = true,
+                    Headless = false
+                }
+            ]], NAMESPACE, NAMESPACE)
+        end
+        loadstring(source .. "\n" .. shimCode)()
+    end)
+    
+    if not loadSuccess then
+        return false, "Hot-swap reload failed: " .. tostring(loadErr)
+    end
+    
+    -- Update bridge reference
+    local bridge = getNamespaceValue("PseudoBridge")
+    if bridge then
+        IY_Interface = bridge
+        BridgeConnected = true
+    end
+    
+    return true, "IYsource hot-swapped and reloaded successfully"
 end
 
 -- Expose BridgeAPI to namespace
@@ -1239,12 +1275,15 @@ Cmdbar = {Text = ""}
 
 -- IO Redirection: Override notify
 local _originalNotify = notify
+_SIY_NS.IY_OutputIndex = _SIY_NS.IY_OutputIndex or 0
 notify = function(title, text, duration)
     _SIY_NS.IY_Output = _SIY_NS.IY_Output or {}
+    _SIY_NS.IY_OutputIndex = _SIY_NS.IY_OutputIndex + 1
     table.insert(_SIY_NS.IY_Output, {
         Title = tostring(title or ""),
         Text = tostring(text or ""),
-        Timestamp = os.time()
+        Timestamp = os.time(),
+        Index = _SIY_NS.IY_OutputIndex
     })
     -- Limit buffer size
     while #_SIY_NS.IY_Output > 50 do
@@ -1264,7 +1303,7 @@ end
 
 -- Bridge setup
 _SIY_NS.PseudoBridge = {
-    Exec = function(cmd) if execCmd then execCmd(cmd) end end,
+    Exec = function(cmd) if type(execCmd) == "function" then execCmd(cmd) end end,
     Ready = true,
     Headless = true
 }
@@ -1302,7 +1341,7 @@ task.spawn(function()
                         local ns = getgenv()["%s"] or {}
                         getgenv()["%s"] = ns
                         ns.PseudoBridge = {
-                            Exec = function(cmd) if execCmd then execCmd(cmd) end end,
+                            Exec = function(cmd) if type(execCmd) == "function" then execCmd(cmd) end end,
                             Ready = true,
                             Headless = false
                         }
@@ -1348,10 +1387,9 @@ task.spawn(function()
         HeadlessModeActive = bridge.Headless or false
         BridgeReady:Fire()
         
-        -- Start feedback loop if in headless mode
-        if HeadlessModeActive then
-            startFeedbackLoop()
-        end
+        -- Start feedback loop for output monitoring and crash protection
+        -- Works in both headless and GUI modes
+        startFeedbackLoop()
     else
         warn("SIY: Bridge connection timeout after " .. tostring(maxTimeout) .. " seconds")
     end
@@ -2398,6 +2436,7 @@ local TutorialFrame = createInstance("Frame", {
     Position = UDim2.new(0.5, 0, 0.5, 0),
     BackgroundColor3 = Colors.Background,
     ZIndex = 100,
+    Visible = true, -- Explicitly visible for tutorial on startup
     Parent = SIY_Screen
 })
 addCorner(TutorialFrame, 12)
@@ -3550,8 +3589,9 @@ local function executeBridge(text, source)
         return
     end
     
-    -- V1.3: Use BridgeAPI for execution when available (enables feedback loop)
-    local useBridgeAPI = BridgeAPI and BridgeAPI.Execute and HeadlessModeActive
+    -- V1.3: Use BridgeAPI for execution when available (provides crash protection and feedback loop)
+    -- BridgeAPI is always available, HeadlessModeActive only affects IY GUI rendering
+    local useBridgeAPI = BridgeAPI and BridgeAPI.Execute
     
     local cleanText = trim(text)
     
