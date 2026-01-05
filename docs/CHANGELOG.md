@@ -6,91 +6,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ---
 
-## [1.3.1] - 2026-01-06
+## [1.2.3] - 2026-01-06
 
 ### Fixed
 
 | Fix | Description |
 |-----|-------------|
-| **Headless GUI Visibility** | Ensures the headless virtualization shim runs IYsource inside a sandboxed loader that mocks UI classes so the base Infinite Yield GUI stays hidden when headless mode is enabled. |
-| **Hot-Swap Consistency** | Reuses the sandboxed loader during hot-swaps to prevent GUI elements from reappearing after refreshing IYsource. |
-
-### Technical
-
-| Improvement | Description |
-|-------------|-------------|
-| **Sandboxed IY Loader** | Centralized IYsource execution helper that injects mock `Instance.new` handling for UI classes while delegating non-UI instances to Roblox. |
-
----
-
-## [1.3.0] - 2026-01-05
-
-### 🚀 Headless Engine Release
-
-This version deconstructs the monolithic script into a **Headless Engine** using a Client-Server model.
-
-#### Part 1: The Injection Layer (The "Shim")
-- [x] **Dynamic Loading**: `fetchIYSource()` fetches `IYsource.lua` from repo with memory and file caching.
-- [x] **Virtualization Shim**: `buildVirtualizationShim()` creates injection code to mock the GUI.
-- [x] **Mock GUI**: Dummy tables for `Holder`, `Title`, `Description`, `ScaledHolder`, `Notification`, `Cmdbar`.
-- [x] **Metatable Protection**: `protectedInstanceNew()` redirects `Instance.new` calls for UI elements to dummy objects.
-- [x] **IO Redirection**: `redirectedNotify()` overwrites `notify()` to write `{Title, Text}` to `_G.IY_Output`.
-- [x] **Input Mocking**: `mockInputListeners()` disables or mocks `Chatted` and `UserInputService` listeners.
-
-#### Part 2: Logic Hardening (The "Feedback Loop")
-- [x] **Closed-Loop Feedback**: `startFeedbackLoop()` implements Write → Read → Report loop with `RunService.Heartbeat`.
-- [x] **Syntax Sanitization**: `sanitizeCommand()` helper for command formatting and prefix consistency.
-- [x] **Crash Protection**: `safeExecute()` wraps execution in `pcall` to catch and report backend errors.
-- [x] **Concurrency Management**: `cleanupExistingInstances()` provides automatic cleanup on load.
-
-#### Part 3: Standardization (The "Service Architecture")
-- [x] **Service Pattern Separation**: Code organized into `[CONFIG]`, `[SERVICES]`, and `[CONTROLLER]` sections.
-- [x] **Unified API Contract**: `BridgeAPI.Execute(cmd)` and `BridgeAPI.GetOutput()` defined.
-- [x] **Type Checking**: Luau `--!strict` directive with type annotations throughout.
-- [x] **Hot-Swap Support**: `BridgeAPI.HotSwap()` allows updating `IYsource.lua` independently.
-
-### Added
-
-| Feature | Description |
-|---------|-------------|
-| **BridgeAPI** | Unified API contract with `Execute()`, `GetOutput()`, `GetAllOutput()`, `ClearOutput()`, `GetStatus()`, `StartFeedbackLoop()`, `StopFeedbackLoop()`, `HotSwap()` |
-| **Headless Mode** | New `CONFIG.HeadlessMode` option to run without IY GUI rendering |
-| **Dynamic IY Loading** | Fetches `IYsource.lua` from repository with 24-hour caching |
-| **Output Buffer** | Configurable buffer (`OutputBufferSize`) for capturing IY notifications |
-| **Feedback Loop** | Real-time output monitoring via `RunService.Heartbeat` with callback support |
-| **Hot-Swap** | Reload `IYsource.lua` without restarting the script |
-| **Crash Protection** | All executions wrapped in `pcall` with error reporting |
-| **Concurrency Cleanup** | Automatic cleanup of existing instances on script load |
-
-### Changed
-
-| Change | Description |
-|--------|-------------|
-| **IYSourceURL** | Now points to `BokX1/InfiniteYieldWithAI` repo instead of external EdgeIY source |
-| **Bridge Execution** | Enhanced with `BridgeAPI.Execute()` integration for headless mode |
-| **Code Organization** | Restructured into `[CONFIG]`, `[SERVICES]`, `[CONTROLLER]` sections |
-| **Type Safety** | Added Luau `--!strict` directive and type annotations |
-
-### Fixed
-
-| Fix | Description |
-|-----|-------------|
-| **GUI Initialization** | Fixed `HeadlessMode` defaulting to true which suppressed the main UI; now defaults to false |
-| **Hot-Swap Logic** | Fixed `BridgeAPI.HotSwap()` to properly re-execute the source after fetching updates |
-| **Feedback Tracking** | Improved feedback loop to use global index tracking, preventing missed entries during buffer trimming |
-| **Bridge Execution** | Enabled `BridgeAPI.Execute()` for both GUI and Headless modes to provide consistent crash protection |
-| **Shim Consistency** | Added `Index` field to shim output entries and fixed `execCmd` type checking across all execution paths |
-| **Tutorial Visibility** | Added explicit visibility setting for `TutorialFrame` to ensure it shows on startup |
-
-### Technical
-
-| Improvement | Description |
-|-------------|-------------|
-| **Lines Added** | 614 new lines of code for Headless Engine implementation |
-| **New Functions** | 15+ new functions for headless operation |
-| **New Config Options** | 8 new configuration options for headless mode |
-| **Mock GUI System** | Complete metatable-based GUI mocking for headless operation |
-| **Type Definitions** | Added `BridgeAPIType`, `BridgeStatusType`, `OutputEntryType` type definitions |
+| **Bridge Regression** | Restored the event-based bridge in `InfiniteYieldWithAI_Dev.Lua` so commands execute reliably again. |
 
 ---
 

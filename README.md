@@ -1,4 +1,4 @@
-# SmartInfiniteYield (SIY) - V1.3.0 Headless Engine
+# SmartInfiniteYield (SIY) - V1.2.3 Event-Based Bridge
 
 **Original Idea by [VolQ5](https://github.com/BokX1/RbxLuauLLM) | Powered by Pollinations.AI (LLM Model)**
 
@@ -9,8 +9,6 @@
 **SmartInfiniteYield (SIY)** is an open-source, AI-powered wrapper for [Infinite Yield](https://github.com/EdgeIY/infiniteyield), the popular Roblox admin script. It bridges the gap between natural human language and precise command execution, allowing users to control the game using everyday phrases instead of memorizing syntax.
 
 At its core, SIY features a **Hybrid Dual-Path Execution Engine** that intelligently routes requests through either instant local processing (for 200+ known commands) or AI-powered translation (for complex natural language). The system includes a **Self-Correcting Logic Engine** that validates commands before execution—if the AI targets a non-existent player or generates invalid syntax, the script automatically detects the error, provides context, and forces the AI to correct itself.
-
-**New in V1.3.0:** The **Headless Engine** architecture allows running SIY without IY GUI rendering, perfect for automation and integration. The unified **BridgeAPI** provides programmatic control with `Execute()`, `GetOutput()`, and `HotSwap()` functions.
 
 Key innovations include **Intelligent Caching** that learns your phrases over time for instant execution, **Fuzzy Player Targeting** using Levenshtein distance matching, and a **Mobile-First Design** with one-tap Quick Actions. Whether you're a power user seeking efficiency or a newcomer who doesn't want to memorize commands, SIY adapts to your workflow.
 
@@ -36,17 +34,6 @@ Key innovations include **Intelligent Caching** that learns your phrases over ti
 | **Fuzzy Player Targeting** | Type partial names like "kill valk" and it resolves to "Valkorym" automatically |
 | **Natural Chain Detection** | Understands requests like "fly and goto random" and splits them correctly |
 | **Smart Waypoint System** | Save locations with `swp`, teleport with `gotowp` - dropdown shows saved waypoints |
-
-### Headless Engine (V1.3.0)
-
-| Feature | Description |
-|---------|-------------|
-| **Headless Mode** | Run SIY without rendering the Infinite Yield GUI, using a virtualization shim |
-| **BridgeAPI** | Unified API contract for programmatic execution and output monitoring |
-| **Feedback Loop** | Real-time monitoring of IY notifications and command output |
-| **Hot-Swap Support** | Update `IYsource.lua` independently without restarting the main script |
-| **Crash Protection** | All command executions are wrapped in `pcall` with automatic error reporting |
-| **Dynamic Loading** | Fetches the latest IY source from the repository with 24-hour caching |
 
 ### Smart Interface
 
@@ -86,46 +73,16 @@ loadstring(game:HttpGet("https://raw.githubusercontent.com/BokX1/InfiniteYieldWi
 
 ---
 
-## BridgeAPI Reference (V1.3.0)
-
-The `BridgeAPI` is exposed via the `SmartInfiniteYield` namespace in `getgenv()` or `_G`.
-
-### Methods
-
-| Method | Description |
-|--------|-------------|
-| `Execute(cmd: string)` | Executes a command through the bridge. Returns `(success, errorMsg)`. |
-| `GetOutput()` | Returns the latest output entry: `{Title, Text, Timestamp, Index}`. |
-| `GetAllOutput()` | Returns an array of all output entries in the buffer. |
-| `ClearOutput()` | Clears the output buffer and resets the index. |
-| `GetStatus()` | Returns bridge status: `{connected, attempts, interface, headless, outputCount}`. |
-| `HotSwap()` | Reloads `IYsource.lua` from the repository without restarting SIY. |
-
-### Example Usage
-
-```lua
-local SIY = getgenv().SmartInfiniteYield
-if SIY and SIY.Ready then
-    local success, err = SIY.BridgeAPI.Execute(";fly")
-    if not success then warn("Failed: " .. err) end
-    
-    local output = SIY.BridgeAPI.GetOutput()
-    if output then print("IY Says: " .. output.Text) end
-end
-```
-
----
-
 ## Configuration
 
 Customize SIY by modifying the `CONFIG` table at the top of the script:
 
 ```lua
 local CONFIG = {
-    -- V1.3 Headless Engine Settings
-    HeadlessMode = false,               -- Enable headless mode (suppresses IY GUI)
-    EnableHotSwap = true,               -- Allow updating IYsource independently
-    OutputBufferSize = 50,              -- Maximum entries in output buffer
+    -- Bridge Settings
+    BridgeMaxRetries = 5,               -- Bridge connection retries
+    BridgeRetryDelay = 0.5,             -- Delay between retries
+    BridgeTimeout = 15,                 -- Total timeout for bridge connection
     
     -- API Settings
     ApiKey = "Null",                    -- Authorization: Bearer <key>
