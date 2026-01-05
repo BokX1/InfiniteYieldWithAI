@@ -1064,6 +1064,12 @@ local function clearOutput()
     if _G then _G.IY_Output = IY_Output end
 end
 
+-- Bridge state (shared across API and connection logic)
+local IY_Interface = nil
+local BridgeReady = Instance.new("BindableEvent")
+local BridgeConnected = false
+local BridgeConnectionAttempts = 0
+
 --[[
     Part 3: Standardization (The "Service Architecture")
     - Service Pattern Separation: [CONFIG], [SERVICES], [CONTROLLER] organization
@@ -1196,10 +1202,6 @@ setNamespaceValue("BridgeAPI", BridgeAPI)
 --// ============================================
 --// 6B. BRIDGE SYSTEM (Event-Based with Configurable Retries)
 --// ============================================
-local IY_Interface = nil
-local BridgeReady = Instance.new("BindableEvent")
-local BridgeConnected = false
-local BridgeConnectionAttempts = 0
 
 -- Enhanced waitForBridge with configurable retries
 local function waitForBridge(timeout: number?, retryCount: number?): boolean
