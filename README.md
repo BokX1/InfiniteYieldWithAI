@@ -1,4 +1,4 @@
-# SmartInfiniteYield (SIY) - V1.2.2 Stable
+# SmartInfiniteYield (SIY) - V1.3.0 Headless Engine
 
 **Original Idea by [VolQ5](https://github.com/BokX1/RbxLuauLLM) | Powered by Pollinations.AI (LLM Model)**
 
@@ -9,6 +9,8 @@
 **SmartInfiniteYield (SIY)** is an open-source, AI-powered wrapper for [Infinite Yield](https://github.com/EdgeIY/infiniteyield), the popular Roblox admin script. It bridges the gap between natural human language and precise command execution, allowing users to control the game using everyday phrases instead of memorizing syntax.
 
 At its core, SIY features a **Hybrid Dual-Path Execution Engine** that intelligently routes requests through either instant local processing (for 200+ known commands) or AI-powered translation (for complex natural language). The system includes a **Self-Correcting Logic Engine** that validates commands before execution—if the AI targets a non-existent player or generates invalid syntax, the script automatically detects the error, provides context, and forces the AI to correct itself.
+
+**New in V1.3.0:** The **Headless Engine** architecture allows running SIY without GUI rendering, perfect for automation and integration. The unified **BridgeAPI** provides programmatic control with `Execute()`, `GetOutput()`, and `HotSwap()` functions.
 
 Key innovations include **Intelligent Caching** that learns your phrases over time for instant execution, **Fuzzy Player Targeting** using Levenshtein distance matching, and a **Mobile-First Design** with one-tap Quick Actions. Whether you're a power user seeking efficiency or a newcomer who doesn't want to memorize commands, SIY adapts to your workflow.
 
@@ -225,7 +227,7 @@ When you use a phrase like "make me fast" and the AI translates it to `;speed 50
 
 ### Hybrid Dual-Path Engine
 
-SmartInfiniteYield V1.2.2 uses a sophisticated routing system that combines local speed with AI intelligence, wrapped in a streamlined compact interface.
+SmartInfiniteYield V1.3.0 uses a sophisticated routing system that combines local speed with AI intelligence, now enhanced with a **Headless Engine** for programmatic control.
 
 **Path A: Fast Path (Local Execution)**
 
@@ -251,11 +253,70 @@ Version 1.2.1 introduced an event-based bridge using BindableEvents, replacing t
 
 ---
 
-## What's New in V1.2.2
+## What's New in V1.3.0
 
-### GUI Improvements
+### Headless Engine Architecture
 
-Version 1.2.2 focuses on streamlining the interface and fixing visual bugs:
+Version 1.3.0 introduces a **Headless Engine** using a Client-Server model:
+
+| Feature | Description |
+|---------|-------------|
+| **BridgeAPI** | Unified API with `Execute()`, `GetOutput()`, `GetAllOutput()`, `ClearOutput()`, `GetStatus()`, `StartFeedbackLoop()`, `StopFeedbackLoop()`, `HotSwap()` |
+| **Headless Mode** | Run without GUI rendering via `CONFIG.HeadlessMode = true` |
+| **Dynamic Loading** | Fetches `IYsource.lua` from repository with 24-hour caching |
+| **Feedback Loop** | Real-time output monitoring via `RunService.Heartbeat` with callback support |
+| **Hot-Swap** | Reload `IYsource.lua` without restarting via `BridgeAPI.HotSwap()` |
+| **Crash Protection** | All executions wrapped in `pcall` with error reporting |
+| **Mock GUI System** | Metatable-based GUI mocking for headless operation |
+| **Type Safety** | Luau `--!strict` directive with type annotations |
+
+### BridgeAPI Usage Example
+
+```lua
+-- Enable headless mode in CONFIG
+CONFIG.HeadlessMode = true
+
+-- After script loads, use BridgeAPI
+local ns = getgenv().SmartInfiniteYield
+local BridgeAPI = ns.BridgeAPI
+
+-- Execute commands
+local success, err = BridgeAPI.Execute(";fly")
+
+-- Get output from feedback loop
+local output = BridgeAPI.GetOutput()
+if output then
+    print(output.Title, output.Text)
+end
+
+-- Start feedback loop with callback
+BridgeAPI.StartFeedbackLoop(function(newEntries)
+    for _, entry in ipairs(newEntries) do
+        print("[IY Output]", entry.Title, entry.Text)
+    end
+end)
+
+-- Hot-swap IYsource when needed
+local success, msg = BridgeAPI.HotSwap()
+```
+
+### New Configuration Options
+
+```lua
+-- V1.3 Headless Engine Settings
+HeadlessMode = false,              -- Enable headless mode (no GUI rendering)
+IYSourceURL = "https://...",       -- URL for dynamic IYsource loading (repo copy)
+IYSourceCacheFile = "...",         -- Local cache file for IYsource
+IYSourceCacheExpiry = 86400,       -- Cache expiry in seconds (24 hours)
+EnableHotSwap = true,              -- Allow updating IYsource independently
+OutputBufferSize = 50,             -- Maximum entries in output buffer
+FeedbackLoopInterval = 0.1,        -- Interval for feedback loop polling
+ConcurrencyCleanupOnLoad = true,   -- Auto-cleanup existing instances
+```
+
+### GUI Improvements (from V1.2.2)
+
+Version 1.2.2 GUI improvements are retained:
 
 | Improvement | Description |
 |-------------|-------------|
@@ -312,7 +373,7 @@ The codebase was refactored for efficiency, security, and maintainability:
 
 ## Roadmap
 
-### Coming in V1.3.0 (Major Update)
+### Coming in V1.4.0 (Next Major Update)
 
 | Feature | Description |
 |---------|-------------|
@@ -332,6 +393,10 @@ See the full [ROADMAP.md](docs/ROADMAP.md) for detailed plans.
 See [CHANGELOG.md](docs/CHANGELOG.md) for the complete version history.
 
 ### Recent Updates
+
+**V1.3.0** - Headless Engine architecture, BridgeAPI unified contract, dynamic IYsource loading from repo, feedback loop system, hot-swap support, crash protection, mock GUI system, type checking with Luau --!strict, concurrency management
+
+**V1.2.2** - Compact mode dropdown, streamlined header, minimal CMD mode, optimized CHAT mode, text collision fixes, temporary status display, tooltip preview
 
 **V1.2.1** - Smart Waypoint System, token cache optimization, event-based bridge, intelligent caching, fuzzy targeting, visual feedback, mobile quick actions, interactive tutorial, enhanced CHAT mode, input sanitization, namespace isolation, cleanup handlers, configurable constants, FastMap completeness (11 new commands)
 

@@ -1,14 +1,21 @@
 --[[ 
-    SMART INFINITE YIELD - V1.2.2 STABLE
-    - Architecture: Context Awareness + Event-Based Bridge
+    SMART INFINITE YIELD - V1.3.0 HEADLESS ENGINE
+    - Architecture: Headless Engine with Client-Server Model
     - Logic: VolQ5 & Pollinations.AI (LLM Model)
-    - Status: Stable 
-    - New: Compact Mode Dropdown UI, Streamlined Header Layout, Text Collision Fixes,
-           Optimized Frame Sizing, Temporary Status Display, Industry-Standard GUI
+    - Status: Development
+    - New: Dynamic Loading, Virtualization Shim, Mock GUI, Metatable Protection,
+           IO Redirection, Input Mocking, Closed-Loop Feedback, Syntax Sanitization,
+           Crash Protection, Concurrency Management, Service Pattern Separation,
+           Unified API Contract (BridgeAPI), Type Checking, Hot-Swap Support
 ]]
 
+--!strict
 --// ============================================
---// 1. SERVICES (Cached for Performance)
+--// [CONFIG] - Global Configuration Constants
+--// ============================================
+
+--// ============================================
+--// [SERVICES] - Roblox Services (Cached for Performance)
 --// ============================================
 local Players = game:GetService("Players")
 local MarketplaceService = game:GetService("MarketplaceService")
@@ -18,8 +25,11 @@ local TweenService = game:GetService("TweenService")
 local CoreGui = game:GetService("CoreGui")
 local RunService = game:GetService("RunService")
 
+--// ============================================
+--// [CONTROLLER] - Namespace & State Management
+--// ============================================
 -- Namespace for global variable isolation
-local NAMESPACE = "SmartInfiniteYield"
+local NAMESPACE: string = "SmartInfiniteYield"
 
 -- Safe global access helpers
 local function getNamespace()
@@ -98,6 +108,15 @@ end
 --// ============================================
 --// 2. CONFIGURATION
 --// ============================================
+
+--[[
+    Type Definitions for Luau --!strict mode
+    @type ConfigType { [string]: any }
+    @type BridgeAPIType { Execute: (cmd: string) -> (boolean, string?), GetOutput: () -> { Title: string, Text: string }?, GetStatus: () -> BridgeStatusType }
+    @type BridgeStatusType { connected: boolean, attempts: number, interface: boolean, headless: boolean }
+    @type OutputEntryType { Title: string, Text: string, Timestamp: number }
+]]
+
 local CONFIG = {
     -- API Settings
     ApiKey = "Null",
@@ -139,6 +158,16 @@ local CONFIG = {
     -- Dropdown Focus Management
     DropdownFocusDelay = 0.15, -- Delay before hiding dropdown after focus loss
     DropdownMaxItems = 6, -- Maximum items to show in dropdown
+    
+    -- V1.3 Headless Engine Settings
+    HeadlessMode = false, -- Enable headless mode (no GUI rendering)
+    IYSourceURL = "https://raw.githubusercontent.com/BokX1/InfiniteYieldWithAI/main/IYsource.lua", -- URL for dynamic IYsource loading (local repo copy)
+    IYSourceCacheFile = "SIY_IYSource_Cache.lua", -- Local cache file for IYsource
+    IYSourceCacheExpiry = 86400, -- Cache expiry in seconds (24 hours)
+    EnableHotSwap = true, -- Allow updating IYsource independently
+    OutputBufferSize = 50, -- Maximum entries in _G.IY_Output buffer
+    FeedbackLoopInterval = 0.1, -- Interval for feedback loop polling
+    ConcurrencyCleanupOnLoad = true, -- Auto-cleanup existing backend instances on load
     
     -- System Prompt (~3500 Tokens)
     CommandPrompt = [[
@@ -684,7 +713,448 @@ end
 loadCache()
 
 --// ============================================
---// 6. BRIDGE SYSTEM (Event-Based with Configurable Retries)
+--// 6. HEADLESS ENGINE SYSTEM (V1.3 Client-Server Model)
+--// ============================================
+
+--[[
+    Part 1: The Injection Layer (The "Shim")
+    - Dynamic Loading: Fetch IYsource.lua content via game:HttpGet
+    - Virtualization Shim: Mock GUI to accept API calls without rendering
+    - Mock GUI: Dummy tables for Holder, Title, Description
+    - Metatable Protection: Redirect Instance.new calls for UI elements
+    - IO Redirection: Overwrite notify() to write to _G.IY_Output
+    - Input Mocking: Disable or mock Chatted and UserInputService listeners
+]]
+
+-- Output buffer for headless feedback loop
+local IY_Output = {} -- { Title: string, Text: string, Timestamp: number }[]
+local IY_OutputIndex = 0
+local HeadlessModeActive = false
+local IYSourceCache = nil
+local IYSourceCacheTimestamp = 0
+
+-- Part 1a: Dynamic Loading - Fetch IYsource.lua with caching
+local function fetchIYSource(): (boolean, string?)
+    -- Check memory cache first
+    if IYSourceCache and (os.time() - IYSourceCacheTimestamp) < CONFIG.IYSourceCacheExpiry then
+        return true, IYSourceCache
+    end
+    
+    -- Check file cache
+    local cacheValid = false
+    if CONFIG.CacheEnabled then
+        local success, content = pcall(function()
+            if readfile and isfile and isfile(CONFIG.IYSourceCacheFile) then
+                local cacheData = readfile(CONFIG.IYSourceCacheFile)
+                local parsed = HttpService:JSONDecode(cacheData)
+                if parsed and parsed.timestamp and (os.time() - parsed.timestamp) < CONFIG.IYSourceCacheExpiry then
+                    return parsed.source
+                end
+            end
+            return nil
+        end)
+        if success and content then
+            IYSourceCache = content
+            IYSourceCacheTimestamp = os.time()
+            return true, content
+        end
+    end
+    
+    -- Fetch from remote
+    local success, source = pcall(game.HttpGet, game, CONFIG.IYSourceURL)
+    if success and source and #source > 1000 then
+        IYSourceCache = source
+        IYSourceCacheTimestamp = os.time()
+        
+        -- Save to file cache
+        if CONFIG.CacheEnabled then
+            pcall(function()
+                if writefile then
+                    local cacheData = HttpService:JSONEncode({
+                        source = source,
+                        timestamp = os.time()
+                    })
+                    writefile(CONFIG.IYSourceCacheFile, cacheData)
+                end
+            end)
+        end
+        
+        return true, source
+    end
+    
+    return false, "Failed to fetch IYsource from " .. CONFIG.IYSourceURL
+end
+
+-- Part 1b: Mock GUI - Dummy tables for UI elements
+local MockGUI = {
+    -- Dummy Holder that accepts all property assignments
+    Holder = setmetatable({}, {
+        __index = function(_, key)
+            return setmetatable({}, {
+                __index = function() return function() end end,
+                __newindex = function() end,
+                __call = function() return setmetatable({}, getmetatable(_)) end
+            })
+        end,
+        __newindex = function() end
+    }),
+    
+    -- Dummy Title label
+    Title = setmetatable({Text = "", Visible = false}, {
+        __newindex = function(t, k, v) rawset(t, k, v) end
+    }),
+    
+    -- Dummy Description label
+    Description = setmetatable({Text = "", Visible = false}, {
+        __newindex = function(t, k, v) rawset(t, k, v) end
+    }),
+    
+    -- Dummy ScaledHolder
+    ScaledHolder = setmetatable({}, {
+        __index = function() return setmetatable({}, getmetatable(MockGUI.Holder)) end,
+        __newindex = function() end
+    }),
+    
+    -- Dummy Notification frame
+    Notification = setmetatable({Visible = false}, {
+        __index = function() return function() end end,
+        __newindex = function() end
+    }),
+    
+    -- Dummy Cmdbar
+    Cmdbar = setmetatable({Text = "", Visible = false}, {
+        __newindex = function(t, k, v) rawset(t, k, v) end
+    })
+}
+
+-- Part 1c: Metatable Protection - Redirect Instance.new for UI elements
+local OriginalInstanceNew = Instance.new
+local UIClassNames = {
+    ["Frame"] = true, ["TextLabel"] = true, ["TextButton"] = true,
+    ["TextBox"] = true, ["ImageLabel"] = true, ["ImageButton"] = true,
+    ["ScrollingFrame"] = true, ["UICorner"] = true, ["UIStroke"] = true,
+    ["UIListLayout"] = true, ["UIGridLayout"] = true, ["UIPadding"] = true,
+    ["UIScale"] = true, ["UIGradient"] = true, ["ScreenGui"] = true,
+    ["BillboardGui"] = true, ["SurfaceGui"] = true, ["CanvasGroup"] = true
+}
+
+local function createMockInstance(className: string)
+    return setmetatable({
+        ClassName = className,
+        Name = className,
+        Parent = nil,
+        Visible = false,
+        _children = {},
+        _properties = {}
+    }, {
+        __index = function(self, key)
+            if key == "Destroy" then
+                return function() end
+            elseif key == "GetChildren" then
+                return function() return self._children end
+            elseif key == "FindFirstChild" then
+                return function(_, name)
+                    for _, child in ipairs(self._children) do
+                        if child.Name == name then return child end
+                    end
+                    return nil
+                end
+            elseif key == "WaitForChild" then
+                return function(_, name) return self:FindFirstChild(name) end
+            elseif key == "TweenPosition" or key == "TweenSize" then
+                return function() end
+            elseif key == "GetPropertyChangedSignal" then
+                return function()
+                    return { Connect = function() return { Disconnect = function() end } end }
+                end
+            end
+            return self._properties[key]
+        end,
+        __newindex = function(self, key, value)
+            if key == "Parent" and value and type(value) == "table" and value._children then
+                table.insert(value._children, self)
+            end
+            self._properties[key] = value
+        end
+    })
+end
+
+local function protectedInstanceNew(className: string, parent: Instance?)
+    if HeadlessModeActive and UIClassNames[className] then
+        local mock = createMockInstance(className)
+        if parent then mock.Parent = parent end
+        return mock
+    end
+    return OriginalInstanceNew(className, parent)
+end
+
+-- Part 1d: IO Redirection - Capture notify() output
+local function redirectedNotify(title: string, text: string, duration: number?)
+    IY_OutputIndex = IY_OutputIndex + 1
+    local entry = {
+        Title = tostring(title or ""),
+        Text = tostring(text or ""),
+        Timestamp = os.time(),
+        Index = IY_OutputIndex
+    }
+    
+    table.insert(IY_Output, entry)
+    
+    -- Enforce buffer size limit
+    while #IY_Output > CONFIG.OutputBufferSize do
+        table.remove(IY_Output, 1)
+    end
+    
+    -- Store in global for external access
+    local ns = getNamespace()
+    ns.IY_Output = IY_Output
+    
+    -- Also store in _G for legacy compatibility
+    if _G then
+        _G.IY_Output = IY_Output
+    end
+end
+
+-- Part 1e: Input Mocking - Disable listeners in headless mode
+local MockedConnections = {}
+
+local function mockInputListeners()
+    -- Create dummy connection objects
+    local dummyConnection = {
+        Connected = false,
+        Disconnect = function() end
+    }
+    return dummyConnection
+end
+
+--[[
+    Part 2: Logic Hardening (The "Feedback Loop")
+    - Closed-Loop Feedback: Write (AI command) -> Read (_G.IY_Output) -> Report (AI Context)
+    - Syntax Sanitization: Helper function for command formatting and prefix consistency
+    - Crash Protection: Wrap execution in pcall to catch and report backend errors
+    - Concurrency Management: Automatic cleanup of existing backend instances on load
+]]
+
+-- Part 2a: Syntax Sanitization - Command formatting helper
+local function sanitizeCommand(cmd: string): string
+    if not cmd or type(cmd) ~= "string" then return "" end
+    
+    -- Trim whitespace
+    cmd = cmd:gsub("^%s+", ""):gsub("%s+$", "")
+    
+    -- Ensure command starts with prefix (;)
+    if not cmd:match("^;") then
+        cmd = ";" .. cmd
+    end
+    
+    -- Normalize multiple semicolons to single
+    cmd = cmd:gsub(";+", ";")
+    
+    -- Remove dangerous patterns
+    cmd = cmd:gsub("loadstring", "")
+    cmd = cmd:gsub("require", "")
+    cmd = cmd:gsub("getfenv", "")
+    cmd = cmd:gsub("setfenv", "")
+    
+    return cmd
+end
+
+-- Part 2b: Crash Protection - Safe execution wrapper
+local function safeExecute(func: () -> any, errorHandler: ((string) -> ())?): (boolean, any)
+    local success, result = pcall(func)
+    if not success then
+        local errorMsg = tostring(result)
+        warn("SIY Headless: Execution error - " .. errorMsg)
+        
+        -- Log error to output buffer
+        redirectedNotify("Error", errorMsg)
+        
+        if errorHandler then
+            errorHandler(errorMsg)
+        end
+    end
+    return success, result
+end
+
+-- Part 2c: Concurrency Management - Cleanup existing instances
+local function cleanupExistingInstances()
+    if not CONFIG.ConcurrencyCleanupOnLoad then return end
+    
+    -- Check for existing SIY instances
+    local ns = getNamespace()
+    if ns.Cleanup and type(ns.Cleanup) == "function" then
+        pcall(ns.Cleanup)
+    end
+    
+    -- Clear any existing IY instances in CoreGui
+    pcall(function()
+        local existing = CoreGui:FindFirstChild("SmartInfiniteYield")
+        if existing then existing:Destroy() end
+    end)
+    
+    -- Reset output buffer
+    IY_Output = {}
+    IY_OutputIndex = 0
+    
+    -- Clear global references
+    if _G then
+        _G.IY_Output = nil
+    end
+end
+
+-- Part 2d: Closed-Loop Feedback System
+local FeedbackLoopConnection = nil
+local LastOutputIndex = 0
+
+local function startFeedbackLoop(callback: ((table) -> ())?)
+    if FeedbackLoopConnection then
+        pcall(function() FeedbackLoopConnection:Disconnect() end)
+    end
+    
+    FeedbackLoopConnection = RunService.Heartbeat:Connect(function()
+        -- Check for new output entries
+        if #IY_Output > 0 and IY_Output[#IY_Output].Index > LastOutputIndex then
+            local newEntries = {}
+            for _, entry in ipairs(IY_Output) do
+                if entry.Index > LastOutputIndex then
+                    table.insert(newEntries, entry)
+                end
+            end
+            LastOutputIndex = IY_Output[#IY_Output].Index
+            
+            if callback and #newEntries > 0 then
+                callback(newEntries)
+            end
+        end
+    end)
+    
+    registerConnection(FeedbackLoopConnection)
+end
+
+local function stopFeedbackLoop()
+    if FeedbackLoopConnection then
+        pcall(function() FeedbackLoopConnection:Disconnect() end)
+        removeConnection(FeedbackLoopConnection)
+        FeedbackLoopConnection = nil
+    end
+end
+
+local function getLatestOutput(): table?
+    if #IY_Output > 0 then
+        return IY_Output[#IY_Output]
+    end
+    return nil
+end
+
+local function getAllOutput(): {table}
+    return IY_Output
+end
+
+local function clearOutput()
+    IY_Output = {}
+    IY_OutputIndex = 0
+    LastOutputIndex = 0
+    local ns = getNamespace()
+    ns.IY_Output = IY_Output
+    if _G then _G.IY_Output = IY_Output end
+end
+
+--[[
+    Part 3: Standardization (The "Service Architecture")
+    - Service Pattern Separation: [CONFIG], [SERVICES], [CONTROLLER] organization
+    - Unified API Contract: BridgeAPI.Execute(cmd) and BridgeAPI.GetOutput()
+    - Type Checking: Luau --!strict definitions
+    - Hot-Swap Support: Architecture allows updating IYsource.lua independently
+]]
+
+-- Part 3a: Unified API Contract - BridgeAPI
+local BridgeAPI = {}
+
+function BridgeAPI.Execute(cmd: string): (boolean, string?)
+    local sanitized = sanitizeCommand(cmd)
+    if sanitized == "" then
+        return false, "Empty or invalid command"
+    end
+    
+    local success, errorMsg = safeExecute(function()
+        if IY_Interface and IY_Interface.Exec then
+            IY_Interface.Exec(sanitized)
+        elseif execCmd then
+            execCmd(sanitized)
+        else
+            error("No execution interface available")
+        end
+    end)
+    
+    if success then
+        return true, nil
+    else
+        return false, errorMsg
+    end
+end
+
+function BridgeAPI.GetOutput(): table?
+    return getLatestOutput()
+end
+
+function BridgeAPI.GetAllOutput(): {table}
+    return getAllOutput()
+end
+
+function BridgeAPI.ClearOutput()
+    clearOutput()
+end
+
+function BridgeAPI.GetStatus(): table
+    return {
+        connected = BridgeConnected,
+        attempts = BridgeConnectionAttempts,
+        interface = IY_Interface ~= nil,
+        headless = HeadlessModeActive,
+        outputCount = #IY_Output,
+        lastOutputIndex = LastOutputIndex
+    }
+end
+
+function BridgeAPI.StartFeedbackLoop(callback: ((table) -> ())?)
+    startFeedbackLoop(callback)
+end
+
+function BridgeAPI.StopFeedbackLoop()
+    stopFeedbackLoop()
+end
+
+-- Part 3b: Hot-Swap Support - Reload IYsource independently
+function BridgeAPI.HotSwap(): (boolean, string?)
+    if not CONFIG.EnableHotSwap then
+        return false, "Hot-swap is disabled in configuration"
+    end
+    
+    -- Clear cached source
+    IYSourceCache = nil
+    IYSourceCacheTimestamp = 0
+    
+    -- Delete file cache
+    pcall(function()
+        if delfile then
+            delfile(CONFIG.IYSourceCacheFile)
+        end
+    end)
+    
+    -- Fetch fresh source
+    local success, source = fetchIYSource()
+    if not success then
+        return false, source
+    end
+    
+    return true, "IYsource hot-swapped successfully"
+end
+
+-- Expose BridgeAPI to namespace
+setNamespaceValue("BridgeAPI", BridgeAPI)
+
+--// ============================================
+--// 6B. BRIDGE SYSTEM (Event-Based with Configurable Retries)
 --// ============================================
 local IY_Interface = nil
 local BridgeReady = Instance.new("BindableEvent")
@@ -692,7 +1162,7 @@ local BridgeConnected = false
 local BridgeConnectionAttempts = 0
 
 -- Enhanced waitForBridge with configurable retries
-local function waitForBridge(timeout, retryCount)
+local function waitForBridge(timeout: number?, retryCount: number?): boolean
     if BridgeConnected then return true end
     
     local maxRetries = retryCount or CONFIG.BridgeMaxRetries
@@ -741,48 +1211,115 @@ local function waitForBridge(timeout, retryCount)
     return BridgeConnected
 end
 
--- Get bridge connection status for debugging
-local function getBridgeStatus()
-    return {
-        connected = BridgeConnected,
-        attempts = BridgeConnectionAttempts,
-        interface = IY_Interface ~= nil
-    }
+-- Get bridge connection status for debugging (legacy compatibility)
+local function getBridgeStatus(): table
+    return BridgeAPI.GetStatus()
 end
 
--- Initialize Bridge with retry logic
+-- Build the Virtualization Shim for headless mode
+local function buildVirtualizationShim(): string
+    return string.format([[
+-- SIY Virtualization Shim v1.3.0
+local _SIY_NS = getgenv()["%s"] or {}
+getgenv()["%s"] = _SIY_NS
+
+-- Mock GUI globals
+Holder = setmetatable({}, {
+    __index = function() return setmetatable({}, {
+        __index = function() return function() end end,
+        __newindex = function() end
+    }) end,
+    __newindex = function() end
+})
+ScaledHolder = Holder
+Title = {Text = "", Visible = false}
+Description = {Text = "", Visible = false}
+Notification = {Visible = false}
+Cmdbar = {Text = ""}
+
+-- IO Redirection: Override notify
+local _originalNotify = notify
+notify = function(title, text, duration)
+    _SIY_NS.IY_Output = _SIY_NS.IY_Output or {}
+    table.insert(_SIY_NS.IY_Output, {
+        Title = tostring(title or ""),
+        Text = tostring(text or ""),
+        Timestamp = os.time()
+    })
+    -- Limit buffer size
+    while #_SIY_NS.IY_Output > 50 do
+        table.remove(_SIY_NS.IY_Output, 1)
+    end
+    if _G then _G.IY_Output = _SIY_NS.IY_Output end
+end
+
+-- Input Mocking: Disable Chatted listener
+local _originalChatted = nil
+if Players.LocalPlayer then
+    pcall(function()
+        -- Store but don't connect Chatted
+        _originalChatted = Players.LocalPlayer.Chatted
+    end)
+end
+
+-- Bridge setup
+_SIY_NS.PseudoBridge = {
+    Exec = function(cmd) if execCmd then execCmd(cmd) end end,
+    Ready = true,
+    Headless = true
+}
+]], NAMESPACE, NAMESPACE)
+end
+
+-- Initialize Bridge with Headless Engine support
 task.spawn(function()
+    -- Cleanup existing instances first
+    cleanupExistingInstances()
+    
     -- Check for existing bridge in namespace or legacy location
     local existingBridge = getNamespaceValue("PseudoBridge") or (getgenv and getgenv().PseudoBridge)
     if existingBridge then
         IY_Interface = existingBridge
         BridgeConnected = true
+        HeadlessModeActive = existingBridge.Headless or false
         BridgeReady:Fire()
         return
     end
 
-    local function attemptBridgeConnection()
+    local function attemptBridgeConnection(): boolean
         if not CoreGui:FindFirstChild("InfiniteYield") then
-            local success, source = pcall(game.HttpGet, game, "https://raw.githubusercontent.com/EdgeIY/infiniteyield/master/source")
-            if success then
-                -- Bridge code uses namespace for isolation
-                local bridgeCode = string.format([[
-                    local ns = getgenv()["%s"] or {}
-                    getgenv()["%s"] = ns
-                    ns.PseudoBridge = {
-                        Exec = function(cmd) if execCmd then execCmd(cmd) end end,
-                        Ready = true
-                    }
-                ]], NAMESPACE, NAMESPACE)
-                local loadSuccess, loadErr = pcall(function()
-                    loadstring(source .. "\n" .. bridgeCode)()
+            -- Dynamic Loading: Fetch IYsource
+            local success, source = fetchIYSource()
+            if success and source then
+                -- Build the shim code based on mode
+                local shimCode = ""
+                if CONFIG.HeadlessMode then
+                    HeadlessModeActive = true
+                    shimCode = buildVirtualizationShim()
+                else
+                    -- Standard bridge code for GUI mode
+                    shimCode = string.format([[
+                        local ns = getgenv()["%s"] or {}
+                        getgenv()["%s"] = ns
+                        ns.PseudoBridge = {
+                            Exec = function(cmd) if execCmd then execCmd(cmd) end end,
+                            Ready = true,
+                            Headless = false
+                        }
+                    ]], NAMESPACE, NAMESPACE)
+                end
+                
+                -- Crash Protection: Wrap in pcall
+                local loadSuccess, loadErr = safeExecute(function()
+                    loadstring(source .. "\n" .. shimCode)()
                 end)
+                
                 if not loadSuccess then
                     warn("SIY: Failed to load IY source: " .. tostring(loadErr))
                     return false
                 end
             else
-                warn("SIY: Failed to fetch IY source")
+                warn("SIY: Failed to fetch IY source - " .. tostring(source))
                 return false
             end
         end
@@ -808,7 +1345,13 @@ task.spawn(function()
     if bridge then
         IY_Interface = bridge
         BridgeConnected = true
+        HeadlessModeActive = bridge.Headless or false
         BridgeReady:Fire()
+        
+        -- Start feedback loop if in headless mode
+        if HeadlessModeActive then
+            startFeedbackLoop()
+        end
     else
         warn("SIY: Bridge connection timeout after " .. tostring(maxTimeout) .. " seconds")
     end
@@ -2665,7 +3208,7 @@ local function resolveTarget(cmdString)
 end
 
 --// ============================================
---// 14. BRIDGE EXECUTION
+--// 14. BRIDGE EXECUTION (V1.3 BridgeAPI Integration)
 --// ============================================
 local function executeBridge(text, source)
     -- Validate input
@@ -2689,6 +3232,9 @@ local function executeBridge(text, source)
         updateStatus("Error: Bridge Interface Invalid", Colors.Red)
         return
     end
+    
+    -- V1.3: Use BridgeAPI for execution when available (enables feedback loop)
+    local useBridgeAPI = BridgeAPI and BridgeAPI.Execute and HeadlessModeActive
     
     local cleanText = trim(text)
     
@@ -2763,7 +3309,7 @@ local function executeBridge(text, source)
             return
         end
         
-        -- Chain Execution
+        -- Chain Execution (V1.3: Enhanced with BridgeAPI and Crash Protection)
         local commands = cleanText:split(";")
         
         task.spawn(function()
@@ -2782,7 +3328,23 @@ local function executeBridge(text, source)
                             updateStatus(prefix .. "Exec: " .. finalCmd, Colors.Green)
                         end
                         
-                        IY_Interface.Exec(finalCmd)
+                        -- V1.3: Use BridgeAPI.Execute for headless mode (enables feedback loop)
+                        if useBridgeAPI then
+                            local success, execErr = BridgeAPI.Execute(finalCmd)
+                            if not success then
+                                updateStatus("Exec Error: " .. (execErr or "Unknown"), Colors.Red)
+                            end
+                        else
+                            -- Standard execution with crash protection
+                            local success, execErr = pcall(function()
+                                IY_Interface.Exec(finalCmd)
+                            end)
+                            if not success then
+                                warn("SIY: Command execution error - " .. tostring(execErr))
+                                updateStatus("Exec Error: " .. tostring(execErr), Colors.Red)
+                            end
+                        end
+                        
                         if #commands > 1 then task.wait(0.1) end
                     else
                         updateStatus("Error: " .. (err or "Invalid Cmd"), Colors.Red)
@@ -3436,6 +3998,12 @@ local function cleanup()
     -- Save cache before cleanup
     pcall(saveCache)
     
+    -- Stop feedback loop (V1.3 Headless Engine)
+    stopFeedbackLoop()
+    
+    -- Clear output buffer (V1.3 Headless Engine)
+    clearOutput()
+    
     -- Stop animations and persistent tasks
     stopGlowAnimation()
     cancelPersistentTasks()
@@ -3466,6 +4034,7 @@ local function cleanup()
 
     BridgeConnected = false
     IY_Interface = nil
+    HeadlessModeActive = false
     modeDropdownOpen = false
     quickActionsOpen = false
     IS_CHAT_MODE = false
@@ -3474,6 +4043,7 @@ local function cleanup()
     ChatMessageCount = 0
     dropdownFocusCheckId = 0
     setNamespaceValue("Ready", false)
+    setNamespaceValue("BridgeAPI", nil)
 end
 
 -- Handle player leaving
@@ -3492,5 +4062,49 @@ end)
 setNamespaceValue("Cleanup", cleanup)
 setNamespaceValue("ClearChat", clearChatLog)
 setNamespaceValue("GetBridgeStatus", getBridgeStatus)
-setNamespaceValue("Version", "1.2.2")
+setNamespaceValue("BridgeAPI", BridgeAPI)
+setNamespaceValue("HeadlessMode", HeadlessModeActive)
+setNamespaceValue("Version", "1.3.0")
 setNamespaceValue("Ready", true)
+
+--[[
+    V1.3.0 HEADLESS ENGINE API REFERENCE
+    =====================================
+    
+    BridgeAPI.Execute(cmd: string) -> (boolean, string?)
+        Execute a command through the bridge. Returns success status and optional error message.
+        Example: local success, err = BridgeAPI.Execute(";fly")
+    
+    BridgeAPI.GetOutput() -> table?
+        Get the latest output entry from the feedback loop.
+        Returns: { Title: string, Text: string, Timestamp: number, Index: number } or nil
+    
+    BridgeAPI.GetAllOutput() -> {table}
+        Get all output entries from the buffer.
+    
+    BridgeAPI.ClearOutput()
+        Clear the output buffer.
+    
+    BridgeAPI.GetStatus() -> table
+        Get the current bridge status.
+        Returns: { connected: boolean, attempts: number, interface: boolean, headless: boolean, outputCount: number, lastOutputIndex: number }
+    
+    BridgeAPI.StartFeedbackLoop(callback: ((table) -> ())?)
+        Start the feedback loop with an optional callback for new output entries.
+    
+    BridgeAPI.StopFeedbackLoop()
+        Stop the feedback loop.
+    
+    BridgeAPI.HotSwap() -> (boolean, string?)
+        Hot-swap the IYsource.lua file. Returns success status and message.
+    
+    CONFIG OPTIONS (V1.3 Headless Engine):
+    - HeadlessMode: boolean - Enable headless mode (no GUI rendering)
+    - IYSourceURL: string - URL for dynamic IYsource loading
+    - IYSourceCacheFile: string - Local cache file for IYsource
+    - IYSourceCacheExpiry: number - Cache expiry in seconds
+    - EnableHotSwap: boolean - Allow updating IYsource independently
+    - OutputBufferSize: number - Maximum entries in output buffer
+    - FeedbackLoopInterval: number - Interval for feedback loop polling
+    - ConcurrencyCleanupOnLoad: boolean - Auto-cleanup existing instances on load
+]]
