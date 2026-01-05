@@ -6,38 +6,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ---
 
-## [Unreleased]
-
-Features currently in development for the next release.
-
-### Planned
-
-- Additional game genre detection patterns
-- Voice command integration exploration
-- Plugin system for custom command handlers
-
-### Changed
-
-| Change | Description |
-|--------|-------------|
-| **API Request Authorization** | AI requests now include the configured `ApiKey` as a Bearer token when provided |
-| **AI Request Resilience** | Endpoint calls honor `RequestTimeout`, retry up to `MaxRetries`, and surface clearer errors (e.g., invalid API keys) |
-
-### Fixed
-
-| Fix | Description |
-|-----|-------------|
-| **HTTP Capability Guard** | Blocks only the AI request section when executor HTTP support is unavailable, preserving offline command chains and cache execution |
-| **Waypoint Validation** | Trims and validates `gotowp` waypoint names before running waypoint teleports |
-| **Safe Waypoint Discovery** | Falls back to `_G` waypoints when `getgenv` is missing or inaccessible instead of returning an empty list |
-| **Connection Cleanup** | Centralized connection registry disconnects persistent UI, input, and RunService signals during cleanup to prevent leaks |
-| **Drag Input Leak** | Registers the long-lived `UserInputService.InputChanged` drag listener so repeated GUI spawns no longer accumulate connections |
-| **Input Sanitization Frontiers** | Frontier-pattern filtering removes dangerous functions without corrupting benign words containing similar substrings |
-| **Levenshtein GC Optimization** | Two-row distance calculation avoids large matrices, reducing garbage collection overhead during fuzzy matching |
-| **Glow Reset on Cleanup** | Cleanup now clears the glow animation handle after disconnecting it so future sessions can safely restart the effect |
-
----
-
 ## [1.3.0] - (Planned)
 
 ### 🚀 Version 1.3 Pipeline Checklist
@@ -67,43 +35,6 @@ This version focuses on deconstructing the monolithic script into a **Headless E
 ---
 
 ## [1.2.2] - 2026-01-03
-
-### Changed
-
-| Change | Description |
-|--------|-------------|
-| **Compact Mode Dropdown** | Replaced oversized mode toggle button with a compact dropdown selector (55px vs 95px) |
-| **Streamlined Header Layout** | Reduced button sizes (26px vs 30px) and optimized spacing for a cleaner header |
-| **Compact CMD Mode Frame** | Reduced default CMD mode height from 220px to 65px for minimal footprint |
-| **Optimized Chat Mode Frame** | Reduced chat mode width from 560px to 420px for better screen utilization |
-| **Input Box Sizing** | Adjusted input box height (26px vs 30px) and font size (12px vs 14px) for compact layout |
-| **Preview Bar Positioning** | Moved preview bar to tooltip-style position below input area |
-| **Quick Actions Toggle** | Relocated mobile quick actions button to bottom-right corner |
-
-### Fixed
-
-| Fix | Description |
-|-----|-------------|
-| **Text Collision** | Eliminated text overlap between mode button, input area, and status elements |
-| **Oversized Mode Button** | Fixed the permanently large CMD/CHAT button that consumed excessive header space |
-| **Status Bar Visibility** | Status now appears temporarily and auto-hides in compact CMD mode |
-| **Frame Expansion** | Frame temporarily expands to show status messages, then returns to compact size |
-| **Dropdown Arrow Indicator** | Added "▾" arrow to mode button to indicate dropdown functionality |
-| **Mobile Quick Actions** | Fixed visibility toggle for quick actions button when switching modes |
-
-### Technical
-
-| Improvement | Description |
-|-------------|-------------|
-| **Mode Dropdown System** | New dropdown container with CMD/CHAT options and hover effects |
-| **Click-Outside-to-Close** | Dropdown automatically closes when clicking outside its area |
-| **Temporary Status Display** | Status messages expand frame, display for 2.5s, then collapse |
-| **Consistent Sizing** | All header elements now use consistent 26px height and 4px corner radius |
-| **Removed Status Persistence** | StatusLabel no longer persists in compact CMD mode, reducing visual clutter |
-
----
-
-## [1.2.1] - 2026-01-03
 
 ### Added
 | Feature | Description |
@@ -147,6 +78,109 @@ This version focuses on deconstructing the monolithic script into a **Headless E
 | **Quick Action Effects** | Hover and press animations for mobile command grid |
 | **Token Cache Optimization** | Optimized API calls to enable OpenAI token caching for reduced costs |
 | **Target-Smart Context** | Player list is only injected into API payloads when target cues are detected |
+
+### Changed
+
+| Change | Description |
+|--------|-------------|
+| **Compact Mode Dropdown** | Replaced oversized mode toggle button with a compact dropdown selector (55px vs 95px) |
+| **Streamlined Header Layout** | Reduced button sizes (26px vs 30px) and optimized spacing for a cleaner header |
+| **Compact CMD Mode Frame** | Reduced default CMD mode height from 220px to 65px for minimal footprint |
+| **Optimized Chat Mode Frame** | Reduced chat mode width from 560px to 420px for better screen utilization |
+| **Input Box Sizing** | Adjusted input box height (26px vs 30px) and font size (12px vs 14px) for compact layout |
+| **Preview Bar Positioning** | Moved preview bar to tooltip-style position below input area |
+| **Quick Actions Toggle** | Relocated mobile quick actions button to bottom-right corner |
+| **API Request Authorization** | AI requests now include the configured `ApiKey` as a Bearer token when provided |
+| **AI Request Resilience** | Endpoint calls honor `RequestTimeout`, retry up to `MaxRetries`, and surface clearer errors (e.g., invalid API keys) |
+
+### Fixed
+
+| Fix | Description |
+|-----|-------------|
+| **Text Collision** | Eliminated text overlap between mode button, input area, and status elements |
+| **Oversized Mode Button** | Fixed the permanently large CMD/CHAT button that consumed excessive header space |
+| **Status Bar Visibility** | Status now appears temporarily and auto-hides in compact CMD mode |
+| **Frame Expansion** | Frame temporarily expands to show status messages, then returns to compact size |
+| **Dropdown Arrow Indicator** | Added "▾" arrow to mode button to indicate dropdown functionality |
+| **Mobile Quick Actions** | Fixed visibility toggle for quick actions button when switching modes |
+| **HTTP Capability Guard** | Blocks only the AI request section when executor HTTP support is unavailable, preserving offline command chains and cache execution |
+| **Waypoint Validation** | Trims and validates `gotowp` waypoint names before running waypoint teleports |
+| **Safe Waypoint Discovery** | Falls back to `_G` waypoints when `getgenv` is missing or inaccessible instead of returning an empty list |
+| **Connection Cleanup** | Centralized connection registry disconnects persistent UI, input, and RunService signals during cleanup to prevent leaks |
+| **Drag Input Leak** | Registers the long-lived `UserInputService.InputChanged` drag listener so repeated GUI spawns no longer accumulate connections |
+| **Input Sanitization Frontiers** | Frontier-pattern filtering removes dangerous functions without corrupting benign words containing similar substrings |
+| **Levenshtein GC Optimization** | Two-row distance calculation avoids large matrices, reducing garbage collection overhead during fuzzy matching |
+| **Glow Reset on Cleanup** | Cleanup now clears the glow animation handle after disconnecting it so future sessions can safely restart the effect |
+
+### Technical
+
+| Improvement | Description |
+|-------------|-------------|
+| **Mode Dropdown System** | New dropdown container with CMD/CHAT options and hover effects |
+| **Click-Outside-to-Close** | Dropdown automatically closes when clicking outside its area |
+| **Temporary Status Display** | Status messages expand frame, display for 2.5s, then collapse |
+| **Consistent Sizing** | All header elements now use consistent 26px height and 4px corner radius |
+| **Removed Status Persistence** | StatusLabel no longer persists in compact CMD mode, reducing visual clutter |
+
+---
+
+## [1.2.1] - 2026-01-03
+
+### Changed
+
+| Change | Description |
+|--------|-------------|
+| **Fuzzy Match Precision** | Dynamic threshold based on input length - shorter inputs require stricter matching to prevent false positives |
+| **Minimum Input Length** | New `FuzzyMatchMinInputLength` config (default: 3) prevents 1-2 character inputs from fuzzy matching |
+| **Chat Log Styling** | Increased padding, larger font sizes, and better color contrast for readability |
+| **Mode Switch Animation** | Enhanced mode switch with proper container visibility toggling and status updates |
+| **Bridge Initialization** | Added retry logic during initial connection with periodic reconnection attempts |
+| **Context Injection** | CMD mode now includes minimal game context for better command understanding |
+| **CHAT Mode Prompt** | Enhanced with genre hints and team awareness for more contextual responses |
+| **Quick Action Grid** | Cell size and font now scale based on display density |
+| **Bridge System** | Replaced polling with event-driven architecture |
+| **Cache Cleanup** | LRU-style eviction when max entries reached |
+| **Target Resolution** | Added prefix, contains, and fuzzy matching fallback |
+| **Tutorial** | Multi-step walkthrough replaces single-screen modal |
+| **Quick Actions** | Replaced God/Kill with Jump/Invisible for universal compatibility |
+| **Placeholder Text** | More engaging prompts ("Tell me what to do..." instead of "Enter command...") |
+| **Status Messages** | Friendlier, more varied feedback with personality |
+| **CHAT Mode Context** | Enhanced dynamic context with proper framing for game script assistance |
+| **Safety Compliance** | Removed potentially triggering terms from CHAT mode prompt to prevent AI refusals |
+| **Command Reference** | CHAT mode now includes curated command reference for better question answering |
+
+### Fixed
+
+| Fix | Description |
+|-----|-------------|
+| **Dropdown Click-Outside** | Mode dropdown now closes reliably when clicking anywhere outside of it |
+| **Cleanup Scope** | Cleanup handler now destroys the correct Smart Infinite Yield screen GUI |
+| **ChatHistoryLimit Declaration** | Fixed forward declaration to prevent nil reference errors |
+| **Duplicate Variable Declaration** | Removed duplicate `ChatHistoryLimit` declaration |
+| **Bridge Validation** | Added proper nil checks for bridge interface and Exec function |
+| **Input Validation** | Enhanced `executeBridge` with input type and empty string validation |
+| **Chat Log Cleanup** | Added pcall protection when destroying chat entries |
+| **Memory Leak Prevention** | `clearChatLog` now properly clears both UI and internal ChatHistory |
+| **Dropdown Persistence** | Fixed issue where suggestions would persist after input focus loss |
+| **Focus Race Condition** | Added focus check ID system to prevent stale hide operations |
+| **CHAT Mode Refusals** | Resolved issue where AI would refuse to answer questions about commands like "how do I fly?" |
+| **Context Framing** | Added legitimate gaming context to prevent safety guardrail triggers |
+
+### Technical
+| Improvement | Description |
+|-------------|-------------|
+| **Config Expansion** | Added 8 new configuration options for bridge, mobile, dropdown, and fuzzy matching |
+| **Color Palette** | Extended Colors table with ChatGPT-like colors for CHAT mode UI |
+| **Namespace Exports** | Added `ClearChat` and `GetBridgeStatus` to namespace for external access |
+| **Code Structure** | 19 numbered sections with clear headers |
+| **Helper Functions** | Reusable `createInstance()`, `sanitizeInput()`, namespace helpers reduce duplication |
+| **Variable Naming** | Standardized to Roblox conventions |
+| **Error Handling** | Improved pcall usage throughout bridge and UI operations |
+| **Iterators** | ipairs() for arrays, pairs() for dictionaries |
+| **Dynamic Context** | Minimized variable content in API calls; player list only sent when targeting needed |
+| **FastMap Completeness** | Added 11 missing commands (swp, nofullbright, exit, partpath, copyanimation, etc.) |
+| **Fuzzy Match Optimization** | Levenshtein distance calculated once per player instead of multiple times |
+| **Global Isolation** | All globals use SmartInfiniteYield namespace to prevent pollution |
 
 ---
 
