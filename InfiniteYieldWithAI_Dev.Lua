@@ -1,5 +1,5 @@
 --[[ 
-    SMART INFINITE YIELD - V1.3.0 STABLE
+    SMART INFINITE YIELD - V1.3.1 STABLE
     - Architecture: Headless Engine with Client-Server Model
     - Logic: VolQ5 & Pollinations.AI (LLM Model)
     - Status: Stable
@@ -732,6 +732,7 @@ local IY_OutputIndex = 0
 local HeadlessModeActive = false
 local IYSourceCache = nil
 local IYSourceCacheTimestamp = 0
+local executeIYSourceWithShim
 
 -- Part 1a: Dynamic Loading - Fetch IYsource.lua with caching
 local function fetchIYSource(): (boolean, string?)
@@ -1169,7 +1170,10 @@ function BridgeAPI.HotSwap(): (boolean, string?)
                 }
             ]], NAMESPACE, NAMESPACE)
         end
-        loadstring(source .. "\n" .. shimCode)()
+        local execSuccess, execErr = executeIYSourceWithShim(source, shimCode)
+        if not execSuccess then
+            error(execErr)
+        end
     end)
     
     if not loadSuccess then
@@ -1255,7 +1259,7 @@ end
 -- Build the Virtualization Shim for headless mode
 local function buildVirtualizationShim(): string
     return string.format([[
--- SIY Virtualization Shim v1.3.0
+-- SIY Virtualization Shim v1.3.1
 local _SIY_NS = getgenv()["%s"] or {}
 getgenv()["%s"] = _SIY_NS
 
@@ -1310,6 +1314,37 @@ _SIY_NS.PseudoBridge = {
 ]], NAMESPACE, NAMESPACE)
 end
 
+-- Shared executor for IYsource with optional headless virtualization
+function executeIYSourceWithShim(source: string, shimCode: string): (boolean, string?)
+    local combinedSource = (shimCode and #shimCode > 0) and (source .. "\n" .. shimCode) or source
+    local compiled, compileErr = loadstring(combinedSource)
+    if not compiled then
+        return false, "Failed to compile IYsource: " .. tostring(compileErr)
+    end
+
+    -- In headless mode, sandbox the chunk with a mock-friendly Instance.new
+    if HeadlessModeActive and setfenv then
+        local env = setmetatable({
+            Instance = setmetatable({
+                new = function(className: string, parent: Instance?)
+                    if UIClassNames[className] then
+                        return protectedInstanceNew(className, parent)
+                    end
+                    return OriginalInstanceNew(className, parent)
+                end
+            }, {__index = Instance})
+        }, {__index = _G})
+        setfenv(compiled, env)
+    end
+
+    local success, execResult = safeExecute(compiled)
+    if not success then
+        return false, "IYsource execution failed: " .. tostring(execResult)
+    end
+
+    return true, nil
+end
+
 -- Initialize Bridge with Headless Engine support
 task.spawn(function()
     -- Cleanup existing instances first
@@ -1349,9 +1384,7 @@ task.spawn(function()
                 end
                 
                 -- Crash Protection: Wrap in pcall
-                local loadSuccess, loadErr = safeExecute(function()
-                    loadstring(source .. "\n" .. shimCode)()
-                end)
+                local loadSuccess, loadErr = executeIYSourceWithShim(source, shimCode)
                 
                 if not loadSuccess then
                     warn("SIY: Failed to load IY source: " .. tostring(loadErr))
@@ -4446,11 +4479,11 @@ setNamespaceValue("ClearChat", clearChatLog)
 setNamespaceValue("GetBridgeStatus", getBridgeStatus)
 setNamespaceValue("BridgeAPI", BridgeAPI)
 setNamespaceValue("HeadlessMode", HeadlessModeActive)
-setNamespaceValue("Version", "1.3.0")
+setNamespaceValue("Version", "1.3.1")
 setNamespaceValue("Ready", true)
 
 --[[
-    V1.3.0 HEADLESS ENGINE API REFERENCE
+    V1.3.1 HEADLESS ENGINE API REFERENCE
     =====================================
     
     BridgeAPI.Execute(cmd: string) -> (boolean, string?)
