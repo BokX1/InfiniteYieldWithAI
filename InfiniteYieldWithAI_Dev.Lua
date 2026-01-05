@@ -159,10 +159,10 @@ ROLE: You are a Roblox Command Compiler. Convert Natural Language -> Infinite Yi
 
 3. CHAINING:
    - Separate multiple actions with semicolons (;). 
-   - Example: "fly and kill him" -> ;fly ;kill [target]
+   - Example: "fly and fling him" -> ;fly ;fling
    
 4. TARGETING:
-   - "me" -> Output "me" (e.g., ;kill me)
+   - "me" -> Output "me" (e.g., ;fling)
    - "random" -> Output "random" (e.g., ;goto random)
    - "all" / "everyone" -> INVALID. Ignore or ask for clarification.
 
@@ -263,12 +263,11 @@ ROLE: You are a Roblox Command Compiler. Convert Natural Language -> Infinite Yi
 ;headsit [plr]         : Sit on player's head.
 ;walkto [plr]          : Follow player.
 ;unwalkto              : Stop following.
-;fling                 : Spin fling (Touch to kill).
+;fling                 : Spin fling attack.
 ;unfling               : Stop fling.
 ;invisfling            : Invisible fling.
-;kill [plr]            : Kill player (Tool/Collision).
-;loopkill [plr]        : Loop kill player.
-;unloopkill            : Stop loop kill.
+;handlekill [plr]      : Kill player with tool (requires tool equipped).
+;hkill [plr]           : Alias for handlekill.
 ;loopoof               : Spam death sound.
 ;unloopoof             : Stop sound spam.
 ;reset / ;respawn      : Respawn character.
@@ -371,8 +370,8 @@ AI: ;unfly
 User: "Make me walk slow"
 AI: ;speed 16
 
-User: "I want to kill him and leave"
-AI: ;kill [player] ;serverhop
+User: "I want to fling him and leave"
+AI: ;fling ;serverhop
 
 User: "Remove the lag"
 AI: ;antilag ;noesp ;nochams
@@ -384,16 +383,16 @@ User: "Save this spot as my base"
 AI: ;swp base
 
 User: "Go to my base waypoint"
-AI: ;gotowp base
+AI: ;waypoint base
 
 User: "Remember this location as coffee"
 AI: ;swp coffee
 
 User: "Goto coffee waypoint"
-AI: ;gotowp coffee
+AI: ;waypoint coffee
 
 User: "Take me to the farm spot I saved"
-AI: ;gotowp farm
+AI: ;waypoint farm
 
 User: "Show my saved waypoints"
 AI: ;waypoints
@@ -418,7 +417,7 @@ AI: ;goto bob
 - Defensive Recovery: Add safety resets when the user asks to undo risky states.
   > "disable noclip and reset view" -> ;clip ;fixcam
 - Timed Escapes: Pair hostile actions with exits.
-  > "kill him and server hop" -> ;kill [player] ;serverhop
+  > "fling him and server hop" -> ;fling ;serverhop
 - Contextual Defaults: If a numeric value is missing, apply safe defaults (speed 16, jumppower 50).
 
 [ERROR HANDLING]
@@ -1869,13 +1868,13 @@ local TutorialSteps = {
     {
         title = "Smart Features",
         icon = "✨",
-        content = "<b><font color='#b464ff'>Intelligent Caching</font></b>\nSmart IY <b>learns</b> your phrases! After using \"make me fast\" once, it executes instantly next time.\n\n<b><font color='#b464ff'>Fuzzy Targeting</font></b>\nType partial names: <font color='#ff9128'>\"kill valk\"</font> finds \"Valkorym\"\n\n<b><font color='#b464ff'>Predictions</font></b>\nAs you type, suggestions appear below the input box.",
+        content = "<b><font color='#b464ff'>Intelligent Caching</font></b>\nSmart IY <b>learns</b> your phrases! After using \"make me fast\" once, it executes instantly next time.\n\n<b><font color='#b464ff'>Fuzzy Targeting</font></b>\nType partial names: <font color='#ff9128'>\"goto valk\"</font> finds \"Valkorym\"\n\n<b><font color='#b464ff'>Predictions</font></b>\nAs you type, suggestions appear below the input box.",
         button = "Next →"
     },
     {
         title = "Waypoints & Teleporting",
         icon = "📍",
-        content = "<b>Save & Teleport to Locations:</b>\n\n<font color='#40e682'>swp [name]</font> - Save current spot\n<font color='#969696'>\"swp base\" saves your position as \"base\"</font>\n\n<font color='#40e682'>gotowp [name]</font> - Teleport to waypoint\n<font color='#969696'>\"gotowp base\" takes you back there</font>\n\n<font color='#40e682'>goto [player]</font> - Teleport to player\n<font color='#969696'>\"goto john\" teleports to player John</font>\n\n<font color='#ff9128'>Tip:</font> Type \"gotowp \" to see saved waypoints!",
+        content = "<b>Save & Teleport to Locations:</b>\n\n<font color='#40e682'>swp [name]</font> - Save current spot\n<font color='#969696'>\"swp base\" saves your position as \"base\"</font>\n\n<font color='#40e682'>waypoint [name]</font> - Teleport to waypoint\n<font color='#969696'>\"waypoint base\" takes you back there</font>\n\n<font color='#40e682'>goto [player]</font> - Teleport to player\n<font color='#969696'>\"goto john\" teleports to player John</font>\n\n<font color='#ff9128'>Tip:</font> Type \"waypoint \" to see saved waypoints!",
         button = "Next →"
     },
     {
@@ -2213,55 +2212,84 @@ local function getChatHistorySnapshot()
     return copy
 end
 
+-- ToggleMap: Maps commands to their opposite toggle state
+-- Only includes commands that actually exist in IYsource.lua
 local ToggleMap = {
+    -- Movement
     fly = "unfly", unfly = "fly",
     noclip = "clip", clip = "noclip", unnoclip = "noclip",
     float = "unfloat", unfloat = "float",
-    swim = "unswim", unswim = "swim",
-    sit = "unsit", unsit = "sit",
     platform = "unplatform", unplatform = "platform",
+    swim = "unswim", unswim = "swim",
     vehiclefly = "unvehiclefly", unvehiclefly = "vehiclefly",
+    vfly = "unvfly", unvfly = "vfly",
     cframefly = "uncframefly", uncframefly = "cframefly",
-    spam = "unspam", unspam = "spam",
-    pmspam = "unpmspam", unpmspam = "pmspam",
+    cfly = "uncfly", uncfly = "cfly",
+    
+    -- Visuals
     esp = "noesp", noesp = "esp",
     chams = "nochams", nochams = "chams",
-    xray = "noxray", noxray = "xray",
-    fullbright = "nofullbright", nofullbright = "fullbright",
-    shadows = "noshadows", noshadows = "shadows",
-    fog = "nofog", nofog = "fog",
-    light = "nolight", nolight = "light",
+    xray = "unxray", unxray = "xray",
+    fullbright = "restorelighting",
+    globalshadows = "unglobalshadows", gshadows = "nogshadows",
+    light = "unlight", unlight = "light",
+    
+    -- Camera
+    view = "unview", unview = "view",
     spectate = "unspectate", unspectate = "spectate",
     freecam = "unfreecam", unfreecam = "freecam",
     fc = "unfc", unfc = "fc",
-    shiftlock = "unshiftlock",
-    god = "ungod", ungod = "god",
+    
+    -- Player
     invisible = "visible", visible = "invisible",
     invis = "vis", vis = "invis",
-    mute = "unmute", unmute = "mute",
+    god = "respawn",
+    
+    -- Chat
+    spam = "unspam", unspam = "spam",
+    pmspam = "unpmspam", unpmspam = "pmspam",
+    bubblechat = "unbubblechat", unbubblechat = "bubblechat",
+    
+    -- Animation
     dance = "undance", undance = "dance",
     spin = "unspin", unspin = "spin",
+    spasm = "unspasm", unspasm = "spasm",
+    hatspin = "unhatspin", unhatspin = "hatspin",
+    
+    -- Tools
     tools = "notools", notools = "tools",
     grabtools = "ungrabtools", ungrabtools = "grabtools",
-    autoclick = "unautoclick", unautoclick = "autoclick",
     reach = "unreach", unreach = "reach",
-    anim = "noanim", noanim = "anim"
+    
+    -- Misc
+    autoclick = "unautoclick", unautoclick = "autoclick",
+    noanim = "reanim", reanim = "noanim",
+    stun = "unstun", unstun = "stun",
+    platformstand = "unplatformstand", unplatformstand = "platformstand",
+    anchor = "unanchor", unanchor = "anchor",
+    fling = "unfling", unfling = "fling",
+    walkfling = "unwalkfling", unwalkfling = "walkfling",
+    antifling = "unantifling", unantifling = "antifling",
+    antivoid = "unantivoid", unantivoid = "antivoid",
+    infjump = "uninfjump", uninfjump = "infjump",
+    autojump = "unautojump", unautojump = "autojump",
+    edgejump = "unedgejump", unedgejump = "edgejump"
 }
 
 -- FastMap: Comprehensive command mapping with all IY commands and aliases
 -- Updated: v1.2.2 - Extracted from IYsource.lua with 400+ commands
 local FastMap = {
-    -- System & Aliases
-    ["^help$"] = "help", ["^cmds$"] = "help", ["^commands$"] = "help",
-    ["^clearcache$"] = "clearcache", ["^cacheinfo$"] = "cacheinfo",
-    ["^bind (.+)"] = "bind %1", ["^unbind (.+)"] = "unbind %1",
+    -- System & Aliases (only valid IY commands)
     ["^addalias (.+)"] = "addalias %1", ["^removealias (.+)"] = "removealias %1", ["^clraliases$"] = "clraliases",
-    ["^addplugin (.+)"] = "addplugin %1", ["^removeplugin (.+)"] = "removeplugin %1", ["^deleteplugin (.+)"] = "removeplugin %1",
-    ["^reloadplugin (.+)"] = "reloadplugin %1", ["^addallplugins$"] = "addallplugins", ["^loadallplugins$"] = "addallplugins",
-    ["^breakloops$"] = "breakloops", ["^break$"] = "breakloops", ["^removecmd (.+)"] = "removecmd %1", ["^deletecmd (.+)"] = "removecmd %1",
+    ["^addplugin (.+)"] = "addplugin %1", ["^plugin (.+)"] = "addplugin %1",
+    ["^removeplugin (.+)"] = "removeplugin %1", ["^deleteplugin (.+)"] = "removeplugin %1",
+    ["^reloadplugin (.+)"] = "reloadplugin %1",
+    ["^addallplugins$"] = "addallplugins", ["^loadallplugins$"] = "addallplugins",
+    ["^breakloops$"] = "breakloops", ["^break$"] = "breakloops",
+    ["^removecmd (.+)"] = "removecmd %1", ["^deletecmd (.+)"] = "removecmd %1",
 
-    -- Waypoint Teleport
-    ["^gotowp (.+)"] = "gotowp %1", ["^gwp (.+)"] = "gotowp %1",
+    -- Waypoint Commands (using correct IY command names)
+    ["^waypoint (.+)"] = "waypoint %1", ["^wp (.+)"] = "waypoint %1",
     ["^swp (.+)"] = "setwaypoint %1", ["^savewp (.+)"] = "setwaypoint %1", ["^setwp (.+)"] = "setwaypoint %1",
     ["^spos (.+)"] = "setwaypoint %1", ["^savepos (.+)"] = "setwaypoint %1", ["^saveposition (.+)"] = "setwaypoint %1",
     ["^waypoints$"] = "waypoints", ["^positions$"] = "waypoints",
@@ -2360,6 +2388,7 @@ local FastMap = {
     ["^walltp$"] = "walltp", ["^nowalltp$"] = "nowalltp", ["^unwalltp$"] = "nowalltp",
     ["^teleporttool$"] = "teleporttool", ["^tptool$"] = "teleporttool",
     ["^clickteleport$"] = "clickteleport",
+    ["^clickdelete$"] = "clickdelete",
     ["^mouseteleport$"] = "mouseteleport", ["^mousetp$"] = "mouseteleport",
     ["^tpposition (.+)"] = "tpposition %1", ["^tppos (.+)"] = "tpposition %1",
     ["^tweentpposition (.+)"] = "tweentpposition %1", ["^ttppos (.+)"] = "tweentpposition %1",
@@ -2401,7 +2430,6 @@ local FastMap = {
     ["^enableshiftlock$"] = "enableshiftlock", ["^enablesl$"] = "enableshiftlock", ["^shiftlock$"] = "enableshiftlock",
     ["^lookat (.+)"] = "lookat %1",
     ["^fullbright$"] = "fullbright", ["^fb$"] = "fullbright", ["^fullbrightness$"] = "fullbright",
-    ["^nofullbright$"] = "nofullbright",
     ["^loopfullbright$"] = "loopfullbright", ["^loopfb$"] = "loopfullbright",
     ["^unloopfullbright$"] = "unloopfullbright", ["^unloopfb$"] = "unloopfullbright",
     ["^day$"] = "day", ["^night$"] = "night", ["^nofog$"] = "nofog",
@@ -2441,8 +2469,7 @@ local FastMap = {
     ["^walkfling$"] = "walkfling", ["^unwalkfling$"] = "unwalkfling", ["^nowalkfling$"] = "unwalkfling", ["^togglewalkfling$"] = "togglewalkfling",
     ["^invisfling$"] = "invisfling",
     ["^antifling$"] = "antifling", ["^unantifling$"] = "unantifling", ["^toggleantifling$"] = "toggleantifling",
-    ["^kill (.+)"] = "kill %1", ["^handlekill (.+)"] = "handlekill %1", ["^hkill (.+)"] = "handlekill %1",
-    ["^loopkill (.+)"] = "loopkill %1", ["^unloopkill$"] = "unloopkill",
+    ["^handlekill (.+)"] = "handlekill %1", ["^hkill (.+)"] = "handlekill %1",
     ["^loopoof$"] = "loopoof", ["^unloopoof$"] = "unloopoof",
     ["^muteboombox$"] = "muteboombox", ["^unmuteboombox$"] = "unmuteboombox",
     ["^hitbox (.+)"] = "hitbox %1", ["^headsize (.+)"] = "headsize %1",
@@ -2637,22 +2664,47 @@ local FastMap = {
     ["^rolewatch (.+)"] = "rolewatch %1", ["^rolewatchstop$"] = "rolewatchstop",
     ["^rolewatchleave$"] = "rolewatchleave", ["^unrolewatch$"] = "rolewatchleave",
     ["^staffwatch$"] = "staffwatch", ["^unstaffwatch$"] = "unstaffwatch",
-    ["^removeads$"] = "removeads", ["^adblock$"] = "removeads"
+    ["^removeads$"] = "removeads", ["^adblock$"] = "removeads",
+    
+    -- Additional missing commands
+    ["^antiafk$"] = "antiafk", ["^antiidle$"] = "antiafk",
+    ["^jpower (%d+)$"] = "jpower %1",
+    ["^lockws$"] = "lockws", ["^lockworkspace$"] = "lockws",
+    ["^unlockws$"] = "unlockws", ["^unlockworkspace$"] = "unlockws",
+    ["^rec$"] = "rec", ["^record$"] = "rec",
+    ["^teleportwalk (%d+)$"] = "teleportwalk %1", ["^tpwalk (%d+)$"] = "teleportwalk %1",
+    ["^unteleportwalk$"] = "unteleportwalk", ["^untpwalk$"] = "unteleportwalk",
+    ["^togglefs$"] = "togglefs", ["^togglefullscreen$"] = "togglefs",
+    ["^touchinterests$"] = "touchinterests", ["^touchinterest$"] = "touchinterests",
+    ["^firetouchinterests$"] = "touchinterests", ["^firetouchinterest$"] = "touchinterests",
+    ["^tptool$"] = "tptool", ["^teleporttool$"] = "tptool",
+    ["^unglobalshadows$"] = "unglobalshadows", ["^nogshadows$"] = "unglobalshadows",
+    ["^ungshadows$"] = "unglobalshadows", ["^noglobalshadows$"] = "unglobalshadows",
+    ["^unlight$"] = "unlight", ["^nolight$"] = "unlight",
+    ["^view (.+)$"] = "view %1", ["^spectate (.+)$"] = "view %1",
+    ["^unview$"] = "unview", ["^unspectate$"] = "unview",
+    ["^unwalltp$"] = "unwalltp", ["^nowalltp$"] = "unwalltp",
+    ["^unxray$"] = "unxray", ["^noxray$"] = "unxray",
+    ["^vfly$"] = "vfly", ["^vehiclefly$"] = "vfly",
+    ["^vflyspeed (%d+)$"] = "vflyspeed %1", ["^vflysp (%d+)$"] = "vflyspeed %1",
+    ["^vehicleflyspeed (%d+)$"] = "vflyspeed %1", ["^vehicleflysp (%d+)$"] = "vflyspeed %1",
+    ["^copyid (.+)$"] = "copyid %1", ["^copyuserid (.+)$"] = "copyid %1"
 }
 
 local Priority = {
     fly = 100, unfly = 100, noclip = 100, clip = 100,
-    speed = 95, ws = 95, jumppower = 95, jp = 95,
+    speed = 95, ws = 95, jpower = 95, jumppower = 95, jp = 95,
     ["goto"] = 90, tp = 90, bring = 90,
-    kill = 80, fling = 80, loopkill = 80,
-    esp = 75, noesp = 75, xray = 75, spectate = 75,
-    btools = 70, f3x = 70, dex = 70,
+    handlekill = 80, hkill = 80, fling = 80,
+    esp = 75, noesp = 75, xray = 75, view = 75, spectate = 75,
+    btools = 70, f3x = 70, dex = 70, explorer = 70,
     rejoin = 50, serverhop = 50, console = 50, reset = 50
 }
 
 local TargetTriggers = {
-    "kill", "fling", "goto", "tp", "spectate", "view", "watch",
-    "bring", "attach", "loopkill", "bang", "freeze", "follow", "walkto", "headsit"
+    "handlekill", "hkill", "fling", "goto", "tp", "view", "spectate",
+    "bring", "clientbring", "cbring", "bang", "freeze", "thaw",
+    "follow", "walkto", "headsit", "loopgoto", "loopbring"
 }
 
 --// ============================================
