@@ -1,21 +1,13 @@
---[[ 
-    SMART INFINITE YIELD - V1.3.1 STABLE
-    - Architecture: Headless Engine with Client-Server Model
+    SMART INFINITE YIELD - V1.2.3 STABLE
+    - Architecture: Context Awareness + Event-Based Bridge
     - Logic: VolQ5 & Pollinations.AI (LLM Model)
-    - Status: Stable
-    - New: Dynamic Loading, Virtualization Shim, Mock GUI, Metatable Protection,
-           IO Redirection, Input Mocking, Closed-Loop Feedback, Syntax Sanitization,
-           Crash Protection, Concurrency Management, Service Pattern Separation,
-           Unified API Contract (BridgeAPI), Type Checking, Hot-Swap Support
+    - Status: Stable 
+    - New: Compact Mode Dropdown UI, Streamlined Header Layout, Text Collision Fixes,
+           Optimized Frame Sizing, Temporary Status Display, Industry-Standard GUI
 ]]
 
---!strict
 --// ============================================
---// [CONFIG] - Global Configuration Constants
---// ============================================
-
---// ============================================
---// [SERVICES] - Roblox Services (Cached for Performance)
+--// 1. SERVICES (Cached for Performance)
 --// ============================================
 local Players = game:GetService("Players")
 local MarketplaceService = game:GetService("MarketplaceService")
@@ -25,11 +17,8 @@ local TweenService = game:GetService("TweenService")
 local CoreGui = game:GetService("CoreGui")
 local RunService = game:GetService("RunService")
 
---// ============================================
---// [CONTROLLER] - Namespace & State Management
---// ============================================
 -- Namespace for global variable isolation
-local NAMESPACE: string = "SmartInfiniteYield"
+local NAMESPACE = "SmartInfiniteYield"
 
 -- Safe global access helpers
 local function getNamespace()
@@ -108,15 +97,6 @@ end
 --// ============================================
 --// 2. CONFIGURATION
 --// ============================================
-
---[[
-    Type Definitions for Luau --!strict mode
-    @type ConfigType { [string]: any }
-    @type BridgeAPIType { Execute: (cmd: string) -> (boolean, string?), GetOutput: () -> { Title: string, Text: string }?, GetStatus: () -> BridgeStatusType }
-    @type BridgeStatusType { connected: boolean, attempts: number, interface: boolean, headless: boolean }
-    @type OutputEntryType { Title: string, Text: string, Timestamp: number }
-]]
-
 local CONFIG = {
     -- API Settings
     ApiKey = "Null",
@@ -158,16 +138,6 @@ local CONFIG = {
     -- Dropdown Focus Management
     DropdownFocusDelay = 0.15, -- Delay before hiding dropdown after focus loss
     DropdownMaxItems = 6, -- Maximum items to show in dropdown
-    
-    -- V1.3 Headless Engine Settings
-    HeadlessMode = false, -- Enable headless mode (suppresses IY GUI rendering, SIY GUI always renders)
-    IYSourceURL = "https://raw.githubusercontent.com/BokX1/InfiniteYieldWithAI/main/IYsource.lua", -- URL for dynamic IYsource loading (local repo copy)
-    IYSourceCacheFile = "SIY_IYSource_Cache.lua", -- Local cache file for IYsource
-    IYSourceCacheExpiry = 86400, -- Cache expiry in seconds (24 hours)
-    EnableHotSwap = true, -- Allow updating IYsource independently
-    OutputBufferSize = 50, -- Maximum entries in _G.IY_Output buffer
-    FeedbackLoopInterval = 0.1, -- Interval for feedback loop polling
-    ConcurrencyCleanupOnLoad = true, -- Auto-cleanup existing backend instances on load
     
     -- System Prompt (~3500 Tokens)
     CommandPrompt = [[
@@ -713,498 +683,15 @@ end
 loadCache()
 
 --// ============================================
---// 6. HEADLESS ENGINE SYSTEM (V1.3 Client-Server Model)
+--// 6. BRIDGE SYSTEM (Event-Based with Configurable Retries)
 --// ============================================
-
---[[
-    Part 1: The Injection Layer (The "Shim")
-    - Dynamic Loading: Fetch IYsource.lua content via game:HttpGet
-    - Virtualization Shim: Mock GUI to accept API calls without rendering
-    - Mock GUI: Dummy tables for Holder, Title, Description
-    - Metatable Protection: Redirect Instance.new calls for UI elements
-    - IO Redirection: Overwrite notify() to write to _G.IY_Output
-    - Input Mocking: Disable or mock Chatted and UserInputService listeners
-]]
-
--- Output buffer for headless feedback loop
-local IY_Output = {} -- { Title: string, Text: string, Timestamp: number }[]
-local IY_OutputIndex = 0
-local HeadlessModeActive = false
-local IYSourceCache = nil
-local IYSourceCacheTimestamp = 0
-local executeIYSourceWithShim
-
--- Part 1a: Dynamic Loading - Fetch IYsource.lua with caching
-local function fetchIYSource(): (boolean, string?)
-    -- Check memory cache first
-    if IYSourceCache and (os.time() - IYSourceCacheTimestamp) < CONFIG.IYSourceCacheExpiry then
-        return true, IYSourceCache
-    end
-    
-    -- Check file cache
-    local cacheValid = false
-    if CONFIG.CacheEnabled then
-        local success, content = pcall(function()
-            if readfile and isfile and isfile(CONFIG.IYSourceCacheFile) then
-                local cacheData = readfile(CONFIG.IYSourceCacheFile)
-                local parsed = HttpService:JSONDecode(cacheData)
-                if parsed and parsed.timestamp and (os.time() - parsed.timestamp) < CONFIG.IYSourceCacheExpiry then
-                    return parsed.source
-                end
-            end
-            return nil
-        end)
-        if success and content then
-            IYSourceCache = content
-            IYSourceCacheTimestamp = os.time()
-            return true, content
-        end
-    end
-    
-    -- Fetch from remote
-    local success, source = pcall(game.HttpGet, game, CONFIG.IYSourceURL)
-    if success and source and #source > 1000 then
-        IYSourceCache = source
-        IYSourceCacheTimestamp = os.time()
-        
-        -- Save to file cache
-        if CONFIG.CacheEnabled then
-            pcall(function()
-                if writefile then
-                    local cacheData = HttpService:JSONEncode({
-                        source = source,
-                        timestamp = os.time()
-                    })
-                    writefile(CONFIG.IYSourceCacheFile, cacheData)
-                end
-            end)
-        end
-        
-        return true, source
-    end
-    
-    return false, "Failed to fetch IYsource from " .. CONFIG.IYSourceURL
-end
-
--- Part 1b: Mock GUI - Dummy tables for UI elements
-local MockGUI = {
-    -- Dummy Holder that accepts all property assignments
-    Holder = setmetatable({}, {
-        __index = function(_, key)
-            return setmetatable({}, {
-                __index = function() return function() end end,
-                __newindex = function() end,
-                __call = function() return setmetatable({}, getmetatable(_)) end
-            })
-        end,
-        __newindex = function() end
-    }),
-    
-    -- Dummy Title label
-    Title = setmetatable({Text = "", Visible = false}, {
-        __newindex = function(t, k, v) rawset(t, k, v) end
-    }),
-    
-    -- Dummy Description label
-    Description = setmetatable({Text = "", Visible = false}, {
-        __newindex = function(t, k, v) rawset(t, k, v) end
-    }),
-    
-    -- Dummy ScaledHolder
-    ScaledHolder = setmetatable({}, {
-        __index = function() return setmetatable({}, getmetatable(MockGUI.Holder)) end,
-        __newindex = function() end
-    }),
-    
-    -- Dummy Notification frame
-    Notification = setmetatable({Visible = false}, {
-        __index = function() return function() end end,
-        __newindex = function() end
-    }),
-    
-    -- Dummy Cmdbar
-    Cmdbar = setmetatable({Text = "", Visible = false}, {
-        __newindex = function(t, k, v) rawset(t, k, v) end
-    })
-}
-
--- Part 1c: Metatable Protection - Redirect Instance.new for UI elements
-local OriginalInstanceNew = Instance.new
-local UIClassNames = {
-    ["Frame"] = true, ["TextLabel"] = true, ["TextButton"] = true,
-    ["TextBox"] = true, ["ImageLabel"] = true, ["ImageButton"] = true,
-    ["ScrollingFrame"] = true, ["UICorner"] = true, ["UIStroke"] = true,
-    ["UIListLayout"] = true, ["UIGridLayout"] = true, ["UIPadding"] = true,
-    ["UIScale"] = true, ["UIGradient"] = true, ["ScreenGui"] = true,
-    ["BillboardGui"] = true, ["SurfaceGui"] = true, ["CanvasGroup"] = true
-}
-
-local function createMockInstance(className: string)
-    return setmetatable({
-        ClassName = className,
-        Name = className,
-        Parent = nil,
-        Visible = false,
-        _children = {},
-        _properties = {}
-    }, {
-        __index = function(self, key)
-            if key == "Destroy" then
-                return function() end
-            elseif key == "GetChildren" then
-                return function() return self._children end
-            elseif key == "FindFirstChild" then
-                return function(_, name)
-                    for _, child in ipairs(self._children) do
-                        if child.Name == name then return child end
-                    end
-                    return nil
-                end
-            elseif key == "WaitForChild" then
-                return function(_, name) return self:FindFirstChild(name) end
-            elseif key == "TweenPosition" or key == "TweenSize" then
-                return function() end
-            elseif key == "GetPropertyChangedSignal" then
-                return function()
-                    return { Connect = function() return { Disconnect = function() end } end }
-                end
-            end
-            return self._properties[key]
-        end,
-        __newindex = function(self, key, value)
-            if key == "Parent" and value and type(value) == "table" and value._children then
-                table.insert(value._children, self)
-            end
-            self._properties[key] = value
-        end
-    })
-end
-
-local function protectedInstanceNew(className: string, parent: Instance?)
-    if HeadlessModeActive and UIClassNames[className] then
-        local mock = createMockInstance(className)
-        if parent then mock.Parent = parent end
-        return mock
-    end
-    return OriginalInstanceNew(className, parent)
-end
-
--- Part 1d: IO Redirection - Capture notify() output
-local function redirectedNotify(title: string, text: string, duration: number?)
-    IY_OutputIndex = IY_OutputIndex + 1
-    local entry = {
-        Title = tostring(title or ""),
-        Text = tostring(text or ""),
-        Timestamp = os.time(),
-        Index = IY_OutputIndex
-    }
-    
-    table.insert(IY_Output, entry)
-    
-    -- Enforce buffer size limit
-    while #IY_Output > CONFIG.OutputBufferSize do
-        table.remove(IY_Output, 1)
-    end
-    
-    -- Store in global for external access
-    local ns = getNamespace()
-    ns.IY_Output = IY_Output
-    
-    -- Also store in _G for legacy compatibility
-    if _G then
-        _G.IY_Output = IY_Output
-    end
-end
-
--- Part 1e: Input Mocking - Disable listeners in headless mode
-local MockedConnections = {}
-
-local function mockInputListeners()
-    -- Create dummy connection objects
-    local dummyConnection = {
-        Connected = false,
-        Disconnect = function() end
-    }
-    return dummyConnection
-end
-
---[[
-    Part 2: Logic Hardening (The "Feedback Loop")
-    - Closed-Loop Feedback: Write (AI command) -> Read (_G.IY_Output) -> Report (AI Context)
-    - Syntax Sanitization: Helper function for command formatting and prefix consistency
-    - Crash Protection: Wrap execution in pcall to catch and report backend errors
-    - Concurrency Management: Automatic cleanup of existing backend instances on load
-]]
-
--- Part 2a: Syntax Sanitization - Command formatting helper
-local function sanitizeCommand(cmd: string): string
-    if not cmd or type(cmd) ~= "string" then return "" end
-    
-    -- Trim whitespace
-    cmd = cmd:gsub("^%s+", ""):gsub("%s+$", "")
-    
-    -- Ensure command starts with prefix (;)
-    if not cmd:match("^;") then
-        cmd = ";" .. cmd
-    end
-    
-    -- Normalize multiple semicolons to single
-    cmd = cmd:gsub(";+", ";")
-    
-    -- Remove dangerous patterns
-    cmd = cmd:gsub("loadstring", "")
-    cmd = cmd:gsub("require", "")
-    cmd = cmd:gsub("getfenv", "")
-    cmd = cmd:gsub("setfenv", "")
-    
-    return cmd
-end
-
--- Part 2b: Crash Protection - Safe execution wrapper
-local function safeExecute(func: () -> any, errorHandler: ((string) -> ())?): (boolean, any)
-    local success, result = pcall(func)
-    if not success then
-        local errorMsg = tostring(result)
-        warn("SIY Headless: Execution error - " .. errorMsg)
-        
-        -- Log error to output buffer
-        redirectedNotify("Error", errorMsg)
-        
-        if errorHandler then
-            errorHandler(errorMsg)
-        end
-    end
-    return success, result
-end
-
--- Part 2c: Concurrency Management - Cleanup existing instances
-local function cleanupExistingInstances()
-    if not CONFIG.ConcurrencyCleanupOnLoad then return end
-    
-    -- Check for existing SIY instances
-    local ns = getNamespace()
-    if ns.Cleanup and type(ns.Cleanup) == "function" then
-        pcall(ns.Cleanup)
-    end
-    
-    -- Clear any existing IY instances in CoreGui
-    pcall(function()
-        local existing = CoreGui:FindFirstChild("SmartInfiniteYield")
-        if existing then existing:Destroy() end
-    end)
-    
-    -- Reset output buffer
-    IY_Output = {}
-    IY_OutputIndex = 0
-    
-    -- Clear global references
-    if _G then
-        _G.IY_Output = nil
-    end
-end
-
--- Part 2d: Closed-Loop Feedback System
-local FeedbackLoopConnection = nil
-local LastOutputIndex = 0
-
-local function startFeedbackLoop(callback: ((table) -> ())?)
-    if FeedbackLoopConnection then
-        pcall(function() FeedbackLoopConnection:Disconnect() end)
-        removeConnection(FeedbackLoopConnection)
-    end
-    
-    FeedbackLoopConnection = RunService.Heartbeat:Connect(function()
-        -- Check for new output entries using global index counter
-        if IY_OutputIndex > LastOutputIndex then
-            local newEntries = {}
-            -- Collect entries with Index > LastOutputIndex
-            for _, entry in ipairs(IY_Output) do
-                if entry.Index and entry.Index > LastOutputIndex then
-                    table.insert(newEntries, entry)
-                end
-            end
-            -- Update to current global index (handles buffer trimming)
-            LastOutputIndex = IY_OutputIndex
-            
-            if callback and #newEntries > 0 then
-                callback(newEntries)
-            end
-        end
-    end)
-    
-    registerConnection(FeedbackLoopConnection)
-end
-
-local function stopFeedbackLoop()
-    if FeedbackLoopConnection then
-        pcall(function() FeedbackLoopConnection:Disconnect() end)
-        removeConnection(FeedbackLoopConnection)
-        FeedbackLoopConnection = nil
-    end
-end
-
-local function getLatestOutput(): table?
-    if #IY_Output > 0 then
-        return IY_Output[#IY_Output]
-    end
-    return nil
-end
-
-local function getAllOutput(): {table}
-    return IY_Output
-end
-
-local function clearOutput()
-    IY_Output = {}
-    IY_OutputIndex = 0
-    LastOutputIndex = 0
-    local ns = getNamespace()
-    ns.IY_Output = IY_Output
-    ns.IY_OutputIndex = 0 -- Reset namespace index for shim consistency
-    if _G then _G.IY_Output = IY_Output end
-end
-
--- Bridge state (shared across API and connection logic)
 local IY_Interface = nil
 local BridgeReady = Instance.new("BindableEvent")
 local BridgeConnected = false
 local BridgeConnectionAttempts = 0
 
---[[
-    Part 3: Standardization (The "Service Architecture")
-    - Service Pattern Separation: [CONFIG], [SERVICES], [CONTROLLER] organization
-    - Unified API Contract: BridgeAPI.Execute(cmd) and BridgeAPI.GetOutput()
-    - Type Checking: Luau --!strict definitions
-    - Hot-Swap Support: Architecture allows updating IYsource.lua independently
-]]
-
--- Part 3a: Unified API Contract - BridgeAPI
-local BridgeAPI = {}
-
-function BridgeAPI.Execute(cmd: string): (boolean, string?)
-    local sanitized = sanitizeCommand(cmd)
-    if sanitized == "" then
-        return false, "Empty or invalid command"
-    end
-    
-    local success, errorMsg = safeExecute(function()
-        if IY_Interface and IY_Interface.Exec then
-            IY_Interface.Exec(sanitized)
-        elseif type(execCmd) == "function" then
-            -- execCmd is a global function defined by IYsource.lua
-            execCmd(sanitized)
-        else
-            error("No execution interface available - IY not loaded")
-        end
-    end)
-    
-    if success then
-        return true, nil
-    else
-        return false, errorMsg
-    end
-end
-
-function BridgeAPI.GetOutput(): table?
-    return getLatestOutput()
-end
-
-function BridgeAPI.GetAllOutput(): {table}
-    return getAllOutput()
-end
-
-function BridgeAPI.ClearOutput()
-    clearOutput()
-end
-
-function BridgeAPI.GetStatus(): table
-    return {
-        connected = BridgeConnected,
-        attempts = BridgeConnectionAttempts,
-        interface = IY_Interface ~= nil,
-        headless = HeadlessModeActive,
-        outputCount = #IY_Output,
-        lastOutputIndex = LastOutputIndex
-    }
-end
-
-function BridgeAPI.StartFeedbackLoop(callback: ((table) -> ())?)
-    startFeedbackLoop(callback)
-end
-
-function BridgeAPI.StopFeedbackLoop()
-    stopFeedbackLoop()
-end
-
--- Part 3b: Hot-Swap Support - Reload IYsource independently
-function BridgeAPI.HotSwap(): (boolean, string?)
-    if not CONFIG.EnableHotSwap then
-        return false, "Hot-swap is disabled in configuration"
-    end
-    
-    -- Clear cached source
-    IYSourceCache = nil
-    IYSourceCacheTimestamp = 0
-    
-    -- Delete file cache
-    pcall(function()
-        if delfile then
-            delfile(CONFIG.IYSourceCacheFile)
-        end
-    end)
-    
-    -- Fetch fresh source
-    local success, source = fetchIYSource()
-    if not success then
-        return false, source
-    end
-    
-    -- Re-execute the source to apply updates
-    local loadSuccess, loadErr = safeExecute(function()
-        -- Build shim based on current mode
-        local shimCode = ""
-        if HeadlessModeActive then
-            shimCode = buildVirtualizationShim()
-        else
-            shimCode = string.format([[
-                local ns = getgenv()["%s"] or {}
-                getgenv()["%s"] = ns
-                ns.PseudoBridge = {
-                    Exec = function(cmd) if type(execCmd) == "function" then execCmd(cmd) end end,
-                    Ready = true,
-                    Headless = false
-                }
-            ]], NAMESPACE, NAMESPACE)
-        end
-        local execSuccess, execErr = executeIYSourceWithShim(source, shimCode)
-        if not execSuccess then
-            error(execErr)
-        end
-    end)
-    
-    if not loadSuccess then
-        return false, "Hot-swap reload failed: " .. tostring(loadErr)
-    end
-    
-    -- Update bridge reference
-    local bridge = getNamespaceValue("PseudoBridge")
-    if bridge then
-        IY_Interface = bridge
-        BridgeConnected = true
-    end
-    
-    return true, "IYsource hot-swapped and reloaded successfully"
-end
-
--- Expose BridgeAPI to namespace
-setNamespaceValue("BridgeAPI", BridgeAPI)
-
---// ============================================
---// 6B. BRIDGE SYSTEM (Event-Based with Configurable Retries)
---// ============================================
-
 -- Enhanced waitForBridge with configurable retries
-local function waitForBridge(timeout: number?, retryCount: number?): boolean
+local function waitForBridge(timeout, retryCount)
     if BridgeConnected then return true end
     
     local maxRetries = retryCount or CONFIG.BridgeMaxRetries
@@ -1253,147 +740,48 @@ local function waitForBridge(timeout: number?, retryCount: number?): boolean
     return BridgeConnected
 end
 
--- Get bridge connection status for debugging (legacy compatibility)
-local function getBridgeStatus(): table
-    return BridgeAPI.GetStatus()
+-- Get bridge connection status for debugging
+local function getBridgeStatus()
+    return {
+        connected = BridgeConnected,
+        attempts = BridgeConnectionAttempts,
+        interface = IY_Interface ~= nil
+    }
 end
 
--- Build the Virtualization Shim for headless mode
-local function buildVirtualizationShim(): string
-    return string.format([[
--- SIY Virtualization Shim v1.3.1
-local _SIY_NS = getgenv()["%s"] or {}
-getgenv()["%s"] = _SIY_NS
-
--- Mock GUI globals
-Holder = setmetatable({}, {
-    __index = function() return setmetatable({}, {
-        __index = function() return function() end end,
-        __newindex = function() end
-    }) end,
-    __newindex = function() end
-})
-ScaledHolder = Holder
-Title = {Text = "", Visible = false}
-Description = {Text = "", Visible = false}
-Notification = {Visible = false}
-Cmdbar = {Text = ""}
-
--- IO Redirection: Override notify
-local _originalNotify = notify
-_SIY_NS.IY_OutputIndex = _SIY_NS.IY_OutputIndex or 0
-notify = function(title, text, duration)
-    _SIY_NS.IY_Output = _SIY_NS.IY_Output or {}
-    _SIY_NS.IY_OutputIndex = _SIY_NS.IY_OutputIndex + 1
-    table.insert(_SIY_NS.IY_Output, {
-        Title = tostring(title or ""),
-        Text = tostring(text or ""),
-        Timestamp = os.time(),
-        Index = _SIY_NS.IY_OutputIndex
-    })
-    -- Limit buffer size
-    while #_SIY_NS.IY_Output > 50 do
-        table.remove(_SIY_NS.IY_Output, 1)
-    end
-    if _G then _G.IY_Output = _SIY_NS.IY_Output end
-end
-
--- Input Mocking: Disable Chatted listener
-local _originalChatted = nil
-if Players.LocalPlayer then
-    pcall(function()
-        -- Store but don't connect Chatted
-        _originalChatted = Players.LocalPlayer.Chatted
-    end)
-end
-
--- Bridge setup
-_SIY_NS.PseudoBridge = {
-    Exec = function(cmd) if type(execCmd) == "function" then execCmd(cmd) end end,
-    Ready = true,
-    Headless = true
-}
-]], NAMESPACE, NAMESPACE)
-end
-
--- Shared executor for IYsource with optional headless virtualization
-function executeIYSourceWithShim(source: string, shimCode: string): (boolean, string?)
-    local combinedSource = (shimCode and #shimCode > 0) and (source .. "\n" .. shimCode) or source
-    local compiled, compileErr = loadstring(combinedSource)
-    if not compiled then
-        return false, "Failed to compile IYsource: " .. tostring(compileErr)
-    end
-
-    -- In headless mode, sandbox the chunk with a mock-friendly Instance.new
-    if HeadlessModeActive and setfenv then
-        local env = setmetatable({
-            Instance = setmetatable({
-                new = function(className: string, parent: Instance?)
-                    if UIClassNames[className] then
-                        return protectedInstanceNew(className, parent)
-                    end
-                    return OriginalInstanceNew(className, parent)
-                end
-            }, {__index = Instance})
-        }, {__index = _G})
-        setfenv(compiled, env)
-    end
-
-    local success, execResult = safeExecute(compiled)
-    if not success then
-        return false, "IYsource execution failed: " .. tostring(execResult)
-    end
-
-    return true, nil
-end
-
--- Initialize Bridge with Headless Engine support
+-- Initialize Bridge with retry logic
 task.spawn(function()
-    -- Cleanup existing instances first
-    cleanupExistingInstances()
-    
     -- Check for existing bridge in namespace or legacy location
     local existingBridge = getNamespaceValue("PseudoBridge") or (getgenv and getgenv().PseudoBridge)
     if existingBridge then
         IY_Interface = existingBridge
         BridgeConnected = true
-        HeadlessModeActive = existingBridge.Headless or false
         BridgeReady:Fire()
         return
     end
 
-    local function attemptBridgeConnection(): boolean
+    local function attemptBridgeConnection()
         if not CoreGui:FindFirstChild("InfiniteYield") then
-            -- Dynamic Loading: Fetch IYsource
-            local success, source = fetchIYSource()
-            if success and source then
-                -- Build the shim code based on mode
-                local shimCode = ""
-                if CONFIG.HeadlessMode then
-                    HeadlessModeActive = true
-                    shimCode = buildVirtualizationShim()
-                else
-                    -- Standard bridge code for GUI mode
-                    shimCode = string.format([[
-                        local ns = getgenv()["%s"] or {}
-                        getgenv()["%s"] = ns
-                        ns.PseudoBridge = {
-                            Exec = function(cmd) if type(execCmd) == "function" then execCmd(cmd) end end,
-                            Ready = true,
-                            Headless = false
-                        }
-                    ]], NAMESPACE, NAMESPACE)
-                end
-                
-                -- Crash Protection: Wrap in pcall
-                local loadSuccess, loadErr = executeIYSourceWithShim(source, shimCode)
-                
+            local success, source = pcall(game.HttpGet, game, "https://raw.githubusercontent.com/EdgeIY/infiniteyield/master/source")
+            if success then
+                -- Bridge code uses namespace for isolation
+                local bridgeCode = string.format([[
+                    local ns = getgenv()["%s"] or {}
+                    getgenv()["%s"] = ns
+                    ns.PseudoBridge = {
+                        Exec = function(cmd) if execCmd then execCmd(cmd) end end,
+                        Ready = true
+                    }
+                ]], NAMESPACE, NAMESPACE)
+                local loadSuccess, loadErr = pcall(function()
+                    loadstring(source .. "\n" .. bridgeCode)()
+                end)
                 if not loadSuccess then
                     warn("SIY: Failed to load IY source: " .. tostring(loadErr))
                     return false
                 end
             else
-                warn("SIY: Failed to fetch IY source - " .. tostring(source))
+                warn("SIY: Failed to fetch IY source")
                 return false
             end
         end
@@ -1419,12 +807,7 @@ task.spawn(function()
     if bridge then
         IY_Interface = bridge
         BridgeConnected = true
-        HeadlessModeActive = bridge.Headless or false
         BridgeReady:Fire()
-        
-        -- Start feedback loop for output monitoring and crash protection
-        -- Works in both headless and GUI modes
-        startFeedbackLoop()
     else
         warn("SIY: Bridge connection timeout after " .. tostring(maxTimeout) .. " seconds")
     end
@@ -2122,24 +1505,8 @@ createInstance("UIPadding", {
     Parent = QuickActionsFrame
 })
 
-local QuickActionToggleState = {}
-
-local function getQuickActionBaseTransparency(action)
-    if action.togglePrompt and QuickActionToggleState[action.text] then
-        return 0.4
-    end
-    return 0.7
-end
-
-local function updateQuickActionVisual(btn, action)
-    btn.BackgroundTransparency = getQuickActionBaseTransparency(action)
-    if action.togglePrompt then
-        btn.Text = QuickActionToggleState[action.text] and (action.text .. " (On)") or action.text
-    end
-end
-
 local QuickActions = {
-    {text = "Fly", prompt = "fly", togglePrompt = "unfly", color = Colors.Blue},
+    {text = "Fly", prompt = "fly", color = Colors.Blue},
     {text = "Speed", prompt = "make me fast", color = Colors.Green},
     {text = "ESP", prompt = "esp", color = Colors.Purple},
     {text = "Noclip", prompt = "noclip", color = Colors.Orange},
@@ -2164,8 +1531,6 @@ for i, action in ipairs(QuickActions) do
         Parent = QuickActionsFrame
     })
     addCorner(btn, 4)
-    QuickActionToggleState[action.text] = false
-    updateQuickActionVisual(btn, action)
     
     -- Hover effect
     ConnectPersistent(btn.MouseEnter:Connect(function()
@@ -2176,7 +1541,7 @@ for i, action in ipairs(QuickActions) do
     end))
     ConnectPersistent(btn.MouseLeave:Connect(function()
         TweenService:Create(btn, TweenInfo.new(0.1), {
-            BackgroundTransparency = getQuickActionBaseTransparency(action),
+            BackgroundTransparency = 0.7,
             TextColor3 = Colors.Text
         }):Play()
     end))
@@ -2194,14 +1559,7 @@ for i, action in ipairs(QuickActions) do
     end))
     
     ConnectPersistent(btn.MouseButton1Click:Connect(function()
-        local promptToSend = action.prompt
-        if action.togglePrompt then
-            local isActive = QuickActionToggleState[action.text]
-            promptToSend = isActive and action.togglePrompt or action.prompt
-            QuickActionToggleState[action.text] = not isActive
-            updateQuickActionVisual(btn, action)
-        end
-        InputBox.Text = promptToSend
+        InputBox.Text = action.prompt
         InputBox:CaptureFocus()
         task.wait(0.1)
         InputBox:ReleaseFocus(true)
@@ -2496,7 +1854,6 @@ local TutorialFrame = createInstance("Frame", {
     Position = UDim2.new(0.5, 0, 0.5, 0),
     BackgroundColor3 = Colors.Background,
     ZIndex = 100,
-    Visible = true, -- Explicitly visible for tutorial on startup
     Parent = SIY_Screen
 })
 addCorner(TutorialFrame, 12)
@@ -2836,464 +2193,147 @@ local ToggleMap = {
 }
 
 local FastMap = {
-    --// ==========================================
-    --// SIY-SPECIFIC COMMANDS (Custom)
-    --// ==========================================
+    -- System & Aliases
     ["^help$"] = "help", ["^cmds$"] = "help", ["^commands$"] = "help",
     ["^clearcache$"] = "clearcache", ["^cacheinfo$"] = "cacheinfo",
-    ["^gotowp (.+)"] = "waypoint %1", ["^gwp (.+)"] = "waypoint %1", ["^wpgoto (.+)"] = "waypoint %1",
+    
+    -- Waypoint Teleport
+    ["^gotowp (.+)"] = "gotowp %1", ["^gwp (.+)"] = "gotowp %1", ["^wpgoto (.+)"] = "gotowp %1",
+    ["^swp (.+)"] = "setwaypoint %1", ["^savewp (.+)"] = "setwaypoint %1",
+    
     ["^bind (%w+) (.+)"] = "bind %1 %2", ["^unbind (%w+)"] = "unbind %1",
-
-    --// ==========================================
-    --// SYSTEM & ALIASES
-    --// ==========================================
     ["^addalias (.+) (.+)"] = "addalias %1 %2", ["^removealias (.+)"] = "removealias %1", ["^clraliases$"] = "clraliases",
     ["^addplugin (.+)"] = "addplugin %1", ["^removeplugin (.+)"] = "removeplugin %1",
     ["^reloadplugin (.+)"] = "reloadplugin %1", ["^addallplugins$"] = "addallplugins",
     ["^breakloops$"] = "breakloops", ["^removecmd (.+)"] = "removecmd %1",
-    ["^discord$"] = "discord", ["^support$"] = "discord",
 
-    --// ==========================================
-    --// UTILITY & SYSTEM
-    --// ==========================================
-    ["^guiscale (%d+)"] = "guiscale %1",
+    -- Utility
+    ["^discord$"] = "discord", ["^guiscale (%d+)"] = "guiscale %1",
     ["^console$"] = "console", ["^oldconsole$"] = "oldconsole",
-    ["^explorer$"] = "explorer", ["^dex$"] = "explorer", ["^olddex$"] = "olddex", ["^odex$"] = "olddex",
-    ["^remotespy$"] = "remotespy", ["^rspy$"] = "remotespy",
-    ["^audiologger$"] = "audiologger", ["^alogger$"] = "audiologger",
-    ["^executor$"] = "executor",
-    ["^antiafk$"] = "antiafk", ["^antiidle$"] = "antiafk",
-    ["^datalimit (%d+)"] = "datalimit %1",
-    ["^replicationlag (%d+)"] = "replicationlag %1", ["^backtrack (%d+)"] = "replicationlag %1",
-    ["^creatorid$"] = "creatorid", ["^creator$"] = "creatorid",
-    ["^copycreatorid$"] = "copycreatorid", ["^copycreator$"] = "copycreatorid",
-    ["^setcreatorid (.+)"] = "setcreatorid %1", ["^setcreator (.+)"] = "setcreatorid %1",
-    ["^noprompts$"] = "noprompts", ["^nopurchaseprompts$"] = "noprompts",
-    ["^showprompts$"] = "showprompts", ["^showpurchaseprompts$"] = "showprompts",
-    ["^promptr6$"] = "promptr6", ["^promptr15$"] = "promptr15",
+    ["^explorer$"] = "explorer", ["^dex$"] = "explorer", ["^olddex$"] = "olddex",
+    ["^remotespy$"] = "remotespy", ["^rspy$"] = "remotespy", ["^audiologger$"] = "audiologger",
+    ["^antiidle$"] = "antiidle", ["^datalimit (%d+)"] = "datalimit %1", ["^replicationlag (%d+)"] = "replicationlag %1",
+    ["^creatorid$"] = "creatorid", ["^copycreatorid$"] = "copycreatorid", ["^setcreatorid$"] = "setcreatorid",
+    ["^noprompts$"] = "noprompts", ["^showprompts$"] = "showprompts",
     ["^enable (.+)"] = "enable %1", ["^disable (.+)"] = "disable %1",
-    ["^showguis$"] = "showguis", ["^unshowguis$"] = "unshowguis",
-    ["^hideguis$"] = "hideguis", ["^unhideguis$"] = "unhideguis",
-    ["^guidelete$"] = "guidelete", ["^unguidelete$"] = "unguidelete", ["^noguidelete$"] = "unguidelete",
-    ["^hideiy$"] = "hideiy", ["^showiy$"] = "showiy", ["^unhideiy$"] = "showiy",
-    ["^keepiy$"] = "keepiy", ["^unkeepiy$"] = "unkeepiy", ["^togglekeepiy$"] = "togglekeepiy",
-    ["^savegame$"] = "savegame", ["^saveplace$"] = "savegame",
-    ["^clearerror$"] = "clearerror", ["^clearerrors$"] = "clearerror",
-    ["^clientantikick$"] = "clientantikick", ["^antikick$"] = "clientantikick",
-    ["^clientantiteleport$"] = "clientantiteleport", ["^antiteleport$"] = "clientantiteleport",
-    ["^allowrejoin$"] = "allowrejoin", ["^allowrj$"] = "allowrejoin",
-    ["^cancelteleport$"] = "cancelteleport", ["^canceltp$"] = "cancelteleport",
-    ["^volume (%d+)"] = "volume %1", ["^vol (%d+)"] = "volume %1",
-    ["^antilag$"] = "antilag", ["^boostfps$"] = "antilag", ["^lowgraphics$"] = "antilag",
-    ["^rec$"] = "rec", ["^record$"] = "rec",
-    ["^screenshot$"] = "screenshot", ["^scrnshot$"] = "screenshot",
-    ["^togglefs$"] = "togglefs", ["^togglefullscreen$"] = "togglefs",
-    ["^notify (.+)"] = "notify %1",
-    ["^lastcommand$"] = "lastcommand", ["^lastcmd$"] = "lastcommand",
-    ["^setfpscap (%d+)"] = "setfpscap %1", ["^fpscap (%d+)"] = "setfpscap %1", ["^maxfps (%d+)"] = "setfpscap %1",
-    ["^norender$"] = "norender", ["^render$"] = "render",
-    ["^2022materials$"] = "2022materials", ["^use2022materials$"] = "2022materials",
-    ["^un2022materials$"] = "un2022materials", ["^unuse2022materials$"] = "un2022materials",
-    ["^removeads$"] = "removeads", ["^adblock$"] = "removeads",
+    ["^showguis$"] = "showguis", ["^unshowguis$"] = "unshowguis", ["^hideguis$"] = "hideguis", ["^unhideguis$"] = "unhideguis",
+    ["^guidelete$"] = "guidelete", ["^unguidelete$"] = "unguidelete",
+    ["^hideiy$"] = "hideiy", ["^showiy$"] = "showiy", ["^keepiy$"] = "keepiy", ["^unkeepiy$"] = "unkeepiy", ["^togglekeepiy$"] = "togglekeepiy",
+    ["^savegame$"] = "savegame", ["^clearerror$"] = "clearerror",
+    ["^clientantikick$"] = "clientantikick", ["^clientantiteleport$"] = "clientantiteleport",
+    ["^allowrejoin$"] = "allowrejoin", ["^cancelteleport$"] = "cancelteleport",
+    ["^volume (%d+)"] = "volume %1", ["^antilag$"] = "antilag",
+    ["^record$"] = "record", ["^screenshot$"] = "screenshot", ["^togglefullscreen$"] = "togglefullscreen",
+    ["^notify (.+)"] = "notify %1", ["^lastcommand$"] = "lastcommand", ["^setfpscap (%d+)"] = "setfpscap %1",
 
-    --// ==========================================
-    --// MOVEMENT & NOCLIP
-    --// ==========================================
-    ["^noclip$"] = "noclip", ["^clip$"] = "clip", ["^unnoclip$"] = "clip",
-    ["^togglenoclip$"] = "togglenoclip",
-    ["^fly$"] = "fly", ["^fly (%d+)$"] = "fly %1",
-    ["^unfly$"] = "unfly", ["^nofly$"] = "unfly",
-    ["^togglefly$"] = "togglefly",
-    ["^flyspeed (%d+)$"] = "flyspeed %1", ["^flysp (%d+)$"] = "flyspeed %1",
-    ["^vfly$"] = "vfly", ["^vfly (%d+)$"] = "vfly %1", ["^vehiclefly$"] = "vfly", ["^vehiclefly (%d+)$"] = "vfly %1",
-    ["^unvfly$"] = "unfly", ["^novfly$"] = "unfly", ["^unvehiclefly$"] = "unfly", ["^novehiclefly$"] = "unfly",
-    ["^togglevfly$"] = "togglevfly",
-    ["^vflyspeed (%d+)$"] = "vflyspeed %1", ["^vflysp (%d+)$"] = "vflyspeed %1",
-    ["^vehicleflyspeed (%d+)$"] = "vflyspeed %1", ["^vehicleflysp (%d+)$"] = "vflyspeed %1",
-    ["^cframefly$"] = "cframefly", ["^cframefly (%d+)$"] = "cframefly %1",
-    ["^cfly$"] = "cframefly", ["^cfly (%d+)$"] = "cframefly %1",
-    ["^uncframefly$"] = "uncframefly", ["^uncfly$"] = "uncframefly",
-    ["^cframeflyspeed (%d+)$"] = "cframeflyspeed %1", ["^cflyspeed (%d+)$"] = "cframeflyspeed %1",
-    ["^qefly$"] = "qefly", ["^flyqe$"] = "qefly",
-    ["^float$"] = "float", ["^platform$"] = "float",
-    ["^unfloat$"] = "unfloat", ["^nofloat$"] = "unfloat", ["^unplatform$"] = "unfloat", ["^noplatform$"] = "unfloat",
-    ["^togglefloat$"] = "togglefloat",
-    ["^swim$"] = "swim", ["^unswim$"] = "unswim", ["^noswim$"] = "unswim", ["^toggleswim$"] = "toggleswim",
-    ["^vehiclenoclip$"] = "vehiclenoclip", ["^vnoclip$"] = "vehiclenoclip",
-    ["^vehicleclip$"] = "vehicleclip", ["^vclip$"] = "vehicleclip", ["^unvnoclip$"] = "vehicleclip", ["^unvehiclenoclip$"] = "vehicleclip",
-    ["^togglevnoclip$"] = "togglevnoclip",
-    ["^teleportwalk (%d+)$"] = "teleportwalk %1", ["^tpwalk (%d+)$"] = "teleportwalk %1",
-    ["^unteleportwalk$"] = "unteleportwalk", ["^untpwalk$"] = "unteleportwalk",
-    ["^wallwalk$"] = "wallwalk", ["^walkonwalls$"] = "wallwalk",
+    -- Movement
+    ["^noclip$"] = "noclip", ["^unnoclip$"] = "unnoclip", ["^clip$"] = "clip",
+    ["^fly$"] = "fly", ["^fly (%d+)$"] = "fly %1", ["^unfly$"] = "unfly",
+    ["^flyspeed (%d+)$"] = "flyspeed %1",
+    ["^vfly$"] = "vehiclefly", ["^vfly (%d+)$"] = "vehiclefly %1", ["^unvfly$"] = "unvehiclefly",
+    ["^vehiclefly$"] = "vehiclefly", ["^vehiclefly (%d+)$"] = "vehiclefly %1", ["^unvehiclefly$"] = "unvehiclefly",
+    ["^vehicleflyspeed (%d+)$"] = "vehicleflyspeed %1",
+    ["^cfly$"] = "cframefly", ["^cfly (%d+)$"] = "cframefly %1", ["^uncfly$"] = "uncframefly",
+    ["^cframefly$"] = "cframefly", ["^cframefly (%d+)$"] = "cframefly %1", ["^uncframefly$"] = "uncframefly",
+    ["^cframeflyspeed (%d+)$"] = "cframeflyspeed %1",
+    ["^qefly$"] = "qefly", ["^vehiclenoclip$"] = "vehiclenoclip", ["^vehicleclip$"] = "vehicleclip",
+    ["^float$"] = "float", ["^unfloat$"] = "unfloat",
+    ["^swim$"] = "swim", ["^unswim$"] = "unswim", ["^toggleswim$"] = "toggleswim",
+    ["^tpwalk (%d+)$"] = "tpwalk %1", ["^untpwalk$"] = "untpwalk", ["^wallwalk$"] = "wallwalk",
 
-    --// ==========================================
-    --// WAYPOINTS & TELEPORT
-    --// ==========================================
-    ["^setwaypoint (.+)"] = "setwaypoint %1", ["^swp (.+)"] = "setwaypoint %1", ["^setwp (.+)"] = "setwaypoint %1",
-    ["^spos (.+)"] = "setwaypoint %1", ["^saveposition (.+)"] = "setwaypoint %1", ["^savepos (.+)"] = "setwaypoint %1",
-    ["^waypointpos (.+) (.+)"] = "waypointpos %1 %2", ["^wpp (.+) (.+)"] = "waypointpos %1 %2",
-    ["^setwaypointposition (.+) (.+)"] = "waypointpos %1 %2", ["^setpos (.+) (.+)"] = "waypointpos %1 %2",
-    ["^waypoints$"] = "waypoints", ["^positions$"] = "waypoints",
-    ["^showwaypoints$"] = "showwaypoints", ["^showwp$"] = "showwaypoints", ["^showwps$"] = "showwaypoints",
-    ["^hidewaypoints$"] = "hidewaypoints", ["^hidewp$"] = "hidewaypoints", ["^hidewps$"] = "hidewaypoints",
-    ["^waypoint (.+)"] = "waypoint %1", ["^wp (.+)"] = "waypoint %1",
-    ["^lpos (.+)"] = "waypoint %1", ["^loadposition (.+)"] = "waypoint %1", ["^loadpos (.+)"] = "waypoint %1",
-    ["^tweenspeed (%d+)"] = "tweenspeed %1", ["^tspeed (%d+)"] = "tweenspeed %1",
-    ["^tweenwaypoint (.+)"] = "tweenwaypoint %1", ["^twp (.+)"] = "tweenwaypoint %1",
-    ["^walktowaypoint (.+)"] = "walktowaypoint %1", ["^wtwp (.+)"] = "walktowaypoint %1",
-    ["^deletewaypoint (.+)"] = "deletewaypoint %1", ["^dwp (.+)"] = "deletewaypoint %1",
-    ["^dpos (.+)"] = "deletewaypoint %1", ["^deleteposition (.+)"] = "deletewaypoint %1", ["^deletepos (.+)"] = "deletewaypoint %1",
-    ["^clearwaypoints$"] = "clearwaypoints", ["^cwp$"] = "clearwaypoints",
-    ["^clearpositions$"] = "clearwaypoints", ["^cpos$"] = "clearwaypoints", ["^clearpos$"] = "clearwaypoints",
-    ["^cleargamewaypoints$"] = "cleargamewaypoints", ["^cgamewp$"] = "cleargamewaypoints",
-    ["^goto (.+)"] = "goto %1", ["^to (.+)"] = "goto %1",
-    ["^tweengoto (.+)"] = "tweengoto %1", ["^tgoto (.+)"] = "tweengoto %1", ["^tto (.+)"] = "tweengoto %1", ["^tweento (.+)"] = "tweengoto %1",
-    ["^vehiclegoto (.+)"] = "vehiclegoto %1", ["^vgoto (.+)"] = "vehiclegoto %1", ["^vtp (.+)"] = "vehiclegoto %1", ["^vehicletp (.+)"] = "vehiclegoto %1",
-    ["^pulsetp (.+)"] = "pulsetp %1", ["^ptp (.+)"] = "pulsetp %1",
-    ["^loopgoto (.+)"] = "loopgoto %1", ["^unloopgoto$"] = "unloopgoto", ["^noloopgoto$"] = "unloopgoto",
-    ["^clientbring (.+)"] = "clientbring %1", ["^cbring (.+)"] = "clientbring %1",
-    ["^loopbring (.+)"] = "loopbring %1", ["^unloopbring$"] = "unloopbring", ["^noloopbring$"] = "unloopbring",
-    ["^spawnpoint$"] = "spawnpoint", ["^spawn$"] = "spawnpoint",
-    ["^nospawnpoint$"] = "nospawnpoint", ["^nospawn$"] = "nospawnpoint", ["^removespawnpoint$"] = "nospawnpoint",
-    ["^flashback$"] = "flashback", ["^diedtp$"] = "flashback",
-    ["^walltp$"] = "walltp", ["^unwalltp$"] = "unwalltp", ["^nowalltp$"] = "unwalltp",
-    ["^tptool$"] = "tptool", ["^teleporttool$"] = "tptool",
-    ["^tpposition (.+)"] = "tpposition %1", ["^tppos (.+)"] = "tpposition %1",
-    ["^tweentpposition (.+)"] = "tweentpposition %1", ["^ttppos (.+)"] = "tweentpposition %1",
-    ["^offset (.+)"] = "offset %1",
-    ["^tweenoffset (.+)"] = "tweenoffset %1", ["^toffset (.+)"] = "tweenoffset %1",
-    ["^clickteleport$"] = "clickteleport",
-    ["^mouseteleport$"] = "mouseteleport", ["^mousetp$"] = "mouseteleport",
-    ["^getposition$"] = "getposition", ["^getpos$"] = "getposition", ["^notifypos$"] = "getposition", ["^notifyposition$"] = "getposition",
-    ["^copyposition$"] = "copyposition", ["^copypos$"] = "copyposition",
-    ["^walktopos (.+)"] = "walktopos %1", ["^walktoposition (.+)"] = "walktopos %1",
+    -- Teleport
+    ["^setwaypoint (.+)"] = "setwaypoint %1", ["^waypoints$"] = "waypoints", ["^showwaypoints$"] = "showwaypoints", ["^hidewaypoints$"] = "hidewaypoints",
+    ["^waypoint (.+)"] = "waypoint %1", ["^tweenwaypoint (.+)"] = "tweenwaypoint %1", ["^walktowaypoint (.+)"] = "walktowaypoint %1",
+    ["^deletewaypoint (.+)"] = "deletewaypoint %1", ["^clearwaypoints$"] = "clearwaypoints",
+    ["^goto (.+)"] = "goto %1", ["^tweengoto (.+)"] = "tweengoto %1", ["^tweenspeed (%d+)"] = "tweenspeed %1",
+    ["^vehiclegoto (.+)"] = "vehiclegoto %1", ["^loopgoto (.+)"] = "loopgoto %1", ["^unloopgoto$"] = "unloopgoto",
+    ["^clientbring (.+)"] = "clientbring %1", ["^loopbring (.+)"] = "loopbring %1", ["^unloopbring$"] = "unloopbring",
+    ["^spawnpoint$"] = "spawnpoint", ["^nospawnpoint$"] = "nospawnpoint", ["^flashback$"] = "flashback",
+    ["^walltp$"] = "walltp", ["^nowalltp$"] = "nowalltp", ["^teleporttool$"] = "teleporttool",
 
-    --// ==========================================
-    --// VISUALS & ESP
-    --// ==========================================
-    ["^esp$"] = "esp", ["^noesp$"] = "noesp", ["^unesp$"] = "noesp",
-    ["^espteam$"] = "espteam", ["^unespteam$"] = "noesp",
-    ["^esptransparency (%d+)"] = "esptransparency %1",
-    ["^partesp (.+)"] = "partesp %1", ["^unpartesp (.+)"] = "unpartesp %1", ["^nopartesp (.+)"] = "unpartesp %1",
-    ["^chams$"] = "chams", ["^nochams$"] = "nochams", ["^unchams$"] = "nochams",
-    ["^xray$"] = "xray", ["^unxray$"] = "unxray", ["^noxray$"] = "unxray", ["^togglexray$"] = "togglexray",
-    ["^loopxray$"] = "loopxray", ["^unloopxray$"] = "unloopxray",
-    ["^locate (.+)"] = "locate %1", ["^nolocate$"] = "nolocate", ["^unlocate$"] = "nolocate",
-    ["^view (.+)"] = "view %1", ["^spectate (.+)"] = "view %1",
-    ["^viewpart (.+)"] = "viewpart %1", ["^viewp (.+)"] = "viewpart %1",
-    ["^unview$"] = "unview", ["^unspectate$"] = "unview",
-    ["^freecam$"] = "freecam", ["^fc$"] = "freecam",
-    ["^freecampos (.+)"] = "freecampos %1", ["^fcpos (.+)"] = "freecampos %1", ["^fcp (.+)"] = "freecampos %1",
-    ["^freecamposition (.+)"] = "freecampos %1", ["^fcposition (.+)"] = "freecampos %1",
-    ["^freecamwaypoint (.+)"] = "freecamwaypoint %1", ["^fcwp (.+)"] = "freecamwaypoint %1",
-    ["^freecamgoto (.+)"] = "freecamgoto %1", ["^fcgoto (.+)"] = "freecamgoto %1",
-    ["^freecamtp (.+)"] = "freecamgoto %1", ["^fctp (.+)"] = "freecamgoto %1",
-    ["^unfreecam$"] = "unfreecam", ["^nofreecam$"] = "unfreecam", ["^unfc$"] = "unfreecam", ["^nofc$"] = "unfreecam",
-    ["^freecamspeed (%d+)"] = "freecamspeed %1", ["^fcspeed (%d+)"] = "freecamspeed %1",
-    ["^notifyfreecamposition$"] = "notifyfreecamposition", ["^notifyfcpos$"] = "notifyfreecamposition",
-    ["^copyfreecamposition$"] = "copyfreecamposition", ["^copyfcpos$"] = "copyfreecamposition",
-    ["^gotocamera$"] = "gotocamera", ["^gotocam$"] = "gotocamera", ["^tocam$"] = "gotocamera",
-    ["^tweengotocamera$"] = "tweengotocamera", ["^tweengotocam$"] = "tweengotocamera",
-    ["^tgotocam$"] = "tweengotocamera", ["^ttocam$"] = "tweengotocamera",
-    ["^fov (%d+)"] = "fov %1",
+    -- Visuals
+    ["^esp$"] = "esp", ["^noesp$"] = "noesp", ["^espteam$"] = "espteam", ["^esptransparency (%d+)"] = "esptransparency %1",
+    ["^partesp (.+)"] = "partesp %1", ["^unpartesp (.+)"] = "unpartesp %1",
+    ["^chams$"] = "chams", ["^nochams$"] = "nochams", ["^xray$"] = "xray", ["^noxray$"] = "noxray",
+    ["^locate (.+)"] = "locate %1", ["^unlocate$"] = "unlocate",
+    ["^spectate (.+)"] = "spectate %1", ["^view (.+)"] = "view %1", ["^unspectate$"] = "unspectate",
+    ["^freecam$"] = "freecam", ["^unfreecam$"] = "unfreecam", ["^freecamspeed (%d+)"] = "freecamspeed %1",
+    ["^firstp$"] = "firstp", ["^thirdp$"] = "thirdp", ["^noclipcam$"] = "noclipcam",
+    ["^maxzoom (%d+)"] = "maxzoom %1", ["^minzoom (%d+)"] = "minzoom %1", ["^fov (%d+)"] = "fov %1", ["^fixcam$"] = "fixcam",
     ["^lookat (.+)"] = "lookat %1",
-    ["^fixcam$"] = "fixcam", ["^restorecam$"] = "fixcam",
-    ["^enableshiftlock$"] = "enableshiftlock", ["^enablesl$"] = "enableshiftlock", ["^shiftlock$"] = "enableshiftlock",
-    ["^firstp$"] = "firstp", ["^thirdp$"] = "thirdp",
-    ["^noclipcam$"] = "noclipcam", ["^nccam$"] = "noclipcam",
-    ["^maxzoom (%d+)"] = "maxzoom %1", ["^minzoom (%d+)"] = "minzoom %1",
-    ["^camdistance (%d+)"] = "camdistance %1",
-    ["^fullbright$"] = "fullbright", ["^fb$"] = "fullbright", ["^fullbrightness$"] = "fullbright",
-    ["^loopfullbright$"] = "loopfullbright", ["^loopfb$"] = "loopfullbright",
-    ["^unloopfullbright$"] = "unloopfullbright", ["^unloopfb$"] = "unloopfullbright",
-    ["^ambient (.+)"] = "ambient %1",
-    ["^day$"] = "day", ["^night$"] = "night", ["^nofog$"] = "nofog",
-    ["^brightness (%d+)"] = "brightness %1",
-    ["^globalshadows$"] = "globalshadows", ["^gshadows$"] = "globalshadows",
-    ["^unglobalshadows$"] = "unglobalshadows", ["^nogshadows$"] = "unglobalshadows",
-    ["^ungshadows$"] = "unglobalshadows", ["^noglobalshadows$"] = "unglobalshadows",
-    ["^restorelighting$"] = "restorelighting", ["^rlighting$"] = "restorelighting",
-    ["^light (.+)"] = "light %1", ["^unlight$"] = "unlight", ["^nolight$"] = "unlight",
-    ["^hovername$"] = "hovername", ["^unhovername$"] = "unhovername", ["^nohovername$"] = "unhovername",
+    ["^fullbright$"] = "fullbright", ["^nofullbright$"] = "nofullbright", ["^loopfullbright$"] = "loopfullbright", ["^unloopfullbright$"] = "unloopfullbright",
+    ["^day$"] = "day", ["^night$"] = "night", ["^nofog$"] = "nofog", ["^globalshadows$"] = "globalshadows", ["^noglobalshadows$"] = "noglobalshadows",
+    ["^light$"] = "light", ["^nolight$"] = "nolight", ["^hovername$"] = "hovername", ["^unhovername$"] = "unhovername",
 
-    --// ==========================================
-    --// PLAYER INFO & INTERACTION
-    --// ==========================================
-    ["^inspect (.+)"] = "inspect %1", ["^examine (.+)"] = "inspect %1",
-    ["^age (.+)"] = "age %1", ["^chatage (.+)"] = "chatage %1",
-    ["^joindate (.+)"] = "joindate %1", ["^jd (.+)"] = "joindate %1",
-    ["^chatjoindate (.+)"] = "chatjoindate %1", ["^cjd (.+)"] = "chatjoindate %1",
-    ["^copyname (.+)"] = "copyname %1", ["^copyuser (.+)"] = "copyname %1",
-    ["^userid (.+)"] = "userid %1", ["^id (.+)"] = "userid %1",
-    ["^copyid (.+)"] = "copyid %1", ["^copyuserid (.+)"] = "copyid %1",
-    ["^copyplaceid$"] = "copyplaceid", ["^placeid$"] = "copyplaceid",
-    ["^copygameid$"] = "copygameid", ["^gameid$"] = "copygameid",
-    ["^appearanceid (.+)"] = "appearanceid %1", ["^aid (.+)"] = "appearanceid %1",
-    ["^copyappearanceid (.+)"] = "copyappearanceid %1", ["^caid (.+)"] = "copyappearanceid %1",
-    ["^bang (.+)"] = "bang %1", ["^rape (.+)"] = "bang %1",
-    ["^unbang$"] = "unbang", ["^unrape$"] = "unbang",
-    ["^carpet (.+)"] = "carpet %1", ["^uncarpet$"] = "uncarpet", ["^nocarpet$"] = "uncarpet",
-    ["^friend (.+)"] = "friend %1", ["^unfriend (.+)"] = "unfriend %1",
-    ["^headsit (.+)"] = "headsit %1",
-    ["^walkto (.+)"] = "walkto %1", ["^follow (.+)"] = "walkto %1",
-    ["^pathfindwalkto (.+)"] = "pathfindwalkto %1", ["^pathfindfollow (.+)"] = "pathfindwalkto %1",
-    ["^pathfindwalktowaypoint (.+)"] = "pathfindwalktowaypoint %1", ["^pathfindwalktowp (.+)"] = "pathfindwalktowaypoint %1",
-    ["^unwalkto$"] = "unwalkto", ["^nowalkto$"] = "unwalkto", ["^unfollow$"] = "unwalkto", ["^nofollow$"] = "unwalkto",
-    ["^orbit (.+)"] = "orbit %1", ["^unorbit$"] = "unorbit",
-    ["^stareat (.+)"] = "stareat %1", ["^stare (.+)"] = "stareat %1",
-    ["^unstareat$"] = "unstareat", ["^unstare$"] = "unstareat", ["^nostare$"] = "unstareat", ["^nostareat$"] = "unstareat",
-    ["^listento (.+)"] = "listento %1", ["^unlistento$"] = "unlistento",
-
-    --// ==========================================
-    --// FLING & COMBAT
-    --// ==========================================
-    ["^fling$"] = "fling", ["^unfling$"] = "unfling", ["^nofling$"] = "unfling", ["^togglefling$"] = "togglefling",
-    ["^flyfling$"] = "flyfling", ["^unflyfling$"] = "unflyfling", ["^toggleflyfling$"] = "toggleflyfling",
-    ["^walkfling$"] = "walkfling", ["^unwalkfling$"] = "unwalkfling", ["^nowalkfling$"] = "unwalkfling", ["^togglewalkfling$"] = "togglewalkfling",
-    ["^invisfling$"] = "invisfling",
-    ["^antifling$"] = "antifling", ["^unantifling$"] = "unantifling", ["^toggleantifling$"] = "toggleantifling",
-    ["^handlekill (.+)"] = "handlekill %1", ["^hkill (.+)"] = "handlekill %1",
+    -- Player
+    ["^inspect (.+)"] = "inspect %1", ["^age (.+)"] = "age %1", ["^chatage (.+)"] = "chatage %1", ["^joindate (.+)"] = "joindate %1",
+    ["^copyname (.+)"] = "copyname %1", ["^userid (.+)"] = "userid %1", ["^copyuserid (.+)"] = "copyuserid %1",
+    ["^bang (.+)"] = "bang %1", ["^unbang$"] = "unbang", ["^carpet (.+)"] = "carpet %1", ["^uncarpet$"] = "uncarpet",
+    ["^friend (.+)"] = "friend %1", ["^unfriend (.+)"] = "unfriend %1", ["^headsit (.+)"] = "headsit %1",
+    ["^walkto (.+)"] = "walkto %1", ["^unwalkto$"] = "unwalkto", ["^orbit (.+)"] = "orbit %1", ["^unorbit$"] = "unorbit",
+    ["^stareat (.+)"] = "stareat %1", ["^unstareat$"] = "unstareat",
+    ["^fling$"] = "fling", ["^unfling$"] = "unfling", ["^flyfling$"] = "flyfling", ["^unflyfling$"] = "unflyfling",
+    ["^walkfling$"] = "walkfling", ["^unwalkfling$"] = "unwalkfling", ["^invisfling$"] = "invisfling",
+    ["^kill (.+)"] = "kill %1", ["^loopkill (.+)"] = "loopkill %1", ["^unloopkill$"] = "unloopkill",
     ["^loopoof$"] = "loopoof", ["^unloopoof$"] = "unloopoof",
     ["^hitbox (.+)"] = "hitbox %1", ["^headsize (.+)"] = "headsize %1",
-    ["^reach (%d+)"] = "reach %1", ["^unreach$"] = "unreach", ["^noreach$"] = "unreach",
-    ["^boxreach$"] = "boxreach", ["^unboxreach$"] = "unreach",
+    ["^reset$"] = "reset", ["^respawn$"] = "respawn", ["^refresh$"] = "refresh", ["^god$"] = "god", ["^permadeath$"] = "permadeath",
+    ["^invisible$"] = "invisible", ["^visible$"] = "visible", ["^toolinvisible$"] = "toolinvisible",
+    ["^speed (%d+)$"] = "speed %1", ["^ws (%d+)$"] = "speed %1", ["^loopspeed (%d+)$"] = "loopspeed %1", ["^unloopspeed$"] = "unloopspeed",
+    ["^jumppower (%d+)$"] = "jumppower %1", ["^jp (%d+)$"] = "jumppower %1", ["^loopjumppower (%d+)$"] = "loopjumppower %1", ["^unloopjumppower$"] = "unloopjumppower",
+    ["^sit$"] = "sit", ["^lay$"] = "lay", ["^jump$"] = "jump", ["^infjump$"] = "infjump", ["^uninfjump$"] = "uninfjump",
+    ["^flyjump$"] = "flyjump", ["^unflyjump$"] = "unflyjump", ["^autojump$"] = "autojump", ["^unautojump$"] = "unautojump",
+    ["^stun$"] = "stun", ["^unstun$"] = "unstun", ["^team (.+)"] = "team %1",
+    ["^nobgui$"] = "nobgui", ["^noarms$"] = "noarms", ["^nolegs$"] = "nolegs", ["^nolimbs$"] = "nolimbs", ["^naked$"] = "naked", ["^noface$"] = "noface",
+    ["^blockhead$"] = "blockhead", ["^blockhats$"] = "blockhats", ["^creeper$"] = "creeper",
+    ["^drophats$"] = "drophats", ["^deletehats$"] = "deletehats", ["^hatspin$"] = "hatspin", ["^unhatspin$"] = "unhatspin", ["^clearhats$"] = "clearhats",
+    ["^spin$"] = "spin", ["^unspin$"] = "unspin", ["^split$"] = "split", ["^trip$"] = "trip", ["^jerk$"] = "jerk",
 
-    --// ==========================================
-    --// CHARACTER & BODY
-    --// ==========================================
-    ["^reset$"] = "reset", ["^respawn$"] = "respawn",
-    ["^refresh$"] = "refresh", ["^re$"] = "refresh",
-    ["^god$"] = "god", ["^permadeath$"] = "permadeath",
-    ["^invisible$"] = "invisible", ["^invis$"] = "invisible",
-    ["^visible$"] = "visible", ["^vis$"] = "visible", ["^uninvisible$"] = "visible",
-    ["^toggleinvis$"] = "toggleinvis",
-    ["^toolinvisible$"] = "toolinvisible", ["^toolinvis$"] = "toolinvisible", ["^tinvis$"] = "toolinvisible",
-    ["^strengthen$"] = "strengthen", ["^weaken$"] = "weaken", ["^unweaken$"] = "unweaken", ["^unstrengthen$"] = "unweaken",
-    ["^breakvelocity$"] = "breakvelocity",
-    ["^speed (%d+)$"] = "speed %1", ["^ws (%d+)$"] = "speed %1", ["^walkspeed (%d+)$"] = "speed %1",
-    ["^spoofspeed (%d+)$"] = "spoofspeed %1", ["^spoofws (%d+)$"] = "spoofspeed %1", ["^spoofwalkspeed (%d+)$"] = "spoofspeed %1",
-    ["^loopspeed (%d+)$"] = "loopspeed %1", ["^loopws (%d+)$"] = "loopspeed %1",
-    ["^unloopspeed$"] = "unloopspeed", ["^unloopws$"] = "unloopspeed",
-    ["^jpower (%d+)$"] = "jpower %1", ["^jumppower (%d+)$"] = "jpower %1", ["^jp (%d+)$"] = "jpower %1",
-    ["^spoofjumppower (%d+)$"] = "spoofjumppower %1", ["^spoofjp (%d+)$"] = "spoofjumppower %1",
-    ["^loopjumppower (%d+)$"] = "loopjumppower %1", ["^loopjp (%d+)$"] = "loopjumppower %1", ["^loopjpower (%d+)$"] = "loopjumppower %1",
-    ["^unloopjumppower$"] = "unloopjumppower", ["^unloopjp$"] = "unloopjumppower", ["^unloopjpower$"] = "unloopjumppower",
-    ["^maxslopeangle (%d+)"] = "maxslopeangle %1", ["^msa (%d+)"] = "maxslopeangle %1",
-    ["^gravity (%d+)"] = "gravity %1", ["^grav (%d+)"] = "gravity %1",
-    ["^hipheight (%d+)"] = "hipheight %1", ["^hheight (%d+)"] = "hipheight %1",
-    ["^sit$"] = "sit", ["^lay$"] = "lay", ["^laydown$"] = "lay",
-    ["^sitwalk$"] = "sitwalk", ["^nosit$"] = "nosit", ["^unnosit$"] = "unnosit",
-    ["^jump$"] = "jump",
-    ["^infjump$"] = "infjump", ["^infinitejump$"] = "infjump",
-    ["^uninfjump$"] = "uninfjump", ["^uninfinitejump$"] = "uninfjump", ["^noinfjump$"] = "uninfjump", ["^noinfinitejump$"] = "uninfjump",
-    ["^flyjump$"] = "flyjump", ["^unflyjump$"] = "unflyjump", ["^noflyjump$"] = "unflyjump",
-    ["^autojump$"] = "autojump", ["^ajump$"] = "autojump",
-    ["^unautojump$"] = "unautojump", ["^noautojump$"] = "unautojump", ["^noajump$"] = "unautojump", ["^unajump$"] = "unautojump",
-    ["^edgejump$"] = "edgejump", ["^ejump$"] = "edgejump",
-    ["^unedgejump$"] = "unedgejump", ["^noedgejump$"] = "unedgejump", ["^noejump$"] = "unedgejump", ["^unejump$"] = "unedgejump",
-    ["^stun$"] = "stun", ["^platformstand$"] = "stun",
-    ["^unstun$"] = "unstun", ["^nostun$"] = "unstun", ["^unplatformstand$"] = "unstun", ["^noplatformstand$"] = "unstun",
-    ["^norotate$"] = "norotate", ["^noautorotate$"] = "norotate",
-    ["^unnorotate$"] = "unnorotate", ["^autorotate$"] = "unnorotate",
-    ["^enablestate (.+)"] = "enablestate %1", ["^disablestate (.+)"] = "disablestate %1",
-    ["^team (.+)"] = "team %1",
-    ["^freeze (.+)"] = "freeze %1", ["^fr (.+)"] = "freeze %1",
-    ["^thaw (.+)"] = "thaw %1", ["^unfreeze (.+)"] = "thaw %1", ["^unfr (.+)"] = "thaw %1",
-    ["^anchor$"] = "anchor", ["^unanchor$"] = "unanchor",
+    -- Chat
+    ["^logs$"] = "logs", ["^chatlogs$"] = "chatlogs", ["^chat (.+)"] = "chat %1",
+    ["^spam (.+)"] = "spam %1", ["^unspam$"] = "unspam",
+    ["^whisper (.+)"] = "whisper %1", ["^pmspam (.+)"] = "pmspam %1", ["^unpmspam$"] = "unpmspam",
+    ["^bubblechat$"] = "bubblechat", ["^unbubblechat$"] = "unbubblechat",
 
-    --// ==========================================
-    --// APPEARANCE & BODY PARTS
-    --// ==========================================
-    ["^nobgui$"] = "nobgui", ["^unbgui$"] = "nobgui", ["^nobillboardgui$"] = "nobgui",
-    ["^unbillboardgui$"] = "nobgui", ["^noname$"] = "nobgui", ["^rohg$"] = "nobgui",
-    ["^loopnobgui$"] = "loopnobgui", ["^loopunbgui$"] = "loopnobgui",
-    ["^loopnobillboardgui$"] = "loopnobgui", ["^loopunbillboardgui$"] = "loopnobgui",
-    ["^loopnoname$"] = "loopnobgui", ["^looprohg$"] = "loopnobgui",
-    ["^unloopnobgui$"] = "unloopnobgui", ["^unloopunbgui$"] = "unloopnobgui",
-    ["^unloopnobillboardgui$"] = "unloopnobgui", ["^unloopunbillboardgui$"] = "unloopnobgui",
-    ["^unloopnoname$"] = "unloopnobgui", ["^unlooprohg$"] = "unloopnobgui",
-    ["^nolimbs$"] = "nolimbs", ["^rlimbs$"] = "nolimbs",
-    ["^noarms$"] = "noarms", ["^rarms$"] = "noarms",
-    ["^nolegs$"] = "nolegs", ["^rlegs$"] = "nolegs",
-    ["^naked$"] = "naked", ["^noface$"] = "noface", ["^removeface$"] = "noface",
-    ["^blockhead$"] = "blockhead", ["^blockhats$"] = "blockhats", ["^blocktool$"] = "blocktool",
-    ["^creeper$"] = "creeper",
-    ["^drophats$"] = "drophats", ["^drophat$"] = "drophats",
-    ["^deletehats$"] = "deletehats", ["^nohats$"] = "deletehats", ["^rhats$"] = "deletehats",
-    ["^hatspin$"] = "hatspin", ["^spinhats$"] = "hatspin",
-    ["^unhatspin$"] = "unhatspin", ["^unspinhats$"] = "unhatspin",
-    ["^clearhats$"] = "clearhats", ["^cleanhats$"] = "clearhats",
-    ["^spin$"] = "spin", ["^unspin$"] = "unspin",
-    ["^split$"] = "split", ["^trip$"] = "trip", ["^jerk$"] = "jerk",
-    ["^spasm$"] = "spasm", ["^unspasm$"] = "unspasm", ["^nospasm$"] = "unspasm",
-    ["^headthrow$"] = "headthrow",
-    ["^nilchar$"] = "nilchar", ["^unnilchar$"] = "unnilchar", ["^nonilchar$"] = "unnilchar",
-    ["^noroot$"] = "noroot", ["^removeroot$"] = "noroot", ["^rroot$"] = "noroot",
-    ["^replaceroot$"] = "replaceroot", ["^replacerootpart$"] = "replaceroot",
-    ["^clearcharappearance$"] = "clearcharappearance", ["^clearchar$"] = "clearcharappearance", ["^clrchar$"] = "clearcharappearance",
-    ["^fakeout$"] = "fakeout",
-    ["^scare (.+)"] = "scare %1", ["^spook (.+)"] = "scare %1",
+    -- Workspace
+    ["^btools$"] = "btools", ["^f3x$"] = "f3x", ["^delete (.+)"] = "delete %1",
+    ["^lockworkspace$"] = "lockworkspace", ["^unlockworkspace$"] = "unlockworkspace",
+    ["^gotopart (.+)"] = "gotopart %1", ["^bringpart (.+)"] = "bringpart %1",
+    ["^partpath$"] = "partpath",
+    ["^fireclickdetectors$"] = "fireclickdetectors", ["^firetouchinterests$"] = "firetouchinterests",
+    ["^noclickdetectorlimits$"] = "noclickdetectorlimits",
+    ["^removeterrain$"] = "removeterrain", ["^destroyheight (%d+)"] = "destroyheight %1",
+    ["^antivoid$"] = "antivoid", ["^unantivoid$"] = "unantivoid",
 
-    --// ==========================================
-    --// ANIMATION
-    --// ==========================================
-    ["^animation (.+)"] = "animation %1", ["^anim (.+)"] = "animation %1",
-    ["^emote (.+)"] = "emote %1", ["^em (.+)"] = "emote %1",
-    ["^dance$"] = "dance", ["^undance$"] = "undance", ["^nodance$"] = "undance",
-    ["^noanim$"] = "noanim", ["^reanim$"] = "reanim",
-    ["^animspeed (%d+)"] = "animspeed %1",
-    ["^copyanimation (.+)"] = "copyanimation %1", ["^copyanim (.+)"] = "copyanimation %1", ["^copyemote (.+)"] = "copyanimation %1",
-    ["^copyanimationid (.+)"] = "copyanimationid %1", ["^copyanimid (.+)"] = "copyanimationid %1", ["^copyemoteid (.+)"] = "copyanimationid %1",
-    ["^stopanimations$"] = "stopanimations", ["^stopanims$"] = "stopanimations", ["^stopanim$"] = "stopanimations",
-    ["^refreshanimations$"] = "refreshanimations", ["^refreshanimation$"] = "refreshanimations",
-    ["^refreshanims$"] = "refreshanimations", ["^refreshanim$"] = "refreshanimations",
-    ["^allowcustomanim$"] = "allowcustomanim", ["^allowcustomanimations$"] = "allowcustomanim",
-    ["^unallowcustomanim$"] = "unallowcustomanim", ["^unallowcustomanimations$"] = "unallowcustomanim",
-    ["^loopanimation (.+)"] = "loopanimation %1", ["^loopanim (.+)"] = "loopanimation %1",
-    ["^freezeanims$"] = "freezeanims", ["^unfreezeanims$"] = "unfreezeanims",
+    -- Animation
+    ["^animation (.+)"] = "animation %1", ["^emote (.+)"] = "emote %1", ["^dance$"] = "dance", ["^undance$"] = "undance",
+    ["^spasm$"] = "spasm", ["^unspasm$"] = "unspasm", ["^noanim$"] = "noanim", ["^reanim$"] = "reanim",
+    ["^stopanimations$"] = "stopanimations", ["^copyanimation (.+)"] = "copyanimation %1",
 
-    --// ==========================================
-    --// CHAT & COMMUNICATION
-    --// ==========================================
-    ["^logs$"] = "logs",
-    ["^chatlogs$"] = "chatlogs", ["^clogs$"] = "chatlogs",
-    ["^joinlogs$"] = "joinlogs", ["^jlogs$"] = "joinlogs",
-    ["^chatlogswebhook (.+)"] = "chatlogswebhook %1", ["^logswebhook (.+)"] = "chatlogswebhook %1",
-    ["^antichatlogs$"] = "antichatlogs", ["^antichatlogger$"] = "antichatlogs",
-    ["^chat (.+)"] = "chat %1", ["^say (.+)"] = "chat %1",
-    ["^spam (.+)"] = "spam %1", ["^nospam$"] = "nospam", ["^unspam$"] = "nospam",
-    ["^spamspeed (%d+)"] = "spamspeed %1",
-    ["^whisper (.+)"] = "whisper %1", ["^pm (.+)"] = "whisper %1",
-    ["^pmspam (.+)"] = "pmspam %1", ["^nopmspam$"] = "nopmspam", ["^unpmspam$"] = "nopmspam",
-    ["^bubblechat$"] = "bubblechat", ["^unbubblechat$"] = "unbubblechat", ["^nobubblechat$"] = "unbubblechat",
-    ["^chatwindow$"] = "chatwindow", ["^unchatwindow$"] = "unchatwindow", ["^nochatwindow$"] = "unchatwindow",
+    -- Tools
+    ["^autoclick$"] = "autoclick", ["^unautoclick$"] = "unautoclick", ["^mousesensitivity$"] = "mousesensitivity",
+    ["^tools$"] = "tools", ["^notools$"] = "notools", ["^grabtools$"] = "grabtools", ["^ungrabtools$"] = "ungrabtools",
+    ["^equiptools$"] = "equiptools", ["^unequiptools$"] = "unequiptools", ["^reach (%d+)"] = "reach %1", ["^unreach$"] = "unreach",
+    ["^dupetools (%d+)"] = "dupetools %1", ["^droppabletools$"] = "droppabletools", ["^droptools$"] = "droptools",
 
-    --// ==========================================
-    --// TOOLS & ITEMS
-    --// ==========================================
-    ["^tools$"] = "tools", ["^gears$"] = "tools",
-    ["^notools$"] = "notools", ["^rtools$"] = "notools", ["^clrtools$"] = "notools",
-    ["^removetools$"] = "notools", ["^deletetools$"] = "notools", ["^dtools$"] = "notools",
-    ["^deleteselectedtool$"] = "deleteselectedtool", ["^dst$"] = "deleteselectedtool",
-    ["^grabtools$"] = "grabtools", ["^nograbtools$"] = "nograbtools", ["^ungrabtools$"] = "nograbtools",
-    ["^removespecifictool (.+)"] = "removespecifictool %1",
-    ["^unremovespecifictool (.+)"] = "unremovespecifictool %1",
-    ["^clearremovespecifictool$"] = "clearremovespecifictool",
-    ["^equiptools$"] = "equiptools", ["^unequiptools$"] = "unequiptools",
-    ["^copytools (.+)"] = "copytools %1",
-    ["^dupetools (%d+)"] = "dupetools %1", ["^clonetools (%d+)"] = "dupetools %1",
-    ["^droppabletools$"] = "droppabletools",
-    ["^droptools$"] = "droptools", ["^droptool$"] = "droptools",
-    ["^autoclick$"] = "autoclick", ["^unautoclick$"] = "unautoclick", ["^noautoclick$"] = "unautoclick",
-    ["^mousesensitivity (%d+)"] = "mousesensitivity %1", ["^ms (%d+)"] = "mousesensitivity %1",
-    ["^grippos (.+)"] = "grippos %1",
-    ["^usetools (%d+)"] = "usetools %1",
-
-    --// ==========================================
-    --// WORKSPACE & PARTS
-    --// ==========================================
-    ["^btools$"] = "btools", ["^f3x$"] = "f3x", ["^fex$"] = "f3x",
-    ["^delete (.+)"] = "delete %1", ["^remove (.+)"] = "delete %1",
-    ["^deleteclass (.+)"] = "deleteclass %1", ["^removeclass (.+)"] = "deleteclass %1",
-    ["^deleteclassname (.+)"] = "deleteclass %1", ["^removeclassname (.+)"] = "deleteclass %1", ["^dc (.+)"] = "deleteclass %1",
-    ["^chardelete (.+)"] = "chardelete %1", ["^charremove (.+)"] = "chardelete %1", ["^cd (.+)"] = "chardelete %1",
-    ["^chardeleteclass (.+)"] = "chardeleteclass %1", ["^charremoveclass (.+)"] = "chardeleteclass %1",
-    ["^chardeleteclassname (.+)"] = "chardeleteclass %1", ["^charremoveclassname (.+)"] = "chardeleteclass %1", ["^cdc (.+)"] = "chardeleteclass %1",
-    ["^deletevelocity$"] = "deletevelocity", ["^dv$"] = "deletevelocity", ["^removevelocity$"] = "deletevelocity", ["^removeforces$"] = "deletevelocity",
-    ["^deleteinvisparts$"] = "deleteinvisparts", ["^deleteinvisibleparts$"] = "deleteinvisparts", ["^dip$"] = "deleteinvisparts",
-    ["^invisibleparts$"] = "invisibleparts", ["^invisparts$"] = "invisibleparts",
-    ["^uninvisibleparts$"] = "uninvisibleparts", ["^uninvisparts$"] = "uninvisibleparts",
-    ["^lockws$"] = "lockws", ["^lockworkspace$"] = "lockws",
-    ["^unlockws$"] = "unlockws", ["^unlockworkspace$"] = "unlockws",
-    ["^gotopart (.+)"] = "gotopart %1", ["^topart (.+)"] = "gotopart %1",
-    ["^tweengotopart (.+)"] = "tweengotopart %1", ["^tgotopart (.+)"] = "tweengotopart %1", ["^ttopart (.+)"] = "tweengotopart %1",
-    ["^gotopartclass (.+)"] = "gotopartclass %1", ["^gpc (.+)"] = "gotopartclass %1",
-    ["^tweengotopartclass (.+)"] = "tweengotopartclass %1", ["^tgpc (.+)"] = "tweengotopartclass %1",
-    ["^gotomodel (.+)"] = "gotomodel %1", ["^tomodel (.+)"] = "gotomodel %1",
-    ["^tweengotomodel (.+)"] = "tweengotomodel %1", ["^tgotomodel (.+)"] = "tweengotomodel %1", ["^ttomodel (.+)"] = "tweengotomodel %1",
-    ["^gotopartdelay (%d+)"] = "gotopartdelay %1",
-    ["^bringpart (.+)"] = "bringpart %1",
-    ["^bringpartclass (.+)"] = "bringpartclass %1", ["^bpc (.+)"] = "bringpartclass %1",
-    ["^partpath$"] = "partpath", ["^partname$"] = "partpath",
-    ["^clickdelete$"] = "clickdelete",
-    ["^noclickdetectorlimits$"] = "noclickdetectorlimits", ["^nocdlimits$"] = "noclickdetectorlimits", ["^removecdlimits$"] = "noclickdetectorlimits",
-    ["^fireclickdetectors$"] = "fireclickdetectors", ["^firecd$"] = "fireclickdetectors", ["^firecds$"] = "fireclickdetectors",
-    ["^noproximitypromptlimits$"] = "noproximitypromptlimits", ["^nopplimits$"] = "noproximitypromptlimits", ["^removepplimits$"] = "noproximitypromptlimits",
-    ["^fireproximityprompts$"] = "fireproximityprompts", ["^firepp$"] = "fireproximityprompts",
-    ["^instantproximityprompts$"] = "instantproximityprompts", ["^instantpp$"] = "instantproximityprompts",
-    ["^uninstantproximityprompts$"] = "uninstantproximityprompts", ["^uninstantpp$"] = "uninstantproximityprompts",
-    ["^touchinterests (.+)"] = "touchinterests %1", ["^touchinterest (.+)"] = "touchinterests %1",
-    ["^firetouchinterests (.+)"] = "touchinterests %1", ["^firetouchinterest (.+)"] = "touchinterests %1",
-    ["^removeterrain$"] = "removeterrain", ["^rterrain$"] = "removeterrain", ["^noterrain$"] = "removeterrain",
-    ["^clearnilinstances$"] = "clearnilinstances", ["^nonilinstances$"] = "clearnilinstances", ["^cni$"] = "clearnilinstances",
-    ["^destroyheight (%d+)"] = "destroyheight %1", ["^dh (%d+)"] = "destroyheight %1",
-    ["^antivoid$"] = "antivoid", ["^unantivoid$"] = "unantivoid", ["^noantivoid$"] = "unantivoid",
-    ["^freezeunanchored$"] = "freezeunanchored", ["^freezeua$"] = "freezeunanchored",
-    ["^thawunanchored$"] = "thawunanchored", ["^thawua$"] = "thawunanchored",
-    ["^unfreezeunanchored$"] = "thawunanchored", ["^unfreezeua$"] = "thawunanchored",
-    ["^tpunanchored (.+)"] = "tpunanchored %1", ["^tpua (.+)"] = "tpunanchored %1",
-
-    --// ==========================================
-    --// AUDIO & BOOMBOX
-    --// ==========================================
-    ["^muteboombox$"] = "muteboombox", ["^unmuteboombox$"] = "unmuteboombox",
-    ["^muteallvoices$"] = "muteallvoices", ["^muteallvcs$"] = "muteallvoices",
-    ["^unmuteallvoices$"] = "unmuteallvoices", ["^unmuteallvcs$"] = "unmuteallvoices",
-    ["^mutevc (.+)"] = "mutevc %1", ["^unmutevc (.+)"] = "unmutevc %1",
-    ["^phonebook (.+)"] = "phonebook %1", ["^call (.+)"] = "phonebook %1",
-
-    --// ==========================================
-    --// SERVER & CONNECTION
-    --// ==========================================
-    ["^serverinfo$"] = "serverinfo", ["^info$"] = "serverinfo", ["^sinfo$"] = "serverinfo",
-    ["^jobid$"] = "jobid", ["^notifyjobid$"] = "notifyjobid",
-    ["^notifyping$"] = "notifyping", ["^ping$"] = "notifyping",
-    ["^rejoin$"] = "rejoin", ["^rj$"] = "rejoin",
-    ["^autorejoin$"] = "autorejoin", ["^autorj$"] = "autorejoin",
-    ["^serverhop$"] = "serverhop", ["^shop$"] = "serverhop",
-    ["^gametp (.+)"] = "gametp %1", ["^gameteleport (.+)"] = "gametp %1",
-    ["^exit$"] = "exit",
-
-    --// ==========================================
-    --// ROLEWATCH & STAFFWATCH
-    --// ==========================================
-    ["^rolewatch (.+)"] = "rolewatch %1",
-    ["^rolewatchstop$"] = "rolewatchstop",
-    ["^rolewatchleave$"] = "rolewatchleave", ["^unrolewatch$"] = "rolewatchleave",
-    ["^staffwatch$"] = "staffwatch", ["^unstaffwatch$"] = "unstaffwatch",
-
-    --// ==========================================
-    --// INPUT & CONTROLS
-    --// ==========================================
-    ["^alignmentkeys$"] = "alignmentkeys", ["^unalignmentkeys$"] = "unalignmentkeys", ["^noalignmentkeys$"] = "unalignmentkeys",
-    ["^ctrllock$"] = "ctrllock", ["^unctrllock$"] = "unctrllock",
-    ["^autokeypress (.+)"] = "autokeypress %1", ["^keypress (.+)"] = "autokeypress %1",
-    ["^unautokeypress$"] = "unautokeypress", ["^noautokeypress$"] = "unautokeypress",
-    ["^unkeypress$"] = "unautokeypress", ["^nokeypress$"] = "unautokeypress"
+    -- Server
+    ["^serverinfo$"] = "serverinfo", ["^jobid$"] = "jobid", ["^rejoin$"] = "rejoin", ["^autorejoin$"] = "autorejoin",
+    ["^serverhop$"] = "serverhop", ["^gametp (.+)"] = "gametp %1", ["^exit$"] = "exit"
 }
 
 local Priority = {
-    -- Movement (highest priority)
-    fly = 100, unfly = 100, noclip = 100, clip = 100, vfly = 100,
-    cframefly = 100, float = 100, swim = 100,
-    -- Speed/Jump
-    speed = 95, ws = 95, jpower = 95, jp = 95, walkspeed = 95,
-    -- Teleport
-    ["goto"] = 90, waypoint = 90, tweengoto = 90, vehiclegoto = 90,
-    -- Combat
-    fling = 80, invisfling = 80, flyfling = 80, walkfling = 80, handlekill = 80,
-    -- Visuals
-    esp = 75, noesp = 75, xray = 75, view = 75, chams = 75, freecam = 75,
-    -- Tools
-    btools = 70, f3x = 70, explorer = 70, dex = 70,
-    -- System
-    rejoin = 50, serverhop = 50, console = 50, reset = 50, refresh = 50
+    fly = 100, unfly = 100, noclip = 100, clip = 100,
+    speed = 95, ws = 95, jumppower = 95, jp = 95,
+    ["goto"] = 90, tp = 90, bring = 90,
+    kill = 80, fling = 80, loopkill = 80,
+    esp = 75, noesp = 75, xray = 75, spectate = 75,
+    btools = 70, f3x = 70, dex = 70,
+    rejoin = 50, serverhop = 50, console = 50, reset = 50
 }
 
 local TargetTriggers = {
-    "fling", "goto", "view", "spectate", "bang", "freeze", "thaw",
-    "follow", "walkto", "headsit", "orbit", "stareat", "carpet",
-    "loopgoto", "loopbring", "clientbring", "scare", "handlekill"
+    "kill", "fling", "goto", "tp", "spectate", "view", "watch",
+    "bring", "attach", "loopkill", "bang", "freeze", "follow", "walkto", "headsit"
 }
 
 --// ============================================
@@ -3624,7 +2664,7 @@ local function resolveTarget(cmdString)
 end
 
 --// ============================================
---// 14. BRIDGE EXECUTION (V1.3 BridgeAPI Integration)
+--// 14. BRIDGE EXECUTION
 --// ============================================
 local function executeBridge(text, source)
     -- Validate input
@@ -3648,10 +2688,6 @@ local function executeBridge(text, source)
         updateStatus("Error: Bridge Interface Invalid", Colors.Red)
         return
     end
-    
-    -- V1.3: Use BridgeAPI for execution when available (provides crash protection and feedback loop)
-    -- BridgeAPI is always available, HeadlessModeActive only affects IY GUI rendering
-    local useBridgeAPI = BridgeAPI and BridgeAPI.Execute
     
     local cleanText = trim(text)
     
@@ -3726,7 +2762,7 @@ local function executeBridge(text, source)
             return
         end
         
-        -- Chain Execution (V1.3: Enhanced with BridgeAPI and Crash Protection)
+        -- Chain Execution
         local commands = cleanText:split(";")
         
         task.spawn(function()
@@ -3745,23 +2781,7 @@ local function executeBridge(text, source)
                             updateStatus(prefix .. "Exec: " .. finalCmd, Colors.Green)
                         end
                         
-                        -- V1.3: Use BridgeAPI.Execute for headless mode (enables feedback loop)
-                        if useBridgeAPI then
-                            local success, execErr = BridgeAPI.Execute(finalCmd)
-                            if not success then
-                                updateStatus("Exec Error: " .. (execErr or "Unknown"), Colors.Red)
-                            end
-                        else
-                            -- Standard execution with crash protection
-                            local success, execErr = pcall(function()
-                                IY_Interface.Exec(finalCmd)
-                            end)
-                            if not success then
-                                warn("SIY: Command execution error - " .. tostring(execErr))
-                                updateStatus("Exec Error: " .. tostring(execErr), Colors.Red)
-                            end
-                        end
-                        
+                        IY_Interface.Exec(finalCmd)
                         if #commands > 1 then task.wait(0.1) end
                     else
                         updateStatus("Error: " .. (err or "Invalid Cmd"), Colors.Red)
@@ -4415,12 +3435,6 @@ local function cleanup()
     -- Save cache before cleanup
     pcall(saveCache)
     
-    -- Stop feedback loop (V1.3 Headless Engine)
-    stopFeedbackLoop()
-    
-    -- Clear output buffer (V1.3 Headless Engine)
-    clearOutput()
-    
     -- Stop animations and persistent tasks
     stopGlowAnimation()
     cancelPersistentTasks()
@@ -4451,7 +3465,6 @@ local function cleanup()
 
     BridgeConnected = false
     IY_Interface = nil
-    HeadlessModeActive = false
     modeDropdownOpen = false
     quickActionsOpen = false
     IS_CHAT_MODE = false
@@ -4460,7 +3473,6 @@ local function cleanup()
     ChatMessageCount = 0
     dropdownFocusCheckId = 0
     setNamespaceValue("Ready", false)
-    setNamespaceValue("BridgeAPI", nil)
 end
 
 -- Handle player leaving
@@ -4479,49 +3491,5 @@ end)
 setNamespaceValue("Cleanup", cleanup)
 setNamespaceValue("ClearChat", clearChatLog)
 setNamespaceValue("GetBridgeStatus", getBridgeStatus)
-setNamespaceValue("BridgeAPI", BridgeAPI)
-setNamespaceValue("HeadlessMode", HeadlessModeActive)
-setNamespaceValue("Version", "1.3.1")
+setNamespaceValue("Version", "1.2.3")
 setNamespaceValue("Ready", true)
-
---[[
-    V1.3.1 HEADLESS ENGINE API REFERENCE
-    =====================================
-    
-    BridgeAPI.Execute(cmd: string) -> (boolean, string?)
-        Execute a command through the bridge. Returns success status and optional error message.
-        Example: local success, err = BridgeAPI.Execute(";fly")
-    
-    BridgeAPI.GetOutput() -> table?
-        Get the latest output entry from the feedback loop.
-        Returns: { Title: string, Text: string, Timestamp: number, Index: number } or nil
-    
-    BridgeAPI.GetAllOutput() -> {table}
-        Get all output entries from the buffer.
-    
-    BridgeAPI.ClearOutput()
-        Clear the output buffer.
-    
-    BridgeAPI.GetStatus() -> table
-        Get the current bridge status.
-        Returns: { connected: boolean, attempts: number, interface: boolean, headless: boolean, outputCount: number, lastOutputIndex: number }
-    
-    BridgeAPI.StartFeedbackLoop(callback: ((table) -> ())?)
-        Start the feedback loop with an optional callback for new output entries.
-    
-    BridgeAPI.StopFeedbackLoop()
-        Stop the feedback loop.
-    
-    BridgeAPI.HotSwap() -> (boolean, string?)
-        Hot-swap the IYsource.lua file. Returns success status and message.
-    
-    CONFIG OPTIONS (V1.3 Headless Engine):
-    - HeadlessMode: boolean - Enable headless mode (no GUI rendering)
-    - IYSourceURL: string - URL for dynamic IYsource loading
-    - IYSourceCacheFile: string - Local cache file for IYsource
-    - IYSourceCacheExpiry: number - Cache expiry in seconds
-    - EnableHotSwap: boolean - Allow updating IYsource independently
-    - OutputBufferSize: number - Maximum entries in output buffer
-    - FeedbackLoopInterval: number - Interval for feedback loop polling
-    - ConcurrencyCleanupOnLoad: boolean - Auto-cleanup existing instances on load
-]]
