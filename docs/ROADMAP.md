@@ -29,38 +29,7 @@ This document outlines the planned technical and user experience improvements fo
 
 ---
 
-## Version 1.3.0 - The Headless Engine (In Progress)
-
-Version 1.3 represents a fundamental architectural shift, deconstructing the monolithic script into a **Client-Server model** to enable headless execution and robust AI feedback loops.
-
-### 🏗️ Core Architecture: The "Headless" Engine
-
-#### 1. The Injection Layer (The "Shim")
-Trick the backend into running without a GUI to enable pure AI control.
-- **Goal:** Decouple logic from presentation.
-- **Key Tasks:**
-  - [ ] **Dynamic Loading**: Fetch `IYsource.lua` content via `game:HttpGet`.
-  - [ ] **Virtualization Shim**: Inject a mocking layer before compilation.
-  - [ ] **Mock GUI**: Create dummy tables for UI elements (`Holder`, `Title`, etc.) that accept standard calls but do nothing.
-  - [ ] **Metatable Protection**: Redirect `Instance.new` calls to dummy objects.
-
-#### 2. Logic Hardening (The "Feedback Loop")
-Ensure the AI knows exactly what happened after it issues a command.
-- **Goal:** Implement a closed-loop communication system.
-- **Key Tasks:**
-  - [ ] **Closed-Loop Feedback**: Write (AI command) -> Read (`_G.IY_Output`) -> Report (AI Context).
-  - [ ] **IO Redirection**: Overwrite `notify()` to write to shared tables instead of showing UI notifications.
-  - [ ] **Crash Protection**: Wrap execution in `pcall` to catch and report backend errors safely.
-  - [ ] **Concurrency Management**: Automatic cleanup of existing backend instances to prevent leaks.
-
-#### 3. Standardization (The "Service Architecture")
-Clean code structure for easy maintenance and updates.
-- **Goal:** Implement a formal service-oriented pattern.
-- **Key Tasks:**
-  - [ ] **Service Pattern Separation**: Organize into `[CONFIG]`, `[SERVICES]`, and `[CONTROLLER]`.
-  - [ ] **Unified API Contract**: Formalize `BridgeAPI.Execute(cmd)` and `BridgeAPI.GetOutput()`.
-  - [ ] **Type Checking**: Add Luau `--!strict` definitions for robust development.
-  - [ ] **Hot-Swap Support**: Allow updating the backend independently of the AI script.
+## Version 1.3.0 - TBA
 
 ---
 
