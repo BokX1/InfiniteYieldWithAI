@@ -6,11 +6,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ---
 
-## [1.2.2] - 2026-01-03
+## [1.2.2] - 2026-01-05
 
 ### Added
 | Feature | Description |
 |---------|-------------|
+| **Toggle Quick Actions** | Quick action buttons now work as keybinds—press once to activate, press again to deactivate (Fly, Noclip, ESP, Speed, Jump, Invisible) |
+| **Visual State Feedback** | Active quick actions show highlighted state with brighter colors and reduced transparency |
+| **Comprehensive FastMap** | Updated with 400+ commands and all aliases extracted from IYsource.lua for complete local execution coverage |
+| **Command Accuracy** | Fixed incorrect command mappings and added missing aliases (support, creator, antiafk, etc.) |
 | **ChatGPT-like CHAT Mode UI** | Complete redesign of CHAT mode with modern message bubbles, role indicators (👤 You / 🤖 Assistant), and timestamps |
 | **Memory Indicator** | Visual indicator showing conversation context usage (Memory: X/6) with color-coded status |
 | **Chat Placeholder** | Helpful placeholder text when chat is empty, guiding users to start conversations |
@@ -39,7 +43,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 | **Fuzzy Targeting** | Levenshtein distance matching for player names (e.g., "valk" → "Valkorym") |
 | **Processing Indicator** | Animated glowing aura pulses while AI processes requests |
 | **Command Preview** | Status bar shows AI-generated command before execution |
-| **Quick Actions** | Mobile one-tap grid: Fly, Speed, ESP, noclip, Jump, Teleport, Invisible, Reset, Anti-Lag |
+| **Quick Actions** | Mobile one-tap grid with toggle functionality: Fly, Speed, ESP, Noclip, Jump, Teleport, Invisible, Reset, Anti-Lag |
 | **Cache Management** | `clearcache` wipes learned commands; `cacheinfo` shows statistics |
 | **Interactive Tutorial** | 8-step onboarding covering all features before GUI unlock |
 | **Help Button** | Reopen tutorial anytime via "?" button in main GUI |

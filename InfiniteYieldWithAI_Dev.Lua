@@ -1506,16 +1506,18 @@ createInstance("UIPadding", {
     Parent = QuickActionsFrame
 })
 
+-- Quick Actions with toggle state tracking
+local QuickActionStates = {}
 local QuickActions = {
-    {text = "Fly", prompt = "fly", color = Colors.Blue},
-    {text = "Speed", prompt = "make me fast", color = Colors.Green},
-    {text = "ESP", prompt = "esp", color = Colors.Purple},
-    {text = "Noclip", prompt = "noclip", color = Colors.Orange},
-    {text = "Jump", prompt = "infinite jump", color = Colors.Green},
-    {text = "Teleport", prompt = "goto random", color = Colors.Blue},
-    {text = "Invisible", prompt = "make me invisible", color = Colors.Purple},
-    {text = "Reset", prompt = "reset", color = Colors.TextDim},
-    {text = "Anti-Lag", prompt = "antilag", color = Colors.Orange},
+    {text = "Fly", onCmd = "fly", offCmd = "unfly", color = Colors.Blue, toggleable = true},
+    {text = "Speed", onCmd = "speed 100", offCmd = "speed 16", color = Colors.Green, toggleable = true},
+    {text = "ESP", onCmd = "esp", offCmd = "noesp", color = Colors.Purple, toggleable = true},
+    {text = "Noclip", onCmd = "noclip", offCmd = "clip", color = Colors.Orange, toggleable = true},
+    {text = "Jump", onCmd = "infjump", offCmd = "uninfjump", color = Colors.Green, toggleable = true},
+    {text = "Teleport", onCmd = "goto random", offCmd = nil, color = Colors.Blue, toggleable = false},
+    {text = "Invisible", onCmd = "invisible", offCmd = "visible", color = Colors.Purple, toggleable = true},
+    {text = "Reset", onCmd = "reset", offCmd = nil, color = Colors.TextDim, toggleable = false},
+    {text = "Anti-Lag", onCmd = "antilag", offCmd = nil, color = Colors.Orange, toggleable = false},
 }
 
 for i, action in ipairs(QuickActions) do
@@ -1533,17 +1535,47 @@ for i, action in ipairs(QuickActions) do
     })
     addCorner(btn, 4)
     
-    -- Hover effect
+    -- Initialize state before setting up events
+    QuickActionStates[action.text] = false
+    
+    -- Helper function to update button visual based on state
+    local function updateButtonVisual(isHovered)
+        local isActive = QuickActionStates[action.text]
+        if action.toggleable and isActive then
+            -- Active toggle state - always show highlighted
+            btn.BackgroundTransparency = 0.2
+            btn.TextColor3 = Color3.new(1, 1, 1)
+        elseif isHovered then
+            -- Hover state (not active)
+            btn.BackgroundTransparency = 0.3
+            btn.TextColor3 = Color3.new(1, 1, 1)
+        else
+            -- Default state
+            btn.BackgroundTransparency = 0.7
+            btn.TextColor3 = Colors.Text
+        end
+    end
+    
+    -- Track hover state
+    local isHovering = false
+    
+    -- Hover effect - respects toggle state
     ConnectPersistent(btn.MouseEnter:Connect(function()
+        isHovering = true
         TweenService:Create(btn, TweenInfo.new(0.1), {
-            BackgroundTransparency = 0.3,
+            BackgroundTransparency = QuickActionStates[action.text] and 0.1 or 0.3,
             TextColor3 = Color3.new(1, 1, 1)
         }):Play()
     end))
+    
     ConnectPersistent(btn.MouseLeave:Connect(function()
+        isHovering = false
+        -- Respect toggle state when leaving
+        local targetTransparency = QuickActionStates[action.text] and 0.2 or 0.7
+        local targetColor = QuickActionStates[action.text] and Color3.new(1, 1, 1) or Colors.Text
         TweenService:Create(btn, TweenInfo.new(0.1), {
-            BackgroundTransparency = 0.7,
-            TextColor3 = Colors.Text
+            BackgroundTransparency = targetTransparency,
+            TextColor3 = targetColor
         }):Play()
     end))
     
@@ -1553,17 +1585,43 @@ for i, action in ipairs(QuickActions) do
             BackgroundTransparency = 0
         }):Play()
     end))
+    
     ConnectPersistent(btn.MouseButton1Up:Connect(function()
+        -- Return to appropriate state after press
+        local targetTransparency = QuickActionStates[action.text] and 0.2 or 0.3
         TweenService:Create(btn, TweenInfo.new(0.1), {
-            BackgroundTransparency = 0.3
+            BackgroundTransparency = targetTransparency
         }):Play()
     end))
     
     ConnectPersistent(btn.MouseButton1Click:Connect(function()
-        InputBox.Text = action.prompt
-        InputBox:CaptureFocus()
-        task.wait(0.1)
-        InputBox:ReleaseFocus(true)
+        if action.toggleable then
+            -- Toggle state
+            local isActive = QuickActionStates[action.text]
+            QuickActionStates[action.text] = not isActive
+            
+            -- Execute appropriate command
+            local cmd = isActive and action.offCmd or action.onCmd
+            if cmd then
+                InputBox.Text = cmd
+                InputBox:CaptureFocus()
+                task.wait(0.1)
+                InputBox:ReleaseFocus(true)
+            end
+            
+            -- Visual feedback for toggle state (immediate update)
+            local newIsActive = QuickActionStates[action.text]
+            local targetTransparency = newIsActive and 0.2 or (isHovering and 0.3 or 0.7)
+            local targetColor = newIsActive and Color3.new(1, 1, 1) or (isHovering and Color3.new(1, 1, 1) or Colors.Text)
+            btn.BackgroundTransparency = targetTransparency
+            btn.TextColor3 = targetColor
+        else
+            -- Non-toggleable actions (one-time execution)
+            InputBox.Text = action.onCmd
+            InputBox:CaptureFocus()
+            task.wait(0.1)
+            InputBox:ReleaseFocus(true)
+        end
     end))
 end
 
@@ -2193,133 +2251,396 @@ local ToggleMap = {
     anim = "noanim", noanim = "anim"
 }
 
+-- FastMap: Comprehensive command mapping with all IY commands and aliases
+-- Updated: v1.2.2 - Extracted from IYsource.lua with 400+ commands
 local FastMap = {
     -- System & Aliases
     ["^help$"] = "help", ["^cmds$"] = "help", ["^commands$"] = "help",
     ["^clearcache$"] = "clearcache", ["^cacheinfo$"] = "cacheinfo",
-    
+    ["^bind (.+)"] = "bind %1", ["^unbind (.+)"] = "unbind %1",
+    ["^addalias (.+)"] = "addalias %1", ["^removealias (.+)"] = "removealias %1", ["^clraliases$"] = "clraliases",
+    ["^addplugin (.+)"] = "addplugin %1", ["^removeplugin (.+)"] = "removeplugin %1", ["^deleteplugin (.+)"] = "removeplugin %1",
+    ["^reloadplugin (.+)"] = "reloadplugin %1", ["^addallplugins$"] = "addallplugins", ["^loadallplugins$"] = "addallplugins",
+    ["^breakloops$"] = "breakloops", ["^break$"] = "breakloops", ["^removecmd (.+)"] = "removecmd %1", ["^deletecmd (.+)"] = "removecmd %1",
+
     -- Waypoint Teleport
-    ["^gotowp (.+)"] = "gotowp %1", ["^gwp (.+)"] = "gotowp %1", ["^wpgoto (.+)"] = "gotowp %1",
-    ["^swp (.+)"] = "setwaypoint %1", ["^savewp (.+)"] = "setwaypoint %1",
-    
-    ["^bind (%w+) (.+)"] = "bind %1 %2", ["^unbind (%w+)"] = "unbind %1",
-    ["^addalias (.+) (.+)"] = "addalias %1 %2", ["^removealias (.+)"] = "removealias %1", ["^clraliases$"] = "clraliases",
-    ["^addplugin (.+)"] = "addplugin %1", ["^removeplugin (.+)"] = "removeplugin %1",
-    ["^reloadplugin (.+)"] = "reloadplugin %1", ["^addallplugins$"] = "addallplugins",
-    ["^breakloops$"] = "breakloops", ["^removecmd (.+)"] = "removecmd %1",
+    ["^gotowp (.+)"] = "gotowp %1", ["^gwp (.+)"] = "gotowp %1",
+    ["^swp (.+)"] = "setwaypoint %1", ["^savewp (.+)"] = "setwaypoint %1", ["^setwp (.+)"] = "setwaypoint %1",
+    ["^spos (.+)"] = "setwaypoint %1", ["^savepos (.+)"] = "setwaypoint %1", ["^saveposition (.+)"] = "setwaypoint %1",
+    ["^waypoints$"] = "waypoints", ["^positions$"] = "waypoints",
+    ["^showwaypoints$"] = "showwaypoints", ["^showwp$"] = "showwaypoints", ["^showwps$"] = "showwaypoints",
+    ["^hidewaypoints$"] = "hidewaypoints", ["^hidewp$"] = "hidewaypoints", ["^hidewps$"] = "hidewaypoints",
+    ["^waypoint (.+)"] = "waypoint %1", ["^wp (.+)"] = "waypoint %1", ["^lpos (.+)"] = "waypoint %1",
+    ["^loadpos (.+)"] = "waypoint %1", ["^loadposition (.+)"] = "waypoint %1",
+    ["^tweenwaypoint (.+)"] = "tweenwaypoint %1", ["^twp (.+)"] = "tweenwaypoint %1",
+    ["^walktowaypoint (.+)"] = "walktowaypoint %1", ["^wtwp (.+)"] = "walktowaypoint %1",
+    ["^deletewaypoint (.+)"] = "deletewaypoint %1", ["^dwp (.+)"] = "deletewaypoint %1",
+    ["^deletepos (.+)"] = "deletewaypoint %1", ["^deleteposition (.+)"] = "deletewaypoint %1", ["^dpos (.+)"] = "deletewaypoint %1",
+    ["^clearwaypoints$"] = "clearwaypoints", ["^cwp$"] = "clearwaypoints", ["^clearpos$"] = "clearwaypoints",
+    ["^clearpositions$"] = "clearwaypoints", ["^cpos$"] = "clearwaypoints",
+    ["^waypointpos (.+)"] = "waypointpos %1", ["^wpp (.+)"] = "waypointpos %1",
+    ["^cleargamewaypoints$"] = "cleargamewaypoints", ["^cgamewp$"] = "cleargamewaypoints",
 
     -- Utility
-    ["^discord$"] = "discord", ["^guiscale (%d+)"] = "guiscale %1",
+    ["^discord$"] = "discord", ["^support$"] = "discord",
+    ["^guiscale (.+)"] = "guiscale %1",
     ["^console$"] = "console", ["^oldconsole$"] = "oldconsole",
-    ["^explorer$"] = "explorer", ["^dex$"] = "explorer", ["^olddex$"] = "olddex",
-    ["^remotespy$"] = "remotespy", ["^rspy$"] = "remotespy", ["^audiologger$"] = "audiologger",
-    ["^antiidle$"] = "antiidle", ["^datalimit (%d+)"] = "datalimit %1", ["^replicationlag (%d+)"] = "replicationlag %1",
-    ["^creatorid$"] = "creatorid", ["^copycreatorid$"] = "copycreatorid", ["^setcreatorid$"] = "setcreatorid",
-    ["^noprompts$"] = "noprompts", ["^showprompts$"] = "showprompts",
+    ["^explorer$"] = "explorer", ["^dex$"] = "explorer", ["^olddex$"] = "olddex", ["^odex$"] = "olddex",
+    ["^remotespy$"] = "remotespy", ["^rspy$"] = "remotespy",
+    ["^audiologger$"] = "audiologger", ["^alogger$"] = "audiologger",
+    ["^antiidle$"] = "antiidle", ["^antiafk$"] = "antiidle",
+    ["^datalimit (%d+)"] = "datalimit %1",
+    ["^replicationlag (%d+)"] = "replicationlag %1", ["^backtrack (%d+)"] = "replicationlag %1",
+    ["^creatorid$"] = "creatorid", ["^creator$"] = "creatorid",
+    ["^copycreatorid$"] = "copycreatorid", ["^copycreator$"] = "copycreatorid",
+    ["^setcreatorid$"] = "setcreatorid", ["^setcreator$"] = "setcreatorid",
+    ["^noprompts$"] = "noprompts", ["^nopurchaseprompts$"] = "noprompts",
+    ["^showprompts$"] = "showprompts", ["^showpurchaseprompts$"] = "showprompts",
+    ["^promptr6$"] = "promptr6", ["^promptr15$"] = "promptr15",
     ["^enable (.+)"] = "enable %1", ["^disable (.+)"] = "disable %1",
-    ["^showguis$"] = "showguis", ["^unshowguis$"] = "unshowguis", ["^hideguis$"] = "hideguis", ["^unhideguis$"] = "unhideguis",
-    ["^guidelete$"] = "guidelete", ["^unguidelete$"] = "unguidelete",
-    ["^hideiy$"] = "hideiy", ["^showiy$"] = "showiy", ["^keepiy$"] = "keepiy", ["^unkeepiy$"] = "unkeepiy", ["^togglekeepiy$"] = "togglekeepiy",
-    ["^savegame$"] = "savegame", ["^clearerror$"] = "clearerror",
-    ["^clientantikick$"] = "clientantikick", ["^clientantiteleport$"] = "clientantiteleport",
-    ["^allowrejoin$"] = "allowrejoin", ["^cancelteleport$"] = "cancelteleport",
-    ["^volume (%d+)"] = "volume %1", ["^antilag$"] = "antilag",
-    ["^record$"] = "record", ["^screenshot$"] = "screenshot", ["^togglefullscreen$"] = "togglefullscreen",
-    ["^notify (.+)"] = "notify %1", ["^lastcommand$"] = "lastcommand", ["^setfpscap (%d+)"] = "setfpscap %1",
+    ["^showguis$"] = "showguis", ["^unshowguis$"] = "unshowguis",
+    ["^hideguis$"] = "hideguis", ["^unhideguis$"] = "unhideguis",
+    ["^guidelete$"] = "guidelete", ["^unguidelete$"] = "unguidelete", ["^noguidelete$"] = "unguidelete",
+    ["^hideiy$"] = "hideiy", ["^showiy$"] = "showiy", ["^unhideiy$"] = "showiy",
+    ["^keepiy$"] = "keepiy", ["^unkeepiy$"] = "unkeepiy", ["^togglekeepiy$"] = "togglekeepiy",
+    ["^savegame$"] = "savegame", ["^saveplace$"] = "savegame",
+    ["^clearerror$"] = "clearerror", ["^clearerrors$"] = "clearerror",
+    ["^clientantikick$"] = "clientantikick", ["^antikick$"] = "clientantikick",
+    ["^clientantiteleport$"] = "clientantiteleport", ["^antiteleport$"] = "clientantiteleport",
+    ["^allowrejoin$"] = "allowrejoin", ["^allowrj$"] = "allowrejoin",
+    ["^cancelteleport$"] = "cancelteleport", ["^canceltp$"] = "cancelteleport",
+    ["^volume (%d+)"] = "volume %1", ["^vol (%d+)"] = "volume %1",
+    ["^antilag$"] = "antilag", ["^boostfps$"] = "antilag", ["^lowgraphics$"] = "antilag",
+    ["^record$"] = "record", ["^rec$"] = "record",
+    ["^screenshot$"] = "screenshot", ["^scrnshot$"] = "screenshot",
+    ["^togglefullscreen$"] = "togglefullscreen", ["^togglefs$"] = "togglefullscreen",
+    ["^notify (.+)"] = "notify %1",
+    ["^lastcommand$"] = "lastcommand", ["^lastcmd$"] = "lastcommand",
+    ["^setfpscap (%d+)"] = "setfpscap %1", ["^fpscap (%d+)"] = "setfpscap %1", ["^maxfps (%d+)"] = "setfpscap %1",
+    ["^executor$"] = "executor",
+    ["^inspect (.+)"] = "inspect %1", ["^examine (.+)"] = "inspect %1",
+    ["^partpath$"] = "partpath", ["^partname$"] = "partpath",
+    ["^wallwalk$"] = "wallwalk", ["^walkonwalls$"] = "wallwalk",
 
     -- Movement
-    ["^noclip$"] = "noclip", ["^unnoclip$"] = "unnoclip", ["^clip$"] = "clip",
-    ["^fly$"] = "fly", ["^fly (%d+)$"] = "fly %1", ["^unfly$"] = "unfly",
-    ["^flyspeed (%d+)$"] = "flyspeed %1",
-    ["^vfly$"] = "vehiclefly", ["^vfly (%d+)$"] = "vehiclefly %1", ["^unvfly$"] = "unvehiclefly",
-    ["^vehiclefly$"] = "vehiclefly", ["^vehiclefly (%d+)$"] = "vehiclefly %1", ["^unvehiclefly$"] = "unvehiclefly",
-    ["^vehicleflyspeed (%d+)$"] = "vehicleflyspeed %1",
-    ["^cfly$"] = "cframefly", ["^cfly (%d+)$"] = "cframefly %1", ["^uncfly$"] = "uncframefly",
-    ["^cframefly$"] = "cframefly", ["^cframefly (%d+)$"] = "cframefly %1", ["^uncframefly$"] = "uncframefly",
-    ["^cframeflyspeed (%d+)$"] = "cframeflyspeed %1",
-    ["^qefly$"] = "qefly", ["^vehiclenoclip$"] = "vehiclenoclip", ["^vehicleclip$"] = "vehicleclip",
-    ["^float$"] = "float", ["^unfloat$"] = "unfloat",
-    ["^swim$"] = "swim", ["^unswim$"] = "unswim", ["^toggleswim$"] = "toggleswim",
-    ["^tpwalk (%d+)$"] = "tpwalk %1", ["^untpwalk$"] = "untpwalk", ["^wallwalk$"] = "wallwalk",
+    ["^noclip$"] = "noclip", ["^unnoclip$"] = "noclip", ["^clip$"] = "clip", ["^togglenoclip$"] = "togglenoclip",
+    ["^fly$"] = "fly", ["^fly (%d+)$"] = "fly %1", ["^unfly$"] = "unfly", ["^nofly$"] = "unfly", ["^togglefly$"] = "togglefly",
+    ["^flyspeed (%d+)$"] = "flyspeed %1", ["^flysp (%d+)$"] = "flyspeed %1",
+    ["^vfly$"] = "vehiclefly", ["^vfly (%d+)$"] = "vehiclefly %1",
+    ["^vehiclefly$"] = "vehiclefly", ["^vehiclefly (%d+)$"] = "vehiclefly %1",
+    ["^unvfly$"] = "unvehiclefly", ["^unvehiclefly$"] = "unvehiclefly", ["^novfly$"] = "unvehiclefly", ["^novehiclefly$"] = "unvehiclefly",
+    ["^togglevfly$"] = "togglevfly",
+    ["^vehicleflyspeed (%d+)$"] = "vehicleflyspeed %1", ["^vflyspeed (%d+)$"] = "vehicleflyspeed %1",
+    ["^vflysp (%d+)$"] = "vehicleflyspeed %1", ["^vehicleflysp (%d+)$"] = "vehicleflyspeed %1",
+    ["^cfly$"] = "cframefly", ["^cfly (%d+)$"] = "cframefly %1",
+    ["^cframefly$"] = "cframefly", ["^cframefly (%d+)$"] = "cframefly %1",
+    ["^uncfly$"] = "uncframefly", ["^uncframefly$"] = "uncframefly",
+    ["^cframeflyspeed (%d+)$"] = "cframeflyspeed %1", ["^cflyspeed (%d+)$"] = "cframeflyspeed %1",
+    ["^qefly$"] = "qefly", ["^flyqe$"] = "qefly",
+    ["^vehiclenoclip$"] = "vehiclenoclip", ["^vnoclip$"] = "vehiclenoclip",
+    ["^vehicleclip$"] = "vehicleclip", ["^vclip$"] = "vehicleclip",
+    ["^unvnoclip$"] = "vehicleclip", ["^unvehiclenoclip$"] = "vehicleclip",
+    ["^togglevnoclip$"] = "togglevnoclip",
+    ["^float$"] = "float", ["^platform$"] = "float",
+    ["^unfloat$"] = "unfloat", ["^nofloat$"] = "unfloat", ["^unplatform$"] = "unfloat", ["^noplatform$"] = "unfloat",
+    ["^togglefloat$"] = "togglefloat",
+    ["^swim$"] = "swim", ["^unswim$"] = "unswim", ["^noswim$"] = "unswim", ["^toggleswim$"] = "toggleswim",
+    ["^tpwalk (%d+)$"] = "tpwalk %1", ["^teleportwalk (%d+)$"] = "tpwalk %1",
+    ["^untpwalk$"] = "untpwalk", ["^unteleportwalk$"] = "untpwalk",
 
     -- Teleport
-    ["^setwaypoint (.+)"] = "setwaypoint %1", ["^waypoints$"] = "waypoints", ["^showwaypoints$"] = "showwaypoints", ["^hidewaypoints$"] = "hidewaypoints",
-    ["^waypoint (.+)"] = "waypoint %1", ["^tweenwaypoint (.+)"] = "tweenwaypoint %1", ["^walktowaypoint (.+)"] = "walktowaypoint %1",
-    ["^deletewaypoint (.+)"] = "deletewaypoint %1", ["^clearwaypoints$"] = "clearwaypoints",
-    ["^goto (.+)"] = "goto %1", ["^tweengoto (.+)"] = "tweengoto %1", ["^tweenspeed (%d+)"] = "tweenspeed %1",
-    ["^vehiclegoto (.+)"] = "vehiclegoto %1", ["^loopgoto (.+)"] = "loopgoto %1", ["^unloopgoto$"] = "unloopgoto",
-    ["^clientbring (.+)"] = "clientbring %1", ["^loopbring (.+)"] = "loopbring %1", ["^unloopbring$"] = "unloopbring",
-    ["^spawnpoint$"] = "spawnpoint", ["^nospawnpoint$"] = "nospawnpoint", ["^flashback$"] = "flashback",
-    ["^walltp$"] = "walltp", ["^nowalltp$"] = "nowalltp", ["^teleporttool$"] = "teleporttool",
+    ["^goto (.+)"] = "goto %1", ["^to (.+)"] = "goto %1",
+    ["^tweengoto (.+)"] = "tweengoto %1", ["^tgoto (.+)"] = "tweengoto %1", ["^tto (.+)"] = "tweengoto %1", ["^tweento (.+)"] = "tweengoto %1",
+    ["^tweenspeed (%d+)"] = "tweenspeed %1", ["^tspeed (%d+)"] = "tweenspeed %1",
+    ["^vehiclegoto (.+)"] = "vehiclegoto %1", ["^vgoto (.+)"] = "vehiclegoto %1", ["^vtp (.+)"] = "vehiclegoto %1", ["^vehicletp (.+)"] = "vehiclegoto %1",
+    ["^pulsetp (.+)"] = "pulsetp %1", ["^ptp (.+)"] = "pulsetp %1",
+    ["^loopgoto (.+)"] = "loopgoto %1", ["^unloopgoto$"] = "unloopgoto", ["^noloopgoto$"] = "unloopgoto",
+    ["^clientbring (.+)"] = "clientbring %1", ["^cbring (.+)"] = "clientbring %1",
+    ["^loopbring (.+)"] = "loopbring %1", ["^unloopbring$"] = "unloopbring", ["^noloopbring$"] = "unloopbring",
+    ["^spawnpoint$"] = "spawnpoint", ["^spawn$"] = "spawnpoint",
+    ["^nospawnpoint$"] = "nospawnpoint", ["^nospawn$"] = "nospawnpoint", ["^removespawnpoint$"] = "nospawnpoint",
+    ["^flashback$"] = "flashback", ["^diedtp$"] = "flashback",
+    ["^walltp$"] = "walltp", ["^nowalltp$"] = "nowalltp", ["^unwalltp$"] = "nowalltp",
+    ["^teleporttool$"] = "teleporttool", ["^tptool$"] = "teleporttool",
+    ["^clickteleport$"] = "clickteleport",
+    ["^mouseteleport$"] = "mouseteleport", ["^mousetp$"] = "mouseteleport",
+    ["^tpposition (.+)"] = "tpposition %1", ["^tppos (.+)"] = "tpposition %1",
+    ["^tweentpposition (.+)"] = "tweentpposition %1", ["^ttppos (.+)"] = "tweentpposition %1",
+    ["^offset (.+)"] = "offset %1", ["^tweenoffset (.+)"] = "tweenoffset %1", ["^toffset (.+)"] = "tweenoffset %1",
+    ["^walktopos (.+)"] = "walktopos %1", ["^walktoposition (.+)"] = "walktopos %1",
+    ["^getposition$"] = "getposition", ["^getpos$"] = "getposition", ["^notifypos$"] = "getposition", ["^notifyposition$"] = "getposition",
+    ["^copyposition$"] = "copyposition", ["^copypos$"] = "copyposition",
 
     -- Visuals
-    ["^esp$"] = "esp", ["^noesp$"] = "noesp", ["^espteam$"] = "espteam", ["^esptransparency (%d+)"] = "esptransparency %1",
-    ["^partesp (.+)"] = "partesp %1", ["^unpartesp (.+)"] = "unpartesp %1",
-    ["^chams$"] = "chams", ["^nochams$"] = "nochams", ["^xray$"] = "xray", ["^noxray$"] = "noxray",
-    ["^locate (.+)"] = "locate %1", ["^unlocate$"] = "unlocate",
-    ["^spectate (.+)"] = "spectate %1", ["^view (.+)"] = "view %1", ["^unspectate$"] = "unspectate",
-    ["^freecam$"] = "freecam", ["^unfreecam$"] = "unfreecam", ["^freecamspeed (%d+)"] = "freecamspeed %1",
-    ["^firstp$"] = "firstp", ["^thirdp$"] = "thirdp", ["^noclipcam$"] = "noclipcam",
-    ["^maxzoom (%d+)"] = "maxzoom %1", ["^minzoom (%d+)"] = "minzoom %1", ["^fov (%d+)"] = "fov %1", ["^fixcam$"] = "fixcam",
+    ["^esp$"] = "esp", ["^noesp$"] = "noesp", ["^unesp$"] = "noesp",
+    ["^espteam$"] = "espteam", ["^unespteam$"] = "noesp",
+    ["^esptransparency (%d+)"] = "esptransparency %1",
+    ["^partesp (.+)"] = "partesp %1", ["^unpartesp (.+)"] = "unpartesp %1", ["^nopartesp (.+)"] = "unpartesp %1",
+    ["^chams$"] = "chams", ["^nochams$"] = "nochams", ["^unchams$"] = "nochams",
+    ["^xray$"] = "xray", ["^noxray$"] = "noxray", ["^unxray$"] = "noxray",
+    ["^togglexray$"] = "togglexray", ["^loopxray$"] = "loopxray", ["^unloopxray$"] = "unloopxray",
+    ["^locate (.+)"] = "locate %1", ["^nolocate$"] = "nolocate", ["^unlocate$"] = "nolocate",
+    ["^spectate (.+)"] = "spectate %1", ["^view (.+)"] = "spectate %1",
+    ["^unspectate$"] = "unspectate", ["^unview$"] = "unspectate",
+    ["^viewpart (.+)"] = "viewpart %1", ["^viewp (.+)"] = "viewpart %1",
+    ["^freecam$"] = "freecam", ["^fc$"] = "freecam",
+    ["^unfreecam$"] = "unfreecam", ["^nofreecam$"] = "unfreecam", ["^unfc$"] = "unfreecam", ["^nofc$"] = "unfreecam",
+    ["^freecamspeed (%d+)"] = "freecamspeed %1", ["^fcspeed (%d+)"] = "freecamspeed %1",
+    ["^freecampos (.+)"] = "freecampos %1", ["^fcpos (.+)"] = "freecampos %1", ["^fcp (.+)"] = "freecampos %1",
+    ["^freecamposition (.+)"] = "freecampos %1", ["^fcposition (.+)"] = "freecampos %1",
+    ["^freecamwaypoint (.+)"] = "freecamwaypoint %1", ["^fcwp (.+)"] = "freecamwaypoint %1",
+    ["^freecamgoto (.+)"] = "freecamgoto %1", ["^fcgoto (.+)"] = "freecamgoto %1",
+    ["^freecamtp (.+)"] = "freecamgoto %1", ["^fctp (.+)"] = "freecamgoto %1",
+    ["^notifyfreecamposition$"] = "notifyfreecamposition", ["^notifyfcpos$"] = "notifyfreecamposition",
+    ["^copyfreecamposition$"] = "copyfreecamposition", ["^copyfcpos$"] = "copyfreecamposition",
+    ["^gotocamera$"] = "gotocamera", ["^gotocam$"] = "gotocamera", ["^tocam$"] = "gotocamera",
+    ["^tweengotocamera$"] = "tweengotocamera", ["^tweengotocam$"] = "tweengotocamera",
+    ["^tgotocam$"] = "tweengotocamera", ["^ttocam$"] = "tweengotocamera",
+    ["^firstp$"] = "firstp", ["^thirdp$"] = "thirdp",
+    ["^noclipcam$"] = "noclipcam", ["^nccam$"] = "noclipcam",
+    ["^maxzoom (%d+)"] = "maxzoom %1", ["^minzoom (%d+)"] = "minzoom %1",
+    ["^camdistance (%d+)"] = "camdistance %1",
+    ["^fov (%d+)"] = "fov %1", ["^fixcam$"] = "fixcam", ["^restorecam$"] = "fixcam",
+    ["^enableshiftlock$"] = "enableshiftlock", ["^enablesl$"] = "enableshiftlock", ["^shiftlock$"] = "enableshiftlock",
     ["^lookat (.+)"] = "lookat %1",
-    ["^fullbright$"] = "fullbright", ["^nofullbright$"] = "nofullbright", ["^loopfullbright$"] = "loopfullbright", ["^unloopfullbright$"] = "unloopfullbright",
-    ["^day$"] = "day", ["^night$"] = "night", ["^nofog$"] = "nofog", ["^globalshadows$"] = "globalshadows", ["^noglobalshadows$"] = "noglobalshadows",
-    ["^light$"] = "light", ["^nolight$"] = "nolight", ["^hovername$"] = "hovername", ["^unhovername$"] = "unhovername",
+    ["^fullbright$"] = "fullbright", ["^fb$"] = "fullbright", ["^fullbrightness$"] = "fullbright",
+    ["^nofullbright$"] = "nofullbright",
+    ["^loopfullbright$"] = "loopfullbright", ["^loopfb$"] = "loopfullbright",
+    ["^unloopfullbright$"] = "unloopfullbright", ["^unloopfb$"] = "unloopfullbright",
+    ["^day$"] = "day", ["^night$"] = "night", ["^nofog$"] = "nofog",
+    ["^ambient (.+)"] = "ambient %1", ["^brightness (.+)"] = "brightness %1",
+    ["^globalshadows$"] = "globalshadows", ["^gshadows$"] = "globalshadows",
+    ["^noglobalshadows$"] = "noglobalshadows", ["^unglobalshadows$"] = "noglobalshadows",
+    ["^nogshadows$"] = "noglobalshadows", ["^ungshadows$"] = "noglobalshadows",
+    ["^restorelighting$"] = "restorelighting", ["^rlighting$"] = "restorelighting",
+    ["^light$"] = "light", ["^nolight$"] = "nolight", ["^unlight$"] = "nolight",
+    ["^hovername$"] = "hovername", ["^unhovername$"] = "unhovername", ["^nohovername$"] = "unhovername",
 
     -- Player
-    ["^inspect (.+)"] = "inspect %1", ["^age (.+)"] = "age %1", ["^chatage (.+)"] = "chatage %1", ["^joindate (.+)"] = "joindate %1",
-    ["^copyname (.+)"] = "copyname %1", ["^userid (.+)"] = "userid %1", ["^copyuserid (.+)"] = "copyuserid %1",
-    ["^bang (.+)"] = "bang %1", ["^unbang$"] = "unbang", ["^carpet (.+)"] = "carpet %1", ["^uncarpet$"] = "uncarpet",
-    ["^friend (.+)"] = "friend %1", ["^unfriend (.+)"] = "unfriend %1", ["^headsit (.+)"] = "headsit %1",
-    ["^walkto (.+)"] = "walkto %1", ["^unwalkto$"] = "unwalkto", ["^orbit (.+)"] = "orbit %1", ["^unorbit$"] = "unorbit",
-    ["^stareat (.+)"] = "stareat %1", ["^unstareat$"] = "unstareat",
-    ["^fling$"] = "fling", ["^unfling$"] = "unfling", ["^flyfling$"] = "flyfling", ["^unflyfling$"] = "unflyfling",
-    ["^walkfling$"] = "walkfling", ["^unwalkfling$"] = "unwalkfling", ["^invisfling$"] = "invisfling",
-    ["^kill (.+)"] = "kill %1", ["^loopkill (.+)"] = "loopkill %1", ["^unloopkill$"] = "unloopkill",
+    ["^age (.+)"] = "age %1", ["^chatage (.+)"] = "chatage %1",
+    ["^joindate (.+)"] = "joindate %1", ["^jd (.+)"] = "joindate %1",
+    ["^chatjoindate (.+)"] = "chatjoindate %1", ["^cjd (.+)"] = "chatjoindate %1",
+    ["^copyname (.+)"] = "copyname %1", ["^copyuser (.+)"] = "copyname %1",
+    ["^userid (.+)"] = "userid %1", ["^id (.+)"] = "userid %1",
+    ["^copyuserid (.+)"] = "copyuserid %1", ["^copyid (.+)"] = "copyuserid %1",
+    ["^copyplaceid$"] = "copyplaceid", ["^placeid$"] = "copyplaceid",
+    ["^copygameid$"] = "copygameid", ["^gameid$"] = "copygameid",
+    ["^appearanceid (.+)"] = "appearanceid %1", ["^aid (.+)"] = "appearanceid %1",
+    ["^copyappearanceid (.+)"] = "copyappearanceid %1", ["^caid (.+)"] = "copyappearanceid %1",
+    ["^bang (.+)"] = "bang %1", ["^rape (.+)"] = "bang %1",
+    ["^unbang$"] = "unbang", ["^unrape$"] = "unbang",
+    ["^carpet (.+)"] = "carpet %1", ["^uncarpet$"] = "uncarpet", ["^nocarpet$"] = "uncarpet",
+    ["^friend (.+)"] = "friend %1", ["^unfriend (.+)"] = "unfriend %1",
+    ["^headsit (.+)"] = "headsit %1",
+    ["^walkto (.+)"] = "walkto %1", ["^follow (.+)"] = "walkto %1",
+    ["^unwalkto$"] = "unwalkto", ["^nowalkto$"] = "unwalkto", ["^unfollow$"] = "unwalkto", ["^nofollow$"] = "unwalkto",
+    ["^pathfindwalkto (.+)"] = "pathfindwalkto %1", ["^pathfindfollow (.+)"] = "pathfindwalkto %1",
+    ["^pathfindwalktowaypoint (.+)"] = "pathfindwalktowaypoint %1", ["^pathfindwalktowp (.+)"] = "pathfindwalktowaypoint %1",
+    ["^orbit (.+)"] = "orbit %1", ["^unorbit$"] = "unorbit",
+    ["^stareat (.+)"] = "stareat %1", ["^stare (.+)"] = "stareat %1",
+    ["^unstareat$"] = "unstareat", ["^unstare$"] = "unstareat", ["^nostare$"] = "unstareat", ["^nostareat$"] = "unstareat",
+    ["^fling$"] = "fling", ["^unfling$"] = "unfling", ["^nofling$"] = "unfling", ["^togglefling$"] = "togglefling",
+    ["^flyfling$"] = "flyfling", ["^unflyfling$"] = "unflyfling", ["^toggleflyfling$"] = "toggleflyfling",
+    ["^walkfling$"] = "walkfling", ["^unwalkfling$"] = "unwalkfling", ["^nowalkfling$"] = "unwalkfling", ["^togglewalkfling$"] = "togglewalkfling",
+    ["^invisfling$"] = "invisfling",
+    ["^antifling$"] = "antifling", ["^unantifling$"] = "unantifling", ["^toggleantifling$"] = "toggleantifling",
+    ["^kill (.+)"] = "kill %1", ["^handlekill (.+)"] = "handlekill %1", ["^hkill (.+)"] = "handlekill %1",
+    ["^loopkill (.+)"] = "loopkill %1", ["^unloopkill$"] = "unloopkill",
     ["^loopoof$"] = "loopoof", ["^unloopoof$"] = "unloopoof",
+    ["^muteboombox$"] = "muteboombox", ["^unmuteboombox$"] = "unmuteboombox",
     ["^hitbox (.+)"] = "hitbox %1", ["^headsize (.+)"] = "headsize %1",
-    ["^reset$"] = "reset", ["^respawn$"] = "respawn", ["^refresh$"] = "refresh", ["^god$"] = "god", ["^permadeath$"] = "permadeath",
-    ["^invisible$"] = "invisible", ["^visible$"] = "visible", ["^toolinvisible$"] = "toolinvisible",
-    ["^speed (%d+)$"] = "speed %1", ["^ws (%d+)$"] = "speed %1", ["^loopspeed (%d+)$"] = "loopspeed %1", ["^unloopspeed$"] = "unloopspeed",
-    ["^jumppower (%d+)$"] = "jumppower %1", ["^jp (%d+)$"] = "jumppower %1", ["^loopjumppower (%d+)$"] = "loopjumppower %1", ["^unloopjumppower$"] = "unloopjumppower",
-    ["^sit$"] = "sit", ["^lay$"] = "lay", ["^jump$"] = "jump", ["^infjump$"] = "infjump", ["^uninfjump$"] = "uninfjump",
-    ["^flyjump$"] = "flyjump", ["^unflyjump$"] = "unflyjump", ["^autojump$"] = "autojump", ["^unautojump$"] = "unautojump",
-    ["^stun$"] = "stun", ["^unstun$"] = "unstun", ["^team (.+)"] = "team %1",
-    ["^nobgui$"] = "nobgui", ["^noarms$"] = "noarms", ["^nolegs$"] = "nolegs", ["^nolimbs$"] = "nolimbs", ["^naked$"] = "naked", ["^noface$"] = "noface",
-    ["^blockhead$"] = "blockhead", ["^blockhats$"] = "blockhats", ["^creeper$"] = "creeper",
-    ["^drophats$"] = "drophats", ["^deletehats$"] = "deletehats", ["^hatspin$"] = "hatspin", ["^unhatspin$"] = "unhatspin", ["^clearhats$"] = "clearhats",
-    ["^spin$"] = "spin", ["^unspin$"] = "unspin", ["^split$"] = "split", ["^trip$"] = "trip", ["^jerk$"] = "jerk",
+    ["^reset$"] = "reset",
+    ["^freezeanims$"] = "freezeanims", ["^unfreezeanims$"] = "unfreezeanims",
+    ["^respawn$"] = "respawn", ["^refresh$"] = "refresh", ["^re$"] = "refresh",
+    ["^god$"] = "god", ["^permadeath$"] = "permadeath",
+    ["^invisible$"] = "invisible", ["^invis$"] = "invisible",
+    ["^visible$"] = "visible", ["^vis$"] = "visible", ["^uninvisible$"] = "visible",
+    ["^toggleinvis$"] = "toggleinvis",
+    ["^toolinvisible$"] = "toolinvisible", ["^toolinvis$"] = "toolinvisible", ["^tinvis$"] = "toolinvisible",
+    ["^strengthen$"] = "strengthen", ["^weaken$"] = "weaken",
+    ["^unweaken$"] = "unweaken", ["^unstrengthen$"] = "unweaken",
+    ["^breakvelocity$"] = "breakvelocity",
+    ["^speed (%d+)$"] = "speed %1", ["^ws (%d+)$"] = "speed %1", ["^walkspeed (%d+)$"] = "speed %1",
+    ["^spoofspeed (%d+)$"] = "spoofspeed %1", ["^spoofws (%d+)$"] = "spoofspeed %1", ["^spoofwalkspeed (%d+)$"] = "spoofspeed %1",
+    ["^loopspeed (%d+)$"] = "loopspeed %1", ["^loopws (%d+)$"] = "loopspeed %1",
+    ["^unloopspeed$"] = "unloopspeed", ["^unloopws$"] = "unloopspeed",
+    ["^jumppower (%d+)$"] = "jumppower %1", ["^jpower (%d+)$"] = "jumppower %1", ["^jp (%d+)$"] = "jumppower %1",
+    ["^spoofjumppower (%d+)$"] = "spoofjumppower %1", ["^spoofjp (%d+)$"] = "spoofjumppower %1",
+    ["^loopjumppower (%d+)$"] = "loopjumppower %1", ["^loopjp (%d+)$"] = "loopjumppower %1", ["^loopjpower (%d+)$"] = "loopjumppower %1",
+    ["^unloopjumppower$"] = "unloopjumppower", ["^unloopjp$"] = "unloopjumppower", ["^unloopjpower$"] = "unloopjumppower",
+    ["^maxslopeangle (%d+)$"] = "maxslopeangle %1", ["^msa (%d+)$"] = "maxslopeangle %1",
+    ["^gravity (%d+)$"] = "gravity %1", ["^grav (%d+)$"] = "gravity %1",
+    ["^hipheight (%d+)$"] = "hipheight %1", ["^hheight (%d+)$"] = "hipheight %1",
+    ["^sit$"] = "sit", ["^lay$"] = "lay", ["^laydown$"] = "lay",
+    ["^sitwalk$"] = "sitwalk", ["^nosit$"] = "nosit", ["^unnosit$"] = "unnosit",
+    ["^jump$"] = "jump",
+    ["^infjump$"] = "infjump", ["^infinitejump$"] = "infjump",
+    ["^uninfjump$"] = "uninfjump", ["^uninfinitejump$"] = "uninfjump",
+    ["^noinfjump$"] = "uninfjump", ["^noinfinitejump$"] = "uninfjump",
+    ["^flyjump$"] = "flyjump", ["^unflyjump$"] = "unflyjump", ["^noflyjump$"] = "unflyjump",
+    ["^autojump$"] = "autojump", ["^ajump$"] = "autojump",
+    ["^unautojump$"] = "unautojump", ["^noautojump$"] = "unautojump",
+    ["^noajump$"] = "unautojump", ["^unajump$"] = "unautojump",
+    ["^edgejump$"] = "edgejump", ["^ejump$"] = "edgejump",
+    ["^unedgejump$"] = "unedgejump", ["^noedgejump$"] = "unedgejump",
+    ["^noejump$"] = "unedgejump", ["^unejump$"] = "unedgejump",
+    ["^stun$"] = "stun", ["^platformstand$"] = "stun",
+    ["^unstun$"] = "unstun", ["^nostun$"] = "unstun",
+    ["^unplatformstand$"] = "unstun", ["^noplatformstand$"] = "unstun",
+    ["^norotate$"] = "norotate", ["^noautorotate$"] = "norotate",
+    ["^unnorotate$"] = "unnorotate", ["^autorotate$"] = "unnorotate",
+    ["^enablestate (.+)"] = "enablestate %1", ["^disablestate (.+)"] = "disablestate %1",
+    ["^team (.+)"] = "team %1",
+    ["^nobgui$"] = "nobgui", ["^unbgui$"] = "nobgui", ["^nobillboardgui$"] = "nobgui",
+    ["^unbillboardgui$"] = "nobgui", ["^noname$"] = "nobgui", ["^rohg$"] = "nobgui",
+    ["^loopnobgui$"] = "loopnobgui", ["^loopunbgui$"] = "loopnobgui",
+    ["^loopnobillboardgui$"] = "loopnobgui", ["^loopunbillboardgui$"] = "loopnobgui",
+    ["^loopnoname$"] = "loopnobgui", ["^looprohg$"] = "loopnobgui",
+    ["^unloopnobgui$"] = "unloopnobgui", ["^unloopunbgui$"] = "unloopnobgui",
+    ["^unloopnobillboardgui$"] = "unloopnobgui", ["^unloopunbillboardgui$"] = "unloopnobgui",
+    ["^unloopnoname$"] = "unloopnobgui", ["^unlooprohg$"] = "unloopnobgui",
+    ["^noarms$"] = "noarms", ["^rarms$"] = "noarms",
+    ["^nolegs$"] = "nolegs", ["^rlegs$"] = "nolegs",
+    ["^nolimbs$"] = "nolimbs", ["^rlimbs$"] = "nolimbs",
+    ["^naked$"] = "naked", ["^noface$"] = "noface", ["^removeface$"] = "noface",
+    ["^blockhead$"] = "blockhead", ["^blockhats$"] = "blockhats", ["^blocktool$"] = "blocktool",
+    ["^creeper$"] = "creeper",
+    ["^drophats$"] = "drophats", ["^drophat$"] = "drophats",
+    ["^deletehats$"] = "deletehats", ["^nohats$"] = "deletehats", ["^rhats$"] = "deletehats",
+    ["^hatspin$"] = "hatspin", ["^spinhats$"] = "hatspin",
+    ["^unhatspin$"] = "unhatspin", ["^unspinhats$"] = "unhatspin",
+    ["^clearhats$"] = "clearhats", ["^cleanhats$"] = "clearhats",
+    ["^spin$"] = "spin", ["^unspin$"] = "unspin",
+    ["^split$"] = "split", ["^trip$"] = "trip", ["^jerk$"] = "jerk",
+    ["^nilchar$"] = "nilchar", ["^unnilchar$"] = "unnilchar", ["^nonilchar$"] = "unnilchar",
+    ["^noroot$"] = "noroot", ["^removeroot$"] = "noroot", ["^rroot$"] = "noroot",
+    ["^replaceroot$"] = "replaceroot", ["^replacerootpart$"] = "replaceroot",
+    ["^clearcharappearance$"] = "clearcharappearance", ["^clearchar$"] = "clearcharappearance", ["^clrchar$"] = "clearcharappearance",
+    ["^norender$"] = "norender", ["^render$"] = "render",
+    ["^2022materials$"] = "2022materials", ["^use2022materials$"] = "2022materials",
+    ["^un2022materials$"] = "un2022materials", ["^unuse2022materials$"] = "un2022materials",
+    ["^dance$"] = "dance", ["^undance$"] = "undance", ["^nodance$"] = "undance",
+    ["^spasm$"] = "spasm", ["^unspasm$"] = "unspasm", ["^nospasm$"] = "unspasm",
+    ["^headthrow$"] = "headthrow",
 
     -- Chat
-    ["^logs$"] = "logs", ["^chatlogs$"] = "chatlogs", ["^chat (.+)"] = "chat %1",
-    ["^spam (.+)"] = "spam %1", ["^unspam$"] = "unspam",
-    ["^whisper (.+)"] = "whisper %1", ["^pmspam (.+)"] = "pmspam %1", ["^unpmspam$"] = "unpmspam",
-    ["^bubblechat$"] = "bubblechat", ["^unbubblechat$"] = "unbubblechat",
+    ["^logs$"] = "logs", ["^chatlogs$"] = "chatlogs", ["^clogs$"] = "chatlogs",
+    ["^joinlogs$"] = "joinlogs", ["^jlogs$"] = "joinlogs",
+    ["^chatlogswebhook (.+)"] = "chatlogswebhook %1", ["^logswebhook (.+)"] = "chatlogswebhook %1",
+    ["^antichatlogs$"] = "antichatlogs", ["^antichatlogger$"] = "antichatlogs",
+    ["^chat (.+)"] = "chat %1", ["^say (.+)"] = "chat %1",
+    ["^spam (.+)"] = "spam %1", ["^nospam$"] = "nospam", ["^unspam$"] = "nospam",
+    ["^whisper (.+)"] = "whisper %1", ["^pm (.+)"] = "whisper %1",
+    ["^pmspam (.+)"] = "pmspam %1", ["^nopmspam$"] = "nopmspam", ["^unpmspam$"] = "nopmspam",
+    ["^spamspeed (%d+)"] = "spamspeed %1",
+    ["^bubblechat$"] = "bubblechat", ["^unbubblechat$"] = "unbubblechat", ["^nobubblechat$"] = "unbubblechat",
+    ["^chatwindow$"] = "chatwindow", ["^unchatwindow$"] = "unchatwindow", ["^nochatwindow$"] = "unchatwindow",
 
     -- Workspace
-    ["^btools$"] = "btools", ["^f3x$"] = "f3x", ["^delete (.+)"] = "delete %1",
-    ["^lockworkspace$"] = "lockworkspace", ["^unlockworkspace$"] = "unlockworkspace",
-    ["^gotopart (.+)"] = "gotopart %1", ["^bringpart (.+)"] = "bringpart %1",
-    ["^partpath$"] = "partpath",
-    ["^fireclickdetectors$"] = "fireclickdetectors", ["^firetouchinterests$"] = "firetouchinterests",
-    ["^noclickdetectorlimits$"] = "noclickdetectorlimits",
-    ["^removeterrain$"] = "removeterrain", ["^destroyheight (%d+)"] = "destroyheight %1",
-    ["^antivoid$"] = "antivoid", ["^unantivoid$"] = "unantivoid",
+    ["^btools$"] = "btools", ["^f3x$"] = "f3x", ["^fex$"] = "f3x",
+    ["^delete (.+)"] = "delete %1", ["^remove (.+)"] = "delete %1",
+    ["^deleteclass (.+)"] = "deleteclass %1", ["^removeclass (.+)"] = "deleteclass %1",
+    ["^deleteclassname (.+)"] = "deleteclass %1", ["^removeclassname (.+)"] = "deleteclass %1", ["^dc (.+)"] = "deleteclass %1",
+    ["^chardelete (.+)"] = "chardelete %1", ["^charremove (.+)"] = "chardelete %1", ["^cd (.+)"] = "chardelete %1",
+    ["^chardeleteclass (.+)"] = "chardeleteclass %1", ["^charremoveclass (.+)"] = "chardeleteclass %1",
+    ["^chardeleteclassname (.+)"] = "chardeleteclass %1", ["^charremoveclassname (.+)"] = "chardeleteclass %1", ["^cdc (.+)"] = "chardeleteclass %1",
+    ["^deletevelocity$"] = "deletevelocity", ["^dv$"] = "deletevelocity",
+    ["^removevelocity$"] = "deletevelocity", ["^removeforces$"] = "deletevelocity",
+    ["^deleteinvisparts$"] = "deleteinvisparts", ["^deleteinvisibleparts$"] = "deleteinvisparts", ["^dip$"] = "deleteinvisparts",
+    ["^invisibleparts$"] = "invisibleparts", ["^invisparts$"] = "invisibleparts",
+    ["^uninvisibleparts$"] = "uninvisibleparts", ["^uninvisparts$"] = "uninvisibleparts",
+    ["^lockworkspace$"] = "lockworkspace", ["^lockws$"] = "lockworkspace",
+    ["^unlockworkspace$"] = "unlockworkspace", ["^unlockws$"] = "unlockworkspace",
+    ["^gotopart (.+)"] = "gotopart %1", ["^topart (.+)"] = "gotopart %1",
+    ["^tweengotopart (.+)"] = "tweengotopart %1", ["^tgotopart (.+)"] = "tweengotopart %1", ["^ttopart (.+)"] = "tweengotopart %1",
+    ["^bringpart (.+)"] = "bringpart %1",
+    ["^bringpartclass (.+)"] = "bringpartclass %1", ["^bpc (.+)"] = "bringpartclass %1",
+    ["^gotopartclass (.+)"] = "gotopartclass %1", ["^gpc (.+)"] = "gotopartclass %1",
+    ["^tweengotopartclass (.+)"] = "tweengotopartclass %1", ["^tgpc (.+)"] = "tweengotopartclass %1",
+    ["^gotomodel (.+)"] = "gotomodel %1", ["^tomodel (.+)"] = "gotomodel %1",
+    ["^tweengotomodel (.+)"] = "tweengotomodel %1", ["^tgotomodel (.+)"] = "tweengotomodel %1", ["^ttomodel (.+)"] = "tweengotomodel %1",
+    ["^gotopartdelay (%d+)"] = "gotopartdelay %1",
+    ["^fireclickdetectors$"] = "fireclickdetectors", ["^firecd$"] = "fireclickdetectors", ["^firecds$"] = "fireclickdetectors",
+    ["^noclickdetectorlimits$"] = "noclickdetectorlimits", ["^nocdlimits$"] = "noclickdetectorlimits", ["^removecdlimits$"] = "noclickdetectorlimits",
+    ["^fireproximityprompts$"] = "fireproximityprompts", ["^firepp$"] = "fireproximityprompts",
+    ["^noproximitypromptlimits$"] = "noproximitypromptlimits", ["^nopplimits$"] = "noproximitypromptlimits", ["^removepplimits$"] = "noproximitypromptlimits",
+    ["^instantproximityprompts$"] = "instantproximityprompts", ["^instantpp$"] = "instantproximityprompts",
+    ["^uninstantproximityprompts$"] = "uninstantproximityprompts", ["^uninstantpp$"] = "uninstantproximityprompts",
+    ["^firetouchinterests$"] = "firetouchinterests", ["^touchinterests$"] = "firetouchinterests",
+    ["^touchinterest$"] = "firetouchinterests", ["^firetouchinterest$"] = "firetouchinterests",
+    ["^removeterrain$"] = "removeterrain", ["^rterrain$"] = "removeterrain", ["^noterrain$"] = "removeterrain",
+    ["^destroyheight (%d+)"] = "destroyheight %1", ["^dh (%d+)"] = "destroyheight %1",
+    ["^antivoid$"] = "antivoid", ["^unantivoid$"] = "unantivoid", ["^noantivoid$"] = "unantivoid",
+    ["^clearnilinstances$"] = "clearnilinstances", ["^nonilinstances$"] = "clearnilinstances", ["^cni$"] = "clearnilinstances",
+    ["^freeze (.+)"] = "freeze %1", ["^fr (.+)"] = "freeze %1",
+    ["^thaw (.+)"] = "thaw %1", ["^unfreeze (.+)"] = "thaw %1", ["^unfr (.+)"] = "thaw %1",
+    ["^anchor$"] = "anchor", ["^unanchor$"] = "unanchor",
+    ["^freezeunanchored$"] = "freezeunanchored", ["^freezeua$"] = "freezeunanchored",
+    ["^thawunanchored$"] = "thawunanchored", ["^thawua$"] = "thawunanchored",
+    ["^unfreezeunanchored$"] = "thawunanchored", ["^unfreezeua$"] = "thawunanchored",
+    ["^tpunanchored$"] = "tpunanchored", ["^tpua$"] = "tpunanchored",
 
     -- Animation
-    ["^animation (.+)"] = "animation %1", ["^emote (.+)"] = "emote %1", ["^dance$"] = "dance", ["^undance$"] = "undance",
-    ["^spasm$"] = "spasm", ["^unspasm$"] = "unspasm", ["^noanim$"] = "noanim", ["^reanim$"] = "reanim",
-    ["^stopanimations$"] = "stopanimations", ["^copyanimation (.+)"] = "copyanimation %1",
+    ["^animation (.+)"] = "animation %1", ["^anim (.+)"] = "animation %1",
+    ["^emote (.+)"] = "emote %1", ["^em (.+)"] = "emote %1",
+    ["^noanim$"] = "noanim", ["^reanim$"] = "reanim",
+    ["^animspeed (%d+)"] = "animspeed %1",
+    ["^copyanimation (.+)"] = "copyanimation %1", ["^copyanim (.+)"] = "copyanimation %1", ["^copyemote (.+)"] = "copyanimation %1",
+    ["^copyanimationid (.+)"] = "copyanimationid %1", ["^copyanimid (.+)"] = "copyanimationid %1", ["^copyemoteid (.+)"] = "copyanimationid %1",
+    ["^stopanimations$"] = "stopanimations", ["^stopanims$"] = "stopanimations", ["^stopanim$"] = "stopanimations",
+    ["^refreshanimations$"] = "refreshanimations", ["^refreshanimation$"] = "refreshanimations",
+    ["^refreshanims$"] = "refreshanimations", ["^refreshanim$"] = "refreshanimations",
+    ["^allowcustomanim$"] = "allowcustomanim", ["^allowcustomanimations$"] = "allowcustomanim",
+    ["^unallowcustomanim$"] = "unallowcustomanim", ["^unallowcustomanimations$"] = "unallowcustomanim",
+    ["^loopanimation (.+)"] = "loopanimation %1", ["^loopanim (.+)"] = "loopanimation %1",
 
     -- Tools
-    ["^autoclick$"] = "autoclick", ["^unautoclick$"] = "unautoclick", ["^mousesensitivity$"] = "mousesensitivity",
-    ["^tools$"] = "tools", ["^notools$"] = "notools", ["^grabtools$"] = "grabtools", ["^ungrabtools$"] = "ungrabtools",
-    ["^equiptools$"] = "equiptools", ["^unequiptools$"] = "unequiptools", ["^reach (%d+)"] = "reach %1", ["^unreach$"] = "unreach",
-    ["^dupetools (%d+)"] = "dupetools %1", ["^droppabletools$"] = "droppabletools", ["^droptools$"] = "droptools",
+    ["^autoclick$"] = "autoclick", ["^unautoclick$"] = "unautoclick", ["^noautoclick$"] = "unautoclick",
+    ["^mousesensitivity (%d+)"] = "mousesensitivity %1", ["^ms (%d+)"] = "mousesensitivity %1",
+    ["^tools$"] = "tools", ["^gears$"] = "tools",
+    ["^notools$"] = "notools", ["^rtools$"] = "notools", ["^clrtools$"] = "notools",
+    ["^removetools$"] = "notools", ["^deletetools$"] = "notools", ["^dtools$"] = "notools",
+    ["^deleteselectedtool$"] = "deleteselectedtool", ["^dst$"] = "deleteselectedtool",
+    ["^grabtools$"] = "grabtools", ["^nograbtools$"] = "nograbtools", ["^ungrabtools$"] = "nograbtools",
+    ["^equiptools$"] = "equiptools", ["^unequiptools$"] = "unequiptools",
+    ["^reach (%d+)"] = "reach %1", ["^boxreach (%d+)"] = "boxreach %1",
+    ["^unreach$"] = "unreach", ["^noreach$"] = "unreach", ["^unboxreach$"] = "unreach",
+    ["^dupetools (%d+)"] = "dupetools %1", ["^clonetools (%d+)"] = "dupetools %1",
+    ["^droppabletools$"] = "droppabletools",
+    ["^droptools$"] = "droptools", ["^droptool$"] = "droptools",
+    ["^removespecifictool (.+)"] = "removespecifictool %1",
+    ["^unremovespecifictool$"] = "unremovespecifictool",
+    ["^clearremovespecifictool$"] = "clearremovespecifictool",
+    ["^copytools$"] = "copytools", ["^usetools$"] = "usetools",
+    ["^grippos (.+)"] = "grippos %1",
 
     -- Server
-    ["^serverinfo$"] = "serverinfo", ["^jobid$"] = "jobid", ["^rejoin$"] = "rejoin", ["^autorejoin$"] = "autorejoin",
-    ["^serverhop$"] = "serverhop", ["^gametp (.+)"] = "gametp %1", ["^exit$"] = "exit"
+    ["^serverinfo$"] = "serverinfo", ["^info$"] = "serverinfo", ["^sinfo$"] = "serverinfo",
+    ["^jobid$"] = "jobid", ["^notifyjobid$"] = "notifyjobid",
+    ["^rejoin$"] = "rejoin", ["^rj$"] = "rejoin",
+    ["^autorejoin$"] = "autorejoin", ["^autorj$"] = "autorejoin",
+    ["^serverhop$"] = "serverhop", ["^shop$"] = "serverhop",
+    ["^gametp (.+)"] = "gametp %1", ["^gameteleport (.+)"] = "gametp %1",
+    ["^exit$"] = "exit",
+    ["^notifyping$"] = "notifyping", ["^ping$"] = "notifyping",
+
+    -- Advanced
+    ["^fakeout$"] = "fakeout", ["^scare$"] = "scare", ["^spook$"] = "scare",
+    ["^alignmentkeys$"] = "alignmentkeys",
+    ["^unalignmentkeys$"] = "unalignmentkeys", ["^noalignmentkeys$"] = "unalignmentkeys",
+    ["^ctrllock$"] = "ctrllock", ["^unctrllock$"] = "unctrllock",
+    ["^listento (.+)"] = "listento %1", ["^unlistento$"] = "unlistento",
+    ["^muteallvoices$"] = "muteallvoices", ["^muteallvcs$"] = "muteallvoices",
+    ["^unmuteallvoices$"] = "unmuteallvoices", ["^unmuteallvcs$"] = "unmuteallvoices",
+    ["^mutevc (.+)"] = "mutevc %1", ["^unmutevc (.+)"] = "unmutevc %1",
+    ["^phonebook$"] = "phonebook", ["^call$"] = "phonebook",
+    ["^autokeypress (.+)"] = "autokeypress %1", ["^keypress (.+)"] = "autokeypress %1",
+    ["^unautokeypress$"] = "unautokeypress", ["^noautokeypress$"] = "unautokeypress",
+    ["^unkeypress$"] = "unautokeypress", ["^nokeypress$"] = "unautokeypress",
+    ["^rolewatch (.+)"] = "rolewatch %1", ["^rolewatchstop$"] = "rolewatchstop",
+    ["^rolewatchleave$"] = "rolewatchleave", ["^unrolewatch$"] = "rolewatchleave",
+    ["^staffwatch$"] = "staffwatch", ["^unstaffwatch$"] = "unstaffwatch",
+    ["^removeads$"] = "removeads", ["^adblock$"] = "removeads"
 }
 
 local Priority = {

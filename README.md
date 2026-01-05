@@ -256,7 +256,7 @@ Version 1.2.1 introduced an event-based bridge using BindableEvents, replacing t
 
 ### GUI Improvements
 
-Version 1.2.2 focuses on streamlining the interface and fixing visual bugs:
+Version 1.2.2 focuses on streamlining the interface, fixing visual bugs, and improving command execution:
 
 | Improvement | Description |
 |-------------|-------------|
@@ -268,6 +268,8 @@ Version 1.2.2 focuses on streamlining the interface and fixing visual bugs:
 | **Temporary Status Display** | Status messages now appear briefly (2.5s) then auto-hide to reduce clutter |
 | **Tooltip Preview** | Preview bar repositioned as tooltip-style element below input |
 | **Mobile Quick Actions** | Quick actions toggle relocated to bottom-right corner for better accessibility |
+| **Toggle Quick Actions** | Quick action buttons now work as keybinds—press once to activate, press again to deactivate (Fly, Noclip, ESP, etc.) |
+| **Visual State Feedback** | Active quick actions show highlighted state with visual indicators |
 
 ### Technical Enhancements
 
@@ -278,6 +280,9 @@ Version 1.2.2 focuses on streamlining the interface and fixing visual bugs:
 | **Dynamic Frame Expansion** | Frame temporarily expands to show status messages, then collapses back |
 | **Consistent Sizing** | All header elements now use uniform 26px height for visual harmony |
 | **Dropdown Arrow Indicator** | Added "▾" symbol to mode button to indicate dropdown functionality |
+| **Comprehensive FastMap** | Updated with 400+ commands and all aliases extracted from IYsource.lua for complete coverage |
+| **Toggle State Management** | Quick actions now track state for proper toggle behavior with visual feedback |
+| **Command Accuracy** | Fixed incorrect command mappings and added missing aliases for better local execution |
 
 ### Previous Features (V1.2.1)
 
