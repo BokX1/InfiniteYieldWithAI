@@ -1538,48 +1538,43 @@ for i, action in ipairs(QuickActions) do
     -- Initialize state before setting up events
     QuickActionStates[action.text] = false
     
-    -- Helper function to update button visual based on state
-    local function updateButtonVisual(isHovered)
-        local isActive = QuickActionStates[action.text]
-        if action.toggleable and isActive then
-            -- Active toggle state - always show highlighted
+    -- Helper function to update button visual based on toggle state
+    local function updateButtonVisual()
+        local isActive = action.toggleable and QuickActionStates[action.text]
+        if isActive then
+            -- Active toggle state - show highlighted
             btn.BackgroundTransparency = 0.2
             btn.TextColor3 = Color3.new(1, 1, 1)
-        elseif isHovered then
-            -- Hover state (not active)
-            btn.BackgroundTransparency = 0.3
-            btn.TextColor3 = Color3.new(1, 1, 1)
         else
-            -- Default state
+            -- Default/inactive state
             btn.BackgroundTransparency = 0.7
             btn.TextColor3 = Colors.Text
         end
     end
     
-    -- Track hover state
-    local isHovering = false
+    -- Desktop hover effects (only apply on non-mobile)
+    if not IsMobile then
+        ConnectPersistent(btn.MouseEnter:Connect(function()
+            local isActive = QuickActionStates[action.text]
+            TweenService:Create(btn, TweenInfo.new(0.1), {
+                BackgroundTransparency = isActive and 0.1 or 0.3,
+                TextColor3 = Color3.new(1, 1, 1)
+            }):Play()
+        end))
+        
+        ConnectPersistent(btn.MouseLeave:Connect(function()
+            -- Respect toggle state when leaving
+            local isActive = QuickActionStates[action.text]
+            local targetTransparency = isActive and 0.2 or 0.7
+            local targetColor = isActive and Color3.new(1, 1, 1) or Colors.Text
+            TweenService:Create(btn, TweenInfo.new(0.1), {
+                BackgroundTransparency = targetTransparency,
+                TextColor3 = targetColor
+            }):Play()
+        end))
+    end
     
-    -- Hover effect - respects toggle state
-    ConnectPersistent(btn.MouseEnter:Connect(function()
-        isHovering = true
-        TweenService:Create(btn, TweenInfo.new(0.1), {
-            BackgroundTransparency = QuickActionStates[action.text] and 0.1 or 0.3,
-            TextColor3 = Color3.new(1, 1, 1)
-        }):Play()
-    end))
-    
-    ConnectPersistent(btn.MouseLeave:Connect(function()
-        isHovering = false
-        -- Respect toggle state when leaving
-        local targetTransparency = QuickActionStates[action.text] and 0.2 or 0.7
-        local targetColor = QuickActionStates[action.text] and Color3.new(1, 1, 1) or Colors.Text
-        TweenService:Create(btn, TweenInfo.new(0.1), {
-            BackgroundTransparency = targetTransparency,
-            TextColor3 = targetColor
-        }):Play()
-    end))
-    
-    -- Press effect with scale animation
+    -- Press effect (works on both mobile and desktop)
     ConnectPersistent(btn.MouseButton1Down:Connect(function()
         TweenService:Create(btn, TweenInfo.new(0.05), {
             BackgroundTransparency = 0
@@ -1588,20 +1583,23 @@ for i, action in ipairs(QuickActions) do
     
     ConnectPersistent(btn.MouseButton1Up:Connect(function()
         -- Return to appropriate state after press
-        local targetTransparency = QuickActionStates[action.text] and 0.2 or 0.3
+        local isActive = QuickActionStates[action.text]
+        local targetTransparency = isActive and 0.2 or 0.7
         TweenService:Create(btn, TweenInfo.new(0.1), {
             BackgroundTransparency = targetTransparency
         }):Play()
     end))
     
+    -- Click/Tap handler (works on both mobile and desktop)
     ConnectPersistent(btn.MouseButton1Click:Connect(function()
         if action.toggleable then
             -- Toggle state
-            local isActive = QuickActionStates[action.text]
-            QuickActionStates[action.text] = not isActive
+            local wasActive = QuickActionStates[action.text]
+            QuickActionStates[action.text] = not wasActive
+            local isNowActive = QuickActionStates[action.text]
             
             -- Execute appropriate command
-            local cmd = isActive and action.offCmd or action.onCmd
+            local cmd = wasActive and action.offCmd or action.onCmd
             if cmd then
                 InputBox.Text = cmd
                 InputBox:CaptureFocus()
@@ -1610,9 +1608,8 @@ for i, action in ipairs(QuickActions) do
             end
             
             -- Visual feedback for toggle state (immediate update)
-            local newIsActive = QuickActionStates[action.text]
-            local targetTransparency = newIsActive and 0.2 or (isHovering and 0.3 or 0.7)
-            local targetColor = newIsActive and Color3.new(1, 1, 1) or (isHovering and Color3.new(1, 1, 1) or Colors.Text)
+            local targetTransparency = isNowActive and 0.2 or 0.7
+            local targetColor = isNowActive and Color3.new(1, 1, 1) or Colors.Text
             btn.BackgroundTransparency = targetTransparency
             btn.TextColor3 = targetColor
         else
