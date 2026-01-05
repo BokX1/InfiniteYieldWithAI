@@ -37,7 +37,7 @@ This version deconstructs the monolithic script into a **Headless Engine** using
 | Feature | Description |
 |---------|-------------|
 | **BridgeAPI** | Unified API contract with `Execute()`, `GetOutput()`, `GetAllOutput()`, `ClearOutput()`, `GetStatus()`, `StartFeedbackLoop()`, `StopFeedbackLoop()`, `HotSwap()` |
-| **Headless Mode** | New `CONFIG.HeadlessMode` option to run without GUI rendering |
+| **Headless Mode** | New `CONFIG.HeadlessMode` option to run without IY GUI rendering |
 | **Dynamic IY Loading** | Fetches `IYsource.lua` from repository with 24-hour caching |
 | **Output Buffer** | Configurable buffer (`OutputBufferSize`) for capturing IY notifications |
 | **Feedback Loop** | Real-time output monitoring via `RunService.Heartbeat` with callback support |
@@ -53,6 +53,17 @@ This version deconstructs the monolithic script into a **Headless Engine** using
 | **Bridge Execution** | Enhanced with `BridgeAPI.Execute()` integration for headless mode |
 | **Code Organization** | Restructured into `[CONFIG]`, `[SERVICES]`, `[CONTROLLER]` sections |
 | **Type Safety** | Added Luau `--!strict` directive and type annotations |
+
+### Fixed
+
+| Fix | Description |
+|-----|-------------|
+| **GUI Initialization** | Fixed `HeadlessMode` defaulting to true which suppressed the main UI; now defaults to false |
+| **Hot-Swap Logic** | Fixed `BridgeAPI.HotSwap()` to properly re-execute the source after fetching updates |
+| **Feedback Tracking** | Improved feedback loop to use global index tracking, preventing missed entries during buffer trimming |
+| **Bridge Execution** | Enabled `BridgeAPI.Execute()` for both GUI and Headless modes to provide consistent crash protection |
+| **Shim Consistency** | Added `Index` field to shim output entries and fixed `execCmd` type checking across all execution paths |
+| **Tutorial Visibility** | Added explicit visibility setting for `TutorialFrame` to ensure it shows on startup |
 
 ### Technical
 
@@ -112,7 +123,6 @@ This version deconstructs the monolithic script into a **Headless Engine** using
 | **Target-Smart Context** | Player list is only injected into API payloads when target cues are detected |
 
 ### Changed
-
 | Change | Description |
 |--------|-------------|
 | **Compact Mode Dropdown** | Replaced oversized mode toggle button with a compact dropdown selector (55px vs 95px) |
@@ -178,52 +188,3 @@ This version deconstructs the monolithic script into a **Headless Engine** using
 | **Placeholder Text** | More engaging prompts ("Tell me what to do..." instead of "Enter command...") |
 | **Status Messages** | Friendlier, more varied feedback with personality |
 | **CHAT Mode Context** | Enhanced dynamic context with proper framing for game script assistance |
-| **Safety Compliance** | Removed potentially triggering terms from CHAT mode prompt to prevent AI refusals |
-| **Command Reference** | CHAT mode now includes curated command reference for better question answering |
-
-### Fixed
-
-| Fix | Description |
-|-----|-------------|
-| **Dropdown Click-Outside** | Mode dropdown now closes reliably when clicking anywhere outside of it |
-| **Cleanup Scope** | Cleanup handler now destroys the correct Smart Infinite Yield screen GUI |
-| **ChatHistoryLimit Declaration** | Fixed forward declaration to prevent nil reference errors |
-| **Duplicate Variable Declaration** | Removed duplicate `ChatHistoryLimit` declaration |
-| **Bridge Validation** | Added proper nil checks for bridge interface and Exec function |
-| **Input Validation** | Enhanced `executeBridge` with input type and empty string validation |
-| **Chat Log Cleanup** | Added pcall protection when destroying chat entries |
-| **Memory Leak Prevention** | `clearChatLog` now properly clears both UI and internal ChatHistory |
-| **Dropdown Persistence** | Fixed issue where suggestions would persist after input focus loss |
-| **Focus Race Condition** | Added focus check ID system to prevent stale hide operations |
-| **CHAT Mode Refusals** | Resolved issue where AI would refuse to answer questions about commands like "how do I fly?" |
-| **Context Framing** | Added legitimate gaming context to prevent safety guardrail triggers |
-
-### Technical
-| Improvement | Description |
-|-------------|-------------|
-| **Config Expansion** | Added 8 new configuration options for bridge, mobile, dropdown, and fuzzy matching |
-| **Color Palette** | Extended Colors table with ChatGPT-like colors for CHAT mode UI |
-| **Namespace Exports** | Added `ClearChat` and `GetBridgeStatus` to namespace for external access |
-| **Code Structure** | 19 numbered sections with clear headers |
-| **Helper Functions** | Reusable `createInstance()`, `sanitizeInput()`, namespace helpers reduce duplication |
-| **Variable Naming** | Standardized to Roblox conventions |
-| **Error Handling** | Improved pcall usage throughout bridge and UI operations |
-| **Iterators** | ipairs() for arrays, pairs() for dictionaries |
-| **Dynamic Context** | Minimized variable content in API calls; player list only sent when targeting needed |
-| **FastMap Completeness** | Added 11 missing commands (swp, nofullbright, exit, partpath, copyanimation, etc.) |
-| **Fuzzy Match Optimization** | Levenshtein distance calculated once per player instead of multiple times |
-| **Global Isolation** | All globals use SmartInfiniteYield namespace to prevent pollution |
-
----
-
-## [1.2.0] - 2026-01-01
-
-### Added
-
-| Feature | Description |
-|---------|-------------|
-| **Split-Context Strategy** | Static/dynamic context separation reduces token costs by ~90% |
-| **Chain Detection** | Multi-part requests like "fly and goto" processed correctly |
-| **Predictive Dropdown** | Dynamic suggestions replace ghost text |
-| **Master Toggle** | Right Shift shows/hides interface |
-| **Smart Binds** | Auto-toggling (e.g., `bind f fly` handles fly/unfly) |
