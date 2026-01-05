@@ -6,6 +6,23 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ---
 
+## [1.3.1] - 2026-01-06
+
+### Fixed
+
+| Fix | Description |
+|-----|-------------|
+| **Headless GUI Visibility** | Ensures the headless virtualization shim runs IYsource inside a sandboxed loader that mocks UI classes so the base Infinite Yield GUI stays hidden when headless mode is enabled. |
+| **Hot-Swap Consistency** | Reuses the sandboxed loader during hot-swaps to prevent GUI elements from reappearing after refreshing IYsource. |
+
+### Technical
+
+| Improvement | Description |
+|-------------|-------------|
+| **Sandboxed IY Loader** | Centralized IYsource execution helper that injects mock `Instance.new` handling for UI classes while delegating non-UI instances to Roblox. |
+
+---
+
 ## [1.3.0] - 2026-01-05
 
 ### 🚀 Headless Engine Release
