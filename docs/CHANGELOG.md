@@ -6,10 +6,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ---
 
-## [1.2.3] - 2026-01-06
-
----
-
 ## [1.2.2] - 2026-01-03
 
 ### Added
@@ -108,16 +104,66 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 | **Fuzzy Match Precision** | Dynamic threshold based on input length - shorter inputs require stricter matching to prevent false positives |
 | **Minimum Input Length** | New `FuzzyMatchMinInputLength` config (default: 3) prevents 1-2 character inputs from fuzzy matching |
 | **Chat Log Styling** | Increased padding, larger font sizes, and better color contrast for readability |
-| **Mode Switch Animation** | Enhanced mode switch with proper container visibility toggling and status updates |
-| **Bridge Initialization** | Added retry logic during initial connection with periodic reconnection attempts |
-| **Context Injection** | CMD mode now includes minimal game context for better command understanding |
-| **CHAT Mode Prompt** | Enhanced with genre hints and team awareness for more contextual responses |
-| **Quick Action Grid** | Cell size and font now scale based on display density |
-| **Bridge System** | Replaced polling with event-driven architecture |
-| **Cache Cleanup** | LRU-style eviction when max entries reached |
-| **Target Resolution** | Added prefix, contains, and fuzzy matching fallback |
-| **Tutorial** | Multi-step walkthrough replaces single-screen modal |
-| **Quick Actions** | Replaced God/Kill with Jump/Invisible for universal compatibility |
-| **Placeholder Text** | More engaging prompts ("Tell me what to do..." instead of "Enter command...") |
-| **Status Messages** | Friendlier, more varied feedback with personality |
-| **CHAT Mode Context** | Enhanced dynamic context with proper framing for game script assistance |
+
+---
+
+## [1.2.0] - 2026-01-01
+
+### Added
+
+| Feature | Description |
+|---------|-------------|
+| **Split-Context Strategy** | Static/dynamic context separation reduces token costs by ~90% |
+| **Chain Detection** | Multi-part requests like "fly and goto" processed correctly |
+| **Predictive Dropdown** | Dynamic suggestions replace ghost text |
+| **Master Toggle** | Right Shift shows/hides interface |
+| **Smart Binds** | Auto-toggling (e.g., `bind f fly` handles fly/unfly) |
+| **Command Database** | Full Infinite Yield command list for instant local execution |
+
+### Fixed
+
+| Fix | Description |
+|-----|-------------|
+| **AI Model** | Upgraded to OpenAI GPT-5 Mini for better reasoning |
+| **Regex Bugs** | Fixed greedy patterns breaking text arguments |
+| **Chat Mode** | Removed unnecessary `;chat` prefixes |
+| **UI Z-Index** | Resolved layering issues |
+
+---
+
+## [1.1.0] - 2025-12-28
+
+### Added
+
+| Feature | Description |
+|---------|-------------|
+| **Cloudflare Security** | API protection against abuse |
+| **Logic Engine v2** | Faster, more accurate translations |
+
+### Fixed
+
+| Fix | Description |
+|-----|-------------|
+| **Responsive UI** | Improved PC and Mobile layouts |
+| **Core Bugs** | Multiple logic engine fixes |
+
+---
+
+## [1.0.0] - 2025-11-25
+
+### Added
+
+| Feature | Description |
+|---------|-------------|
+| **Initial Release** | First stable version |
+| **AI Translation** | Natural language to command conversion |
+| **Thinking Bar** | Visual AI processing feedback |
+| **Dual Modes** | CMD for execution, CHAT for advice |
+
+---
+
+[1.2.2]: https://github.com/BokX1/InfiniteYieldWithAI/compare/v1.2.1...v1.2.2
+[1.2.1]: https://github.com/BokX1/InfiniteYieldWithAI/compare/v1.2.0...v1.2.1
+[1.2.0]: https://github.com/BokX1/InfiniteYieldWithAI/compare/v1.1.0...v1.2.0
+[1.1.0]: https://github.com/BokX1/InfiniteYieldWithAI/compare/v1.0.0...v1.1.0
+[1.0.0]: https://github.com/BokX1/InfiniteYieldWithAI/releases/tag/v1.0.0
