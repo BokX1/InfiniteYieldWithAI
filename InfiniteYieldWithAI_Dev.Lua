@@ -160,7 +160,7 @@ local CONFIG = {
     DropdownMaxItems = 6, -- Maximum items to show in dropdown
     
     -- V1.3 Headless Engine Settings
-    HeadlessMode = false, -- Enable headless mode (no GUI rendering)
+    HeadlessMode = true, -- Enable headless mode (no GUI rendering)
     IYSourceURL = "https://raw.githubusercontent.com/BokX1/InfiniteYieldWithAI/main/IYsource.lua", -- URL for dynamic IYsource loading (local repo copy)
     IYSourceCacheFile = "SIY_IYSource_Cache.lua", -- Local cache file for IYsource
     IYSourceCacheExpiry = 86400, -- Cache expiry in seconds (24 hours)
