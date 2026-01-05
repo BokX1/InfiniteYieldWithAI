@@ -2087,8 +2087,24 @@ createInstance("UIPadding", {
     Parent = QuickActionsFrame
 })
 
+local QuickActionToggleState = {}
+
+local function getQuickActionBaseTransparency(action)
+    if action.togglePrompt and QuickActionToggleState[action.text] then
+        return 0.4
+    end
+    return 0.7
+end
+
+local function updateQuickActionVisual(btn, action)
+    btn.BackgroundTransparency = getQuickActionBaseTransparency(action)
+    if action.togglePrompt then
+        btn.Text = QuickActionToggleState[action.text] and (action.text .. " (On)") or action.text
+    end
+end
+
 local QuickActions = {
-    {text = "Fly", prompt = "fly", color = Colors.Blue},
+    {text = "Fly", prompt = "fly", togglePrompt = "unfly", color = Colors.Blue},
     {text = "Speed", prompt = "make me fast", color = Colors.Green},
     {text = "ESP", prompt = "esp", color = Colors.Purple},
     {text = "Noclip", prompt = "noclip", color = Colors.Orange},
@@ -2113,6 +2129,8 @@ for i, action in ipairs(QuickActions) do
         Parent = QuickActionsFrame
     })
     addCorner(btn, 4)
+    QuickActionToggleState[action.text] = false
+    updateQuickActionVisual(btn, action)
     
     -- Hover effect
     ConnectPersistent(btn.MouseEnter:Connect(function()
@@ -2123,7 +2141,7 @@ for i, action in ipairs(QuickActions) do
     end))
     ConnectPersistent(btn.MouseLeave:Connect(function()
         TweenService:Create(btn, TweenInfo.new(0.1), {
-            BackgroundTransparency = 0.7,
+            BackgroundTransparency = getQuickActionBaseTransparency(action),
             TextColor3 = Colors.Text
         }):Play()
     end))
@@ -2141,7 +2159,14 @@ for i, action in ipairs(QuickActions) do
     end))
     
     ConnectPersistent(btn.MouseButton1Click:Connect(function()
-        InputBox.Text = action.prompt
+        local promptToSend = action.prompt
+        if action.togglePrompt then
+            local isActive = QuickActionToggleState[action.text]
+            promptToSend = isActive and action.togglePrompt or action.prompt
+            QuickActionToggleState[action.text] = not isActive
+            updateQuickActionVisual(btn, action)
+        end
+        InputBox.Text = promptToSend
         InputBox:CaptureFocus()
         task.wait(0.1)
         InputBox:ReleaseFocus(true)
