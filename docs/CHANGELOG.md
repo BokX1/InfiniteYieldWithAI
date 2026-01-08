@@ -187,10 +187,3 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 | **Dual Modes** | CMD for execution, CHAT for advice |
 
 ---
-
-[1.2.2.1]: https://github.com/BokX1/InfiniteYieldWithAI/compare/v1.2.2...v1.2.2.1
-[1.2.2]: https://github.com/BokX1/InfiniteYieldWithAI/compare/v1.2.1...v1.2.2
-[1.2.1]: https://github.com/BokX1/InfiniteYieldWithAI/compare/v1.2.0...v1.2.1
-[1.2.0]: https://github.com/BokX1/InfiniteYieldWithAI/compare/v1.1.0...v1.2.0
-[1.1.0]: https://github.com/BokX1/InfiniteYieldWithAI/compare/v1.0.0...v1.1.0
-[1.0.0]: https://github.com/BokX1/InfiniteYieldWithAI/releases/tag/v1.0.0
