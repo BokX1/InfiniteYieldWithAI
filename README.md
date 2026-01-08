@@ -42,7 +42,7 @@ Key innovations include **Intelligent Caching** that learns your phrases over ti
 |---------|-------------|
 | **Compact Mode Dropdown** | Space-efficient dropdown selector (55px) to switch between CMD and CHAT modes |
 | **Predictive Dropdown** | Google-style suggestions with priority ranking as you type |
-| **Waypoint Suggestions** | Type `gotowp ` to see saved waypoints, `goto ` to see players |
+| **Waypoint Suggestions** | Type `gotowp` to see saved waypoints, `goto` to see players |
 | **Command Preview** | Tooltip-style preview shows exactly what will execute before it runs |
 | **Visual Processing Indicator** | Animated glow effect shows when AI is thinking |
 | **Temporary Status Display** | Status messages appear briefly (2.5s) then auto-hide for minimal UI clutter |
@@ -142,8 +142,9 @@ Save and teleport to locations using the waypoint system:
 | `deletewaypoint [name]` | Delete a waypoint | `deletewaypoint base` |
 
 **Dropdown Suggestions:**
-- Type `gotowp ` to see all your saved waypoints
-- Type `goto ` to see all players in the server
+
+- Type `gotowp` to see all your saved waypoints
+- Type `goto` to see all players in the server
 
 **Natural Language Examples:**
 > **You:** "Save this spot as my farm"
@@ -195,6 +196,7 @@ local CONFIG = {
 ### Configuration Categories
 
 #### Cache System
+
 The intelligent caching system learns your frequently used phrases:
 
 | Setting | Default | Description |
@@ -253,6 +255,17 @@ Version 1.2.1 introduced an event-based bridge using BindableEvents, replacing t
 ---
 
 ## What's New in V1.2.2
+
+### Latest Update: V1.2.2.1 (January 8, 2026)
+
+**Bug Fixes & Stability Improvements:**
+
+| Fix | Description |
+|-----|-------------|
+| **Connection Stability** | Improved bridge connection reliability and error handling |
+| **FastMap Synchronization** | Removed invalid commands and synchronized FastMap with IYsource.lua for accurate local execution |
+| **Quick Actions Toggle** | Fixed mobile-specific Quick Actions toggle behavior for proper state management |
+| **Code Optimization** | Refactored 142 lines for better performance and maintainability |
 
 ### GUI Improvements
 
@@ -338,6 +351,10 @@ See the full [ROADMAP.md](docs/ROADMAP.md) for detailed plans.
 See [CHANGELOG.md](docs/CHANGELOG.md) for the complete version history.
 
 ### Recent Updates
+
+**V1.2.2.1** (January 8, 2026) - Connection stability improvements, FastMap synchronization with IYsource.lua, Quick Actions toggle fixes, code optimization (142 lines refactored)
+
+**V1.2.2** - Compact mode dropdown, streamlined header layout, text collision fixes, optimized frame sizing, temporary status display, toggle quick actions, comprehensive FastMap update (400+ commands)
 
 **V1.2.1** - Smart Waypoint System, token cache optimization, event-based bridge, intelligent caching, fuzzy targeting, visual feedback, mobile quick actions, interactive tutorial, enhanced CHAT mode, input sanitization, namespace isolation, cleanup handlers, configurable constants, FastMap completeness (11 new commands)
 

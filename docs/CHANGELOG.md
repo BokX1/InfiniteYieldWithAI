@@ -6,9 +6,30 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ---
 
+## [1.2.2.1] - 2026-01-08
+
+### Fixed
+
+| Fix | Description |
+|-----|-------------|
+| **Connection Stability** | Improved bridge connection reliability and error handling to prevent connection failures |
+| **FastMap Synchronization** | Removed invalid commands and synchronized FastMap with IYsource.lua for accurate local execution |
+| **Quick Actions Toggle** | Fixed mobile-specific Quick Actions toggle behavior for proper state management |
+
+### Technical
+
+| Improvement | Description |
+|-------------|-------------|
+| **Code Optimization** | Refactored 142 lines for better performance and maintainability |
+| **Error Handling** | Enhanced error handling in bridge connection system |
+| **Command Validation** | Improved command validation against IYsource.lua database |
+
+---
+
 ## [1.2.2] - 2026-01-05
 
 ### Added
+
 | Feature | Description |
 |---------|-------------|
 | **Toggle Quick Actions** | Quick action buttons now work as keybinds—press once to activate, press again to deactivate (Fly, Noclip, ESP, Speed, Jump, Invisible) |
@@ -34,8 +55,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 | **Rate Limiting** | Prevents rapid successive AI requests with configurable cooldown |
 | **JSON Error Handling** | Safe parsing of AI responses prevents crashes from malformed data |
 | **Smart Waypoint System** | New `gotowp` command for teleporting to saved waypoints |
-| **Waypoint Dropdown** | Type `gotowp ` to see all saved waypoints in dropdown suggestions |
-| **Player Dropdown** | Type `goto ` to see all players in dropdown suggestions |
+| **Waypoint Dropdown** | Type `gotowp` to see all saved waypoints in dropdown suggestions |
+| **Player Dropdown** | Type `goto` to see all players in dropdown suggestions |
 | **Waypoint Tutorial** | New tutorial step explaining waypoint commands (swp, gotowp, goto) |
 | **Command Aliases** | Added `gwp` and `wpgoto` as aliases for `gotowp` |
 | **Event-Based Bridge** | BindableEvents system for instant bridge connection, eliminating "Bridge not connected" errors |
@@ -56,6 +77,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 | **Target-Smart Context** | Player list is only injected into API payloads when target cues are detected |
 
 ### Changed
+
 | Change | Description |
 |--------|-------------|
 | **Compact Mode Dropdown** | Replaced oversized mode toggle button with a compact dropdown selector (55px vs 95px) |
@@ -166,6 +188,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ---
 
+[1.2.2.1]: https://github.com/BokX1/InfiniteYieldWithAI/compare/v1.2.2...v1.2.2.1
 [1.2.2]: https://github.com/BokX1/InfiniteYieldWithAI/compare/v1.2.1...v1.2.2
 [1.2.1]: https://github.com/BokX1/InfiniteYieldWithAI/compare/v1.2.0...v1.2.1
 [1.2.0]: https://github.com/BokX1/InfiniteYieldWithAI/compare/v1.1.0...v1.2.0
