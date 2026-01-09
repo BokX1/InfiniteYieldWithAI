@@ -6,6 +6,23 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ---
 
+## [1.2.2.2] - 2026-01-09
+
+### Fixed
+
+| Fix | Description |
+|-----|-------------|
+| **Deterministic Command Matching** | Converted `FastMap` to `OrderedFastMap` sorted by pattern length (longest first) to ensure specific commands like `flyspeed` match before generic ones like `fly` |
+
+### Technical
+
+| Improvement | Description |
+|-------------|-------------|
+| **Input Debouncing** | Added 75ms debounce to dropdown updates reducing CPU usage during rapid typing |
+| **Ordered Pattern Iteration** | Updated `queryAI` and `buildSuggestions` to use `ipairs(OrderedFastMap)` for consistent, ordered iteration |
+
+---
+
 ## [1.2.2.1] - 2026-01-08
 
 ### Fixed

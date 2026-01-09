@@ -2691,6 +2691,19 @@ local FastMap = {
     ["^copyid (.+)$"] = "copyid %1", ["^copyuserid (.+)$"] = "copyid %1"
 }
 
+-- Convert FastMap to OrderedFastMap for deterministic matching
+-- Sorted by pattern length (descending) so specific patterns match before generic ones
+local OrderedFastMap = {}
+do
+    for pattern, command in pairs(FastMap) do
+        table.insert(OrderedFastMap, { Pattern = pattern, Command = command })
+    end
+    -- Sort by pattern length descending (longer = more specific = higher priority)
+    table.sort(OrderedFastMap, function(a, b)
+        return #a.Pattern > #b.Pattern
+    end)
+end
+
 local Priority = {
     fly = 100, unfly = 100, noclip = 100, clip = 100,
     speed = 95, ws = 95, jpower = 95, jumppower = 95, jp = 95,
@@ -3239,11 +3252,11 @@ local function queryAI(promptText, retryContext, attemptCount)
         local isChain = cleanPrompt:find(" and ") or cleanPrompt:find(" & ") or cleanPrompt:find(" then ")
         
         if not isChain then
-            -- FastMap lookup
-            for pattern, cmd in pairs(FastMap) do
-                local _, _, capture, capture2 = cleanPrompt:find(pattern)
+            -- OrderedFastMap lookup (deterministic, longest patterns first)
+            for _, entry in ipairs(OrderedFastMap) do
+                local _, _, capture, capture2 = cleanPrompt:find(entry.Pattern)
                 if _ then
-                    local finalCmd = cmd
+                    local finalCmd = entry.Command
                     if capture then finalCmd = finalCmd:gsub("%%1", capture) end
                     if capture2 then finalCmd = finalCmd:gsub("%%2", capture2) end
                     
@@ -3437,7 +3450,8 @@ local SuggestionList = {}
 
 local function buildSuggestions()
     local tempMap = {}
-    for pattern, _ in pairs(FastMap) do
+    for _, entry in ipairs(OrderedFastMap) do
+        local pattern = entry.Pattern
         local cmdName = pattern:match("%^([%w_]+)")
         if cmdName then
             local cleanName = cmdName
@@ -3488,7 +3502,11 @@ local function getIYWaypoints()
     return waypoints
 end
 
-local function updateDropdown(text)
+-- Debounce state for dropdown updates
+local dropdownDebounceId = 0
+local DROPDOWN_DEBOUNCE_MS = 75 -- milliseconds
+
+local function updateDropdownInternal(text)
     for _, child in ipairs(SuggestionFrame:GetChildren()) do
         if child:IsA("TextButton") then child:Destroy() end
     end
@@ -3612,6 +3630,19 @@ local function updateDropdown(text)
     SuggestionFrame.Visible = true
 end
 
+-- Debounced wrapper for updateDropdownInternal
+-- Waits DROPDOWN_DEBOUNCE_MS after last keystroke before updating
+local function updateDropdown(text)
+    dropdownDebounceId = dropdownDebounceId + 1
+    local currentId = dropdownDebounceId
+    
+    task.delay(DROPDOWN_DEBOUNCE_MS / 1000, function()
+        -- Only execute if this is still the latest request
+        if currentId == dropdownDebounceId then
+            updateDropdownInternal(text)
+        end
+    end)
+end
 --// ============================================
 --// 18. EVENT HANDLERS
 --// ============================================
