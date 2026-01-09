@@ -20,6 +20,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 |-------------|-------------|
 | **Input Debouncing** | Added 75ms debounce to dropdown updates reducing CPU usage during rapid typing |
 | **Ordered Pattern Iteration** | Updated `queryAI` and `buildSuggestions` to use `ipairs(OrderedFastMap)` for consistent, ordered iteration |
+| **LuaU Type Annotations** | Added type annotations (`@param`, `@return`) to 12+ core functions for better documentation |
+| **Enhanced Error Logging** | `createInstance` and `cancelTask` now log specific errors via `warn()` with `[SIY]` prefix |
+| **UI Builder Helpers** | Added `createButton()`, `createLabel()`, `createFrame()` helper functions for cleaner UI construction |
 
 ---
 

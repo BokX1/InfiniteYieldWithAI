@@ -1,10 +1,10 @@
 --[[ 
-    SMART INFINITE YIELD - V1.2.2 STABLE
+    SMART INFINITE YIELD - V1.2.2.2 STABLE
     - Architecture: Context Awareness + Event-Based Bridge
     - Logic: VolQ5 & Pollinations.AI (LLM Model)
     - Status: Stable 
-    - New: Compact Mode Dropdown UI, Streamlined Header Layout, Text Collision Fixes,
-           Optimized Frame Sizing, Temporary Status Display, Industry-Standard GUI
+    - Changes: Deterministic Command Matching (OrderedFastMap), Input Debouncing,
+               LuaU Type Annotations, Enhanced Error Logging
 ]]
 
 --// ============================================
@@ -19,9 +19,15 @@ local CoreGui = game:GetService("CoreGui")
 local RunService = game:GetService("RunService")
 
 -- Namespace for global variable isolation
-local NAMESPACE = "SmartInfiniteYield"
+local NAMESPACE = "SmartInfiniteYield" --: string
 
--- Safe global access helpers
+--[=[
+    @type NamespaceTable {[string]: any}
+    Safe global access helpers with type annotations
+]=]
+
+--- Returns the namespace table, creating it if needed
+--- @return table<string, any>
 local function getNamespace()
     if getgenv then
         getgenv()[NAMESPACE] = getgenv()[NAMESPACE] or {}
@@ -33,25 +39,41 @@ local function getNamespace()
     return {}
 end
 
+--- Sets a value in the namespace
+--- @param key string -- The key to set
+--- @param value any -- The value to store
 local function setNamespaceValue(key, value)
     local ns = getNamespace()
     ns[key] = value
 end
 
+--- Gets a value from the namespace
+--- @param key string -- The key to retrieve
+--- @return any -- The stored value or nil
 local function getNamespaceValue(key)
     local ns = getNamespace()
     return ns[key]
 end
 
--- Centralized connection management
-local Connections = {}
-local PersistentTasks = {}
+--[=[
+    Centralized connection management
+    Tracks all RBXScriptConnections for proper cleanup on script unload
+]=]
+local Connections = {} --: {RBXScriptConnection}
+local PersistentTasks = {} --: {thread}
 
+--- Registers a connection for cleanup tracking
+--- @param connection RBXScriptConnection
+--- @return RBXScriptConnection
 local function registerConnection(connection)
     table.insert(Connections, connection)
     return connection
 end
 
+--- Connects a signal and registers it for cleanup
+--- @param signalOrConnection RBXScriptSignal|RBXScriptConnection
+--- @param callback function? -- Optional callback if first arg is a signal
+--- @return RBXScriptConnection?
 local function ConnectPersistent(signalOrConnection, callback)
     local connection = callback and signalOrConnection:Connect(callback) or signalOrConnection
     if connection then
@@ -60,6 +82,8 @@ local function ConnectPersistent(signalOrConnection, callback)
     return connection
 end
 
+--- Removes a connection from tracking (call after manual disconnect)
+--- @param target RBXScriptConnection
 local function removeConnection(target)
     for index = #Connections, 1, -1 do
         if Connections[index] == target then
@@ -69,6 +93,9 @@ local function removeConnection(target)
     end
 end
 
+--- Registers a task thread for cleanup tracking
+--- @param thread thread? -- The coroutine to track
+--- @return thread?
 local function registerTask(thread)
     if thread then
         table.insert(PersistentTasks, thread)
@@ -76,9 +103,14 @@ local function registerTask(thread)
     return thread
 end
 
+--- Cancels a task and removes it from tracking
+--- @param thread thread? -- The coroutine to cancel
 local function cancelTask(thread)
     if not thread then return end
-    pcall(task.cancel, thread)
+    local success, err = pcall(task.cancel, thread)
+    if not success then
+        warn("[SIY] Failed to cancel task:", tostring(err))
+    end
     for index = #PersistentTasks, 1, -1 do
         if PersistentTasks[index] == thread then
             table.remove(PersistentTasks, index)
@@ -87,6 +119,7 @@ local function cancelTask(thread)
     end
 end
 
+--- Cancels all tracked persistent tasks
 local function cancelPersistentTasks()
     for index = #PersistentTasks, 1, -1 do
         cancelTask(PersistentTasks[index])
@@ -851,6 +884,11 @@ local BaseMainSize = IsMobile and UDim2.new(0.9, 0, 0, 65) or UDim2.new(0, 420, 
 local ChatMainSize = IsMobile and UDim2.new(0.9, 0, 0, 280) or UDim2.new(0, 420, 0, 300)
 
 -- UI Helper Functions
+
+--- Adds rounded corners to a GUI object
+--- @param obj GuiObject -- The GUI object to modify
+--- @param radius number -- Corner radius in pixels
+--- @return UICorner
 local function addCorner(obj, radius)
     local corner = Instance.new("UICorner")
     corner.CornerRadius = UDim.new(0, radius)
@@ -858,6 +896,11 @@ local function addCorner(obj, radius)
     return corner
 end
 
+--- Adds a stroke border to a GUI object
+--- @param obj GuiObject -- The GUI object to modify
+--- @param color Color3 -- Stroke color
+--- @param thickness number -- Stroke thickness in pixels
+--- @return UIStroke
 local function addStroke(obj, color, thickness)
     local stroke = Instance.new("UIStroke")
     stroke.Color = color
@@ -866,12 +909,82 @@ local function addStroke(obj, color, thickness)
     return stroke
 end
 
+--- Creates a new Instance with properties, with error handling
+--- @param className string -- The class name to create
+--- @param properties table<string, any> -- Properties to assign
+--- @return Instance
 local function createInstance(className, properties)
-    local instance = Instance.new(className)
+    local success, instance = pcall(Instance.new, className)
+    if not success or not instance then
+        warn("[SIY] Failed to create instance:", className)
+        return Instance.new("Frame") -- Fallback to Frame
+    end
+    
     for prop, value in pairs(properties) do
-        instance[prop] = value
+        local propSuccess, propErr = pcall(function()
+            instance[prop] = value
+        end)
+        if not propSuccess then
+            warn(string.format("[SIY] Failed to set property '%s' on %s: %s", prop, className, tostring(propErr)))
+        end
     end
     return instance
+end
+
+--- Creates a styled button with common defaults
+--- @param text string -- Button text
+--- @param props table<string, any>? -- Additional properties
+--- @return TextButton
+local function createButton(text, props)
+    local defaults = {
+        BackgroundColor3 = Colors.InputBg,
+        Text = text,
+        TextColor3 = Colors.Text,
+        Font = Enum.Font.GothamBold,
+        TextSize = 12,
+        AutoButtonColor = false
+    }
+    if props then
+        for k, v in pairs(props) do defaults[k] = v end
+    end
+    local btn = createInstance("TextButton", defaults)
+    addCorner(btn, 4)
+    return btn
+end
+
+--- Creates a styled text label with common defaults
+--- @param text string -- Label text
+--- @param props table<string, any>? -- Additional properties
+--- @return TextLabel
+local function createLabel(text, props)
+    local defaults = {
+        BackgroundTransparency = 1,
+        Text = text,
+        TextColor3 = Colors.Text,
+        Font = Enum.Font.Gotham,
+        TextSize = 12,
+        TextXAlignment = Enum.TextXAlignment.Left
+    }
+    if props then
+        for k, v in pairs(props) do defaults[k] = v end
+    end
+    return createInstance("TextLabel", defaults)
+end
+
+--- Creates a styled frame with optional corner and stroke
+--- @param props table<string, any> -- Frame properties
+--- @param cornerRadius number? -- Optional corner radius
+--- @param strokeColor Color3? -- Optional stroke color
+--- @return Frame
+local function createFrame(props, cornerRadius, strokeColor)
+    local frame = createInstance("Frame", props)
+    if cornerRadius and cornerRadius > 0 then
+        addCorner(frame, cornerRadius)
+    end
+    if strokeColor then
+        addStroke(frame, strokeColor, 1)
+    end
+    return frame
 end
 
 --// ============================================
@@ -2691,6 +2804,19 @@ local FastMap = {
     ["^copyid (.+)$"] = "copyid %1", ["^copyuserid (.+)$"] = "copyid %1"
 }
 
+-- Convert FastMap to OrderedFastMap for deterministic matching
+-- Sorted by pattern length (descending) so specific patterns match before generic ones
+local OrderedFastMap = {}
+do
+    for pattern, command in pairs(FastMap) do
+        table.insert(OrderedFastMap, { Pattern = pattern, Command = command })
+    end
+    -- Sort by pattern length descending (longer = more specific = higher priority)
+    table.sort(OrderedFastMap, function(a, b)
+        return #a.Pattern > #b.Pattern
+    end)
+end
+
 local Priority = {
     fly = 100, unfly = 100, noclip = 100, clip = 100,
     speed = 95, ws = 95, jpower = 95, jumppower = 95, jp = 95,
@@ -3239,11 +3365,11 @@ local function queryAI(promptText, retryContext, attemptCount)
         local isChain = cleanPrompt:find(" and ") or cleanPrompt:find(" & ") or cleanPrompt:find(" then ")
         
         if not isChain then
-            -- FastMap lookup
-            for pattern, cmd in pairs(FastMap) do
-                local _, _, capture, capture2 = cleanPrompt:find(pattern)
+            -- OrderedFastMap lookup (deterministic, longest patterns first)
+            for _, entry in ipairs(OrderedFastMap) do
+                local _, _, capture, capture2 = cleanPrompt:find(entry.Pattern)
                 if _ then
-                    local finalCmd = cmd
+                    local finalCmd = entry.Command
                     if capture then finalCmd = finalCmd:gsub("%%1", capture) end
                     if capture2 then finalCmd = finalCmd:gsub("%%2", capture2) end
                     
@@ -3437,7 +3563,8 @@ local SuggestionList = {}
 
 local function buildSuggestions()
     local tempMap = {}
-    for pattern, _ in pairs(FastMap) do
+    for _, entry in ipairs(OrderedFastMap) do
+        local pattern = entry.Pattern
         local cmdName = pattern:match("%^([%w_]+)")
         if cmdName then
             local cleanName = cmdName
@@ -3488,7 +3615,11 @@ local function getIYWaypoints()
     return waypoints
 end
 
-local function updateDropdown(text)
+-- Debounce state for dropdown updates
+local dropdownDebounceId = 0
+local DROPDOWN_DEBOUNCE_MS = 75 -- milliseconds
+
+local function updateDropdownInternal(text)
     for _, child in ipairs(SuggestionFrame:GetChildren()) do
         if child:IsA("TextButton") then child:Destroy() end
     end
@@ -3612,6 +3743,19 @@ local function updateDropdown(text)
     SuggestionFrame.Visible = true
 end
 
+-- Debounced wrapper for updateDropdownInternal
+-- Waits DROPDOWN_DEBOUNCE_MS after last keystroke before updating
+local function updateDropdown(text)
+    dropdownDebounceId = dropdownDebounceId + 1
+    local currentId = dropdownDebounceId
+    
+    task.delay(DROPDOWN_DEBOUNCE_MS / 1000, function()
+        -- Only execute if this is still the latest request
+        if currentId == dropdownDebounceId then
+            updateDropdownInternal(text)
+        end
+    end)
+end
 --// ============================================
 --// 18. EVENT HANDLERS
 --// ============================================
