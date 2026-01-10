@@ -6,6 +6,31 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ---
 
+## [1.3.0] - 2026-01-11
+
+### Added
+
+| Feature | Description |
+|---------|-------------|
+| **Sound System** | Acoustic feedback for processing, success, and error events (configurable via `EnableSounds`) |
+| **Onboarding Tour** | Interactive 8-step guide for new users highlighting key UI elements |
+| **Theme Inheritance** | Automatically syncs with Infinite Yield's theme settings and colors |
+| **Animations** | Smooth dropdown transitions, hover effects, and pulsating glow using TweenService |
+| **Plugin Bridge API** | Global `SIY` table (v2.0) exposing `askAI`, `executeCommand`, and `getStatus` |
+| **Lifecycle Manager** | Robust startup/shutdown handling to prevent memory leaks and ensure clean reloading |
+| **Error Handler** | Centralized error reporting (`xpcall`) with safe function wrapping |
+| **IY Integration** | Dynamic scraping of IY aliases and keybinds for enhanced AI context |
+
+### Changed
+
+| Change | Description |
+|--------|-------------|
+| **Event Architecture** | Migrated core communication to extensive `EventBus` system |
+| **Configuration** | Added `EnableSounds`, `SoundVolume`, `EnableTour`, `AnimationSpeed`, `ThemeSync` to config |
+| **Command Execution** | AI now emits `EventBus` signals for feedback sounds |
+
+---
+
 ## [1.2.2.3] - 2026-01-11
 
 ### Added

@@ -1,5 +1,5 @@
 
-# SmartInfiniteYield (SIY) - V1.2.2.3 Stable
+# SmartInfiniteYield (SIY) - V1.3.0 Stable
 
 **Original Idea by [VolQ5](https://github.com/BokX1/RbxLuauLLM) | Powered by Pollinations.AI (LLM Model)**
 
@@ -254,7 +254,20 @@ Version 1.2.1 introduced an event-based bridge using BindableEvents, replacing t
 
 ---
 
-## What's New in V1.2.2
+## What's New in V1.3.0
+
+### Latest Update: V1.3.0 (January 11, 2026)
+
+**Stabilization & Experience Update:**
+
+| Feature | Description |
+|---------|-------------|
+| **Sound Feedback** 🎵 | Acoustic cues for success (chime), error (buzz), and processing (hum) states |
+| **Onboarding Tour** 🔦 | Interactive first-run tour guiding users through key features |
+| **Theme Inheritance** 🎨 | Automatically adopts Infinite Yield's custom theme/colors |
+| **Smooth Animations** ✨ | Polished UI transitions and pulsating glow effects |
+| **Plugin Bridge API** 🔌 | Exposes `_G.SIY.askAI()` for external plugins to use AI |
+| **Core Stabilization** 🛡️ | New EventBus, LifecycleManager, and centralized ErrorHandler |
 
 ### Latest Update: V1.2.2.3 (January 10, 2026)
 
@@ -335,9 +348,7 @@ The codebase was refactored for efficiency, security, and maintainability:
 
 | Feature | Description |
 |---------|-------------|
-| **Multi-Model Support** | Switch between OpenAI, Gemini, Claude, or Local LLMs |
-| **Plugin System** | Community-created extensions and custom commands |
-| **Theme Customization** | Multiple color themes and custom accent colors |
+| **Plugin System** | Community-created extensions and custom commands (Foundation laid in v1.3.0) |
 | **Command Macros** | Record and replay command sequences |
 | **Settings Panel** | In-game configuration without editing code |
 | **Conversation Memory** | Context-aware follow-up commands |
@@ -352,7 +363,9 @@ See [CHANGELOG.md](docs/CHANGELOG.md) for the complete version history.
 
 ### Recent Updates
 
-**V1.2.2.3** (January 11, 2026) - Code quality improvements: operator precedence bug fix, removed unused functions, connection cleanup enhancements, standardized error prefixes, dynamic command scraping
+**V1.3.0** (January 11, 2026) - Major update focusing on "Stabilization & Experience": Sound system, onboarding tour, theme inheritance, animation system, plugin bridge API, and robust lifecycle management.
+
+**V1.2.2.3** (January 10, 2026) - Code quality improvements: operator precedence bug fix, removed unused functions, connection cleanup enhancements, standardized error prefixes, dynamic command scraping
 
 **V1.2.2.2** (January 9, 2026) - LuaU type annotations, deterministic command matching (OrderedFastMap), input debouncing, enhanced error logging
 

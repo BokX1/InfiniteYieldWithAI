@@ -1,10 +1,9 @@
 --[[ 
-    SMART INFINITE YIELD - V1.2.2.3 STABLE
+    SMART INFINITE YIELD - V1.3.0 STABLE
     - Architecture: Context Awareness + Event-Based Bridge
     - Logic: VolQ5 & Pollinations.AI (LLM Model)
     - Status: Stable 
-    - Changes: Dynamic Command Scraping from IY's cmds table, Enhanced Bridge with
-               Feedback Loop, Notification Hooking for Command Output Capture
+    - v1.3.0: Added sound feedback config, tour config, plugin bridge ready
 ]]
 
 --// ============================================
@@ -129,6 +128,353 @@ end
 
 
 --// ============================================
+--// 1B. EVENT BUS SYSTEM (v1.3.0)
+--// ============================================
+-- Decoupled communication between UI, Logic, and Services
+local EventBus = {}
+local _eventListeners = {}
+
+--- Subscribe to an event
+--- @param eventName string
+--- @param callback function
+--- @return function -- Disconnect function
+function EventBus:on(eventName, callback)
+    _eventListeners[eventName] = _eventListeners[eventName] or {}
+    table.insert(_eventListeners[eventName], callback)
+    return function()
+        local listeners = _eventListeners[eventName]
+        if listeners then
+            for i, cb in ipairs(listeners) do
+                if cb == callback then
+                    table.remove(listeners, i)
+                    break
+                end
+            end
+        end
+    end
+end
+
+--- Emit an event to all listeners
+--- @param eventName string
+--- @param ... any
+function EventBus:emit(eventName, ...)
+    local listeners = _eventListeners[eventName]
+    if listeners then
+        for _, callback in ipairs(listeners) do
+            task.spawn(callback, ...)
+        end
+    end
+end
+
+--- Clear all event listeners
+function EventBus:clear()
+    _eventListeners = {}
+end
+
+
+--// ============================================
+--// 1C. LIFECYCLE MANAGER (v1.3.0)
+--// ============================================
+-- Clean startup and shutdown for re-execution support
+local LifecycleManager = {}
+local _isInitialized = false
+
+--- Startup sequence
+function LifecycleManager:startup()
+    if _isInitialized then
+        self:shutdown() -- Clean previous instance
+    end
+    EventBus:clear()
+    _isInitialized = true
+    EventBus:emit("STARTUP_COMPLETE")
+end
+
+--- Shutdown sequence
+function LifecycleManager:shutdown()
+    if not _isInitialized then return end
+    EventBus:emit("SHUTDOWN_START")
+    
+    -- Cancel all tasks
+    cancelPersistentTasks()
+    
+    -- Disconnect all connections
+    for i = #Connections, 1, -1 do
+        local conn = Connections[i]
+        if conn and conn.Connected then
+            pcall(function() conn:Disconnect() end)
+        end
+        Connections[i] = nil
+    end
+    
+    EventBus:clear()
+    _isInitialized = false
+end
+
+--- Check if initialized
+function LifecycleManager:isInitialized()
+    return _isInitialized
+end
+
+
+--// ============================================
+--// 1C. ERROR HANDLER (v1.3.0)
+--// ============================================
+-- Centralized error reporting with graceful degradation
+local ErrorHandler = {}
+
+--- Report an error
+--- @param source string -- Where the error came from
+--- @param message string -- Error description
+--- @param severity string? -- "warning" | "error" | "fatal"
+function ErrorHandler:report(source, message, severity)
+    local sev = severity or "error"
+    local logMsg = string.format("[SIY %s] %s: %s", sev:upper(), source, message)
+    warn(logMsg)
+    EventBus:emit("ERROR_OCCURRED", {source = source, message = message, severity = sev})
+end
+
+--- Wrap a function with error handling
+--- @param fn function -- Function to wrap
+--- @param source string -- Source name for error reporting
+--- @return function
+function ErrorHandler:wrap(fn, source)
+    return function(...)
+        local results = {pcall(fn, ...)}
+        local success = table.remove(results, 1)
+        if not success then
+            self:report(source, tostring(results[1]))
+            return nil
+        end
+        return table.unpack(results)
+    end
+end
+
+
+--// ============================================
+--// 1D. IY INTEGRATION (v1.3.0)
+--// ============================================
+-- Scrapes IY's aliases and keybinds at runtime
+local IYIntegration = {}
+
+--- Scrape IY's custom aliases
+--- @return table<string, string>
+function IYIntegration:scrapeAliases()
+    local aliases = _G.Aliases or (getgenv and getgenv().Aliases) or {}
+    local result = {}
+    for alias, command in pairs(aliases) do
+        if type(alias) == "string" and type(command) == "string" then
+            result[alias] = command
+        end
+    end
+    return result
+end
+
+--- Scrape IY's keybinds
+--- @return table<string, string>
+function IYIntegration:scrapeKeybinds()
+    local binds = _G.binds or (getgenv and getgenv().binds) or {}
+    local result = {}
+    for key, command in pairs(binds) do
+        result[tostring(key)] = tostring(command)
+    end
+    return result
+end
+
+--- Build enhanced context string for AI
+--- @return string
+function IYIntegration:buildContext()
+    local aliases = self:scrapeAliases()
+    local parts = {}
+    local count = 0
+    for _ in pairs(aliases) do count = count + 1 end
+    if count > 0 then
+        table.insert(parts, "User aliases:")
+        for alias, cmd in pairs(aliases) do
+            table.insert(parts, string.format("  %s -> %s", alias, cmd))
+        end
+    end
+    return table.concat(parts, "\n")
+end
+
+
+--// ============================================
+--// 1E. THEME MANAGER (v1.3.0)
+--// ============================================
+-- Inherits IY's theme colors for consistent styling
+local ThemeManager = {}
+
+--- Get IY's theme colors
+--- @return table
+function ThemeManager:getIYTheme()
+    local shade = _G.shade or (getgenv and getgenv().shade) or {}
+    local text = _G.text or (getgenv and getgenv().text) or {}
+    return {shade = shade, text = text}
+end
+
+--- Apply IY theme to an element
+--- @param element GuiObject
+--- @param themeType string -- "shade1" | "shade2" | "text"
+function ThemeManager:applyToElement(element, themeType)
+    local theme = self:getIYTheme()
+    if themeType == "shade1" and theme.shade[1] then
+        if theme.shade[1].BackgroundColor3 then
+            element.BackgroundColor3 = theme.shade[1].BackgroundColor3
+        end
+    elseif themeType == "shade2" and theme.shade[2] then
+        if theme.shade[2].BackgroundColor3 then
+            element.BackgroundColor3 = theme.shade[2].BackgroundColor3
+        end
+    elseif themeType == "text" and theme.text[1] then
+        if theme.text[1].TextColor3 then
+            element.TextColor3 = theme.text[1].TextColor3
+        end
+    end
+end
+
+--- Get fallback colors
+function ThemeManager:getFallbackColors()
+    return {
+        shade1 = Color3.fromRGB(36, 36, 37),
+        shade2 = Color3.fromRGB(46, 46, 47),
+        text = Color3.fromRGB(255, 255, 255)
+    }
+end
+
+
+--// ============================================
+--// 1F. ANIMATION MANAGER (v1.3.0)
+--// ============================================
+-- Smooth animations for UI elements
+local AnimationManager = {}
+
+--- Animate dropdown show/hide
+--- @param frame Frame
+--- @param visible boolean
+--- @param duration number?
+function AnimationManager:animateDropdown(frame, visible, duration)
+    local dur = duration or 0.2
+    local targetProps = {}
+    
+    if visible then
+        targetProps.BackgroundTransparency = 0
+        frame.Visible = true
+    else
+        targetProps.BackgroundTransparency = 1
+    end
+    
+    local tween = TweenService:Create(frame, TweenInfo.new(dur, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), targetProps)
+    tween:Play()
+    
+    if not visible then
+        tween.Completed:Connect(function()
+            frame.Visible = false
+        end)
+    end
+    return tween
+end
+
+--- Create pulsating glow effect
+--- @param element GuiObject
+--- @param color Color3?
+--- @return function -- Cleanup function
+function AnimationManager:createPulsingGlow(element, color)
+    local glowColor = color or Color3.fromRGB(100, 200, 255)
+    
+    local glow = Instance.new("UIStroke")
+    glow.Name = "SIY_Highlight"
+    glow.Color = glowColor
+    glow.Thickness = 2
+    glow.Parent = element
+    
+    local alpha = 0
+    local conn = RunService.Heartbeat:Connect(function(dt)
+        alpha = alpha + dt * 3
+        glow.Transparency = 0.3 + math.sin(alpha) * 0.3
+    end)
+    registerConnection(conn)
+    
+    return function()
+        conn:Disconnect()
+        removeConnection(conn)
+        if glow.Parent then glow:Destroy() end
+    end
+end
+
+
+--// ============================================
+--// 1G. TOUR MANAGER (v1.3.0)
+--// ============================================
+-- First-run onboarding tour
+local TourManager = {}
+local _tourActive = false
+local _tourStep = 0
+local _tourElements = {}
+local _activeHighlights = {}
+
+local _tourSteps = {
+    {target = "InputBox", title = "Welcome! 🎉", message = "Type natural language here"},
+    {target = "ModeToggle", title = "AI Mode", message = "Toggle AI (🤖) / Manual (⌨️)"},
+    {target = "QuickActions", title = "Quick Actions", message = "Tap for instant commands"}
+}
+
+--- Register element for tour
+function TourManager:registerElement(id, element)
+    _tourElements[id] = element
+end
+
+--- Check if first run
+function TourManager:isFirstRun()
+    local ns = getNamespace()
+    return not ns.hasCompletedTour and CONFIG.EnableTour
+end
+
+--- Start tour
+function TourManager:start()
+    if not self:isFirstRun() or _tourActive then return end
+    _tourActive = true
+    _tourStep = 0
+    EventBus:emit("TOUR_START")
+    self:showStep(1)
+end
+
+--- Show step
+function TourManager:showStep(index)
+    self:clearHighlights()
+    local step = _tourSteps[index]
+    if not step then self:complete() return end
+    
+    _tourStep = index
+    local element = _tourElements[step.target]
+    if element then
+        local cleanup = AnimationManager:createPulsingGlow(element)
+        table.insert(_activeHighlights, cleanup)
+    end
+    EventBus:emit("TOUR_STEP", {index = index, total = #_tourSteps, title = step.title, message = step.message})
+end
+
+--- Next step
+function TourManager:nextStep()
+    self:showStep(_tourStep + 1)
+end
+
+--- Complete tour
+function TourManager:complete()
+    self:clearHighlights()
+    _tourActive = false
+    setNamespaceValue("hasCompletedTour", true)
+    EventBus:emit("TOUR_COMPLETE")
+end
+
+--- Clear highlights
+function TourManager:clearHighlights()
+    for _, cleanup in ipairs(_activeHighlights) do
+        pcall(cleanup)
+    end
+    _activeHighlights = {}
+end
+
+
+--// ============================================
 --// 2. CONFIGURATION
 --// ============================================
 local CONFIG = {
@@ -172,6 +518,13 @@ local CONFIG = {
     -- Dropdown Focus Management
     DropdownFocusDelay = 0.15, -- Delay before hiding dropdown after focus loss
     DropdownMaxItems = 6, -- Maximum items to show in dropdown
+    
+    -- v1.3.0: Sound Feedback Settings
+    EnableSounds = true, -- Enable/disable sound effects
+    SoundVolume = 0.5, -- Volume for sound effects (0-1)
+    
+    -- v1.3.0: First-Run Tour Settings  
+    EnableTour = true, -- Enable first-run onboarding tour
     
     -- System Prompt (~3500 Tokens)
     CommandPrompt = [[
@@ -482,6 +835,66 @@ AI: ;goto bob
 [END OF STATIC CONTEXT]
 ]],
 }
+
+--// ============================================
+--// 2B. SOUND MANAGER (v1.3.0)
+--// ============================================
+-- Acoustic feedback for AI states
+local SoundManager = {}
+local _activeSounds = {}
+local _soundIds = {
+    Success = "rbxassetid://18913929246",
+    Error = "rbxassetid://9063125154",
+    Processing = "rbxassetid://6073491164"
+}
+
+--- Play a sound effect
+--- @param soundType string -- "Success" | "Error" | "Processing"
+function SoundManager:play(soundType)
+    if not CONFIG.EnableSounds then return end
+    
+    local soundId = _soundIds[soundType]
+    if not soundId then return end
+    
+    local sound = Instance.new("Sound")
+    sound.SoundId = soundId
+    sound.Volume = CONFIG.SoundVolume or 0.5
+    sound.Parent = game:GetService("SoundService")
+    _activeSounds[soundType] = sound
+    sound:Play()
+    
+    sound.Ended:Connect(function()
+        _activeSounds[soundType] = nil
+        sound:Destroy()
+    end)
+end
+
+--- Stop a sound
+--- @param soundType string
+function SoundManager:stop(soundType)
+    local sound = _activeSounds[soundType]
+    if sound then
+        sound:Stop()
+        sound:Destroy()
+        _activeSounds[soundType] = nil
+    end
+end
+
+-- Connect to EventBus for automatic sound feedback
+EventBus:on("AI_REQUEST_START", function()
+    SoundManager:play("Processing")
+end)
+
+EventBus:on("AI_REQUEST_COMPLETE", function()
+    SoundManager:stop("Processing")
+    SoundManager:play("Success")
+end)
+
+EventBus:on("AI_REQUEST_ERROR", function()
+    SoundManager:stop("Processing")
+    SoundManager:play("Error")
+end)
+
 
 --// ============================================
 --// 3. LOCAL PLAYER & ENVIRONMENT (with Auto-Context Injection)
@@ -1886,6 +2299,23 @@ ConnectPersistent(QuickActionsToggle.MouseButton1Click, function()
         end)
     end
 end)
+
+
+--// ============================================
+--// 10B. TOUR REGISTRATION (v1.3.0)
+--// ============================================
+if TourManager then
+    TourManager:registerElement("InputBox", InputContainer)
+    TourManager:registerElement("ModeToggle", ModeDropdownContainer)
+    if IsMobile then
+        TourManager:registerElement("QuickActions", QuickActionsToggle)
+    end
+    
+    -- Auto-start tour on first load (short delay to ensure UI ready)
+    task.delay(1.5, function()
+        TourManager:start()
+    end)
+end
 
 --// Chat Log Helpers (ChatGPT-like Message Bubbles)
 local ChatLogOrder = 0
@@ -3526,6 +3956,9 @@ local function queryAI(promptText, retryContext, attemptCount)
     lastAIRequestTime = tick() -- Update rate limit timestamp
     setThinkingState(false)
     updateStatus("Thinking", Colors.Orange, true)
+    
+    -- v1.3.0: Emit event for acoustic feedback
+    EventBus:emit("AI_REQUEST_START")
 
     local messagesPayload = {}
     -- Only include volatile player context when targeting is detected to keep cache keys stable
@@ -3641,6 +4074,7 @@ CONTEXT: %s
             if not decodeSuccess or not data then
                 warn("SIY: Failed to parse AI response")
                 updateStatus("Error: Invalid Response", Colors.Red)
+                EventBus:emit("AI_REQUEST_ERROR", {source = "AI", message = "Parse failure"})
                 task.wait(CONFIG.ErrorDisplayTime)
                 resetVisuals()
                 return
@@ -3660,6 +4094,14 @@ CONTEXT: %s
                 executeBridge(safeChat)
                 resetVisuals()
                 InputBox.Text = ""
+                recordChatMessage("assistant", safeChat)
+                
+                -- v1.3.0: Emit success event
+                EventBus:emit("AI_REQUEST_COMPLETE", {prompt = promptText, response = safeChat})
+                
+                executeBridge(safeChat)
+                resetVisuals()
+                InputBox.Text = ""
             else
                 if aiOutput == "" or aiOutput:lower():sub(1, 4) == "sure" then
                     updateStatus("AI Uncertain", Colors.Orange)
@@ -3672,6 +4114,13 @@ CONTEXT: %s
                 showPreview(aiOutput)
                 task.wait(CONFIG.PreviewDelay)
                 
+                cacheCommand(promptText, aiOutput)
+                showPreview(aiOutput)
+                task.wait(CONFIG.PreviewDelay)
+                
+                -- v1.3.0: Emit success event
+                EventBus:emit("AI_REQUEST_COMPLETE", {prompt = promptText, response = aiOutput})
+                
                 executeBridge(aiOutput, "AI")
                 resetVisuals(true)
                 InputBox.Text = ""
@@ -3683,6 +4132,7 @@ CONTEXT: %s
             else
                 updateStatus("Error", Colors.Red, true)
             end
+            EventBus:emit("AI_REQUEST_ERROR", {source = "AI", message = "Network error"})
             task.wait(CONFIG.ErrorDisplayTime)
             resetVisuals()
         end
@@ -4146,5 +4596,49 @@ end)
 setNamespaceValue("Cleanup", cleanup)
 setNamespaceValue("ClearChat", clearChatLog)
 setNamespaceValue("GetBridgeStatus", getBridgeStatus)
-setNamespaceValue("Version", "1.2.2.3")
+setNamespaceValue("Version", "1.3.0")
 setNamespaceValue("Ready", true)
+
+
+--// ============================================
+--// PLUGIN BRIDGE API (v1.3.0)
+--// ============================================
+-- Exposes SIY AI capabilities to IY plugins via _G.SIY
+local PluginBridge = {
+    -- Ask AI to convert natural language to command
+    askAI = function(prompt)
+        -- Uses the existing processAIRequest if available
+        local ns = getNamespace()
+        if ns.processAIRequest then
+            return ns.processAIRequest(prompt)
+        end
+        ErrorHandler:report("PluginBridge", "AI not ready", "warning")
+        return nil
+    end,
+    
+    -- Execute a command through the bridge
+    executeCommand = function(command)
+        if IY_Interface and IY_Interface.execCmd then
+            IY_Interface.execCmd(command)
+            EventBus:emit("COMMAND_EXECUTED", {source = "PluginBridge", command = command})
+            return true
+        end
+        return false
+    end,
+    
+    -- Get bridge status
+    getStatus = function()
+        return {
+            ready = getNamespaceValue("Ready") or false,
+            version = getNamespaceValue("Version") or "unknown"
+        }
+    end
+}
+
+-- Register globally for plugin access
+if getgenv then
+    getgenv().SIY = PluginBridge
+elseif _G then
+    _G.SIY = PluginBridge
+end
+setNamespaceValue("PluginBridge", PluginBridge)
