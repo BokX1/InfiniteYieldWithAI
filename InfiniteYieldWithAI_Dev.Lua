@@ -1,10 +1,10 @@
 --[[ 
-    SMART INFINITE YIELD - V1.2.2.2 STABLE
+    SMART INFINITE YIELD - V1.2.2.3 STABLE
     - Architecture: Context Awareness + Event-Based Bridge
     - Logic: VolQ5 & Pollinations.AI (LLM Model)
     - Status: Stable 
-    - Changes: Deterministic Command Matching (OrderedFastMap), Input Debouncing,
-               LuaU Type Annotations, Enhanced Error Logging
+    - Changes: Dynamic Command Scraping from IY's cmds table, Enhanced Bridge with
+               Feedback Loop, Notification Hooking for Command Output Capture
 ]]
 
 --// ============================================
@@ -797,13 +797,46 @@ task.spawn(function()
         if not CoreGui:FindFirstChild("InfiniteYield") then
             local success, source = pcall(game.HttpGet, game, "https://raw.githubusercontent.com/EdgeIY/infiniteyield/master/source")
             if success then
-                -- Bridge code uses namespace for isolation
+                -- Enhanced bridge code exposes cmds table, execCmd, and notify with output capture
                 local bridgeCode = string.format([[
                     local ns = getgenv()["%s"] or {}
                     getgenv()["%s"] = ns
+                    
+                    -- Capture last notification for feedback loop
+                    ns.LastNotification = nil
+                    local originalNotify = notify
+                    if originalNotify then
+                        notify = function(title, text, duration)
+                            ns.LastNotification = {
+                                title = title,
+                                text = text,
+                                timestamp = os.time()
+                            }
+                            return originalNotify(title, text, duration)
+                        end
+                    end
+                    
                     ns.PseudoBridge = {
-                        Exec = function(cmd) if execCmd then execCmd(cmd) end end,
-                        Ready = true
+                        Exec = function(cmd) 
+                            if execCmd then 
+                                ns.LastNotification = nil -- Clear before execution
+                                execCmd(cmd) 
+                                return true
+                            end 
+                            return false
+                        end,
+                        GetCommands = function()
+                            -- Return reference to cmds table for dynamic command extraction
+                            return cmds or {}
+                        end,
+                        GetNotify = function()
+                            return ns.LastNotification
+                        end,
+                        ClearNotify = function()
+                            ns.LastNotification = nil
+                        end,
+                        Ready = true,
+                        Version = "2.0"
                     }
                 ]], NAMESPACE, NAMESPACE)
                 local loadSuccess, loadErr = pcall(function()
@@ -843,6 +876,135 @@ task.spawn(function()
         BridgeReady:Fire()
     else
         warn("SIY: Bridge connection timeout after " .. tostring(maxTimeout) .. " seconds")
+    end
+end)
+
+--// ============================================
+--// 6.5 DYNAMIC COMMAND MAP BUILDER
+--// ============================================
+local DynamicCommandMap = {}  -- Will be populated from IY's cmds table
+local DynamicCommandList = {} -- Ordered list for suggestions
+local DynamicMapBuilt = false
+
+--- Builds a command map by extracting commands from IY's internal cmds table
+--- @return boolean -- True if successfully built
+local function buildDynamicCommandMap()
+    if not IY_Interface or not IY_Interface.GetCommands then
+        return false
+    end
+    
+    local success, cmds = pcall(IY_Interface.GetCommands)
+    if not success or not cmds or type(cmds) ~= "table" then
+        warn("[SIY] Failed to get commands from IY bridge")
+        return false
+    end
+    
+    -- Clear existing maps
+    DynamicCommandMap = {}
+    DynamicCommandList = {}
+    
+    local count = 0
+    for _, cmd in pairs(cmds) do
+        if cmd and type(cmd) == "table" and cmd.NAME then
+            local cmdName = cmd.NAME:lower()
+            -- Add main command name
+            DynamicCommandMap[cmdName] = {
+                name = cmd.NAME,
+                aliases = cmd.ALIAS or {},
+                args = cmd.ARGS or {},
+                desc = cmd.DESC or ""
+            }
+            table.insert(DynamicCommandList, {
+                name = cmd.NAME,
+                pattern = "^" .. cmdName .. "$",
+                command = cmdName
+            })
+            
+            -- Add all aliases
+            if cmd.ALIAS and type(cmd.ALIAS) == "table" then
+                for _, alias in ipairs(cmd.ALIAS) do
+                    local aliasLower = alias:lower()
+                    DynamicCommandMap[aliasLower] = DynamicCommandMap[cmdName]
+                    table.insert(DynamicCommandList, {
+                        name = alias,
+                        pattern = "^" .. aliasLower .. "$",
+                        command = cmdName
+                    })
+                end
+            end
+            count = count + 1
+        end
+    end
+    
+    DynamicMapBuilt = count > 0
+    if DynamicMapBuilt then
+        print("[SIY] Loaded " .. count .. " commands from IY dynamically")
+    end
+    return DynamicMapBuilt
+end
+
+--- Gets command info from the dynamic map
+--- @param cmdName string -- Command name or alias
+--- @return table? -- Command info or nil
+local function getDynamicCommand(cmdName)
+    if not DynamicMapBuilt then
+        buildDynamicCommandMap()
+    end
+    return DynamicCommandMap[cmdName:lower()]
+end
+
+--- Gets a list of command names for autocomplete/suggestions
+--- @param prefix string? -- Optional prefix filter
+--- @param limit number? -- Max results (default 10)
+--- @return table -- Array of command names
+local function getDynamicCommandSuggestions(prefix, limit)
+    if not DynamicMapBuilt then
+        buildDynamicCommandMap()
+    end
+    
+    local results = {}
+    local maxResults = limit or 10
+    local prefixLower = prefix and prefix:lower() or ""
+    
+    for _, entry in ipairs(DynamicCommandList) do
+        if #results >= maxResults then break end
+        if prefixLower == "" or entry.name:lower():sub(1, #prefixLower) == prefixLower then
+            table.insert(results, entry.name)
+        end
+    end
+    
+    return results
+end
+
+--- Checks if a command exists in the dynamic map
+--- @param cmdName string -- Command name to check
+--- @return boolean
+local function isDynamicCommand(cmdName)
+    return getDynamicCommand(cmdName) ~= nil
+end
+
+--- Gets the last notification from IY (for feedback loop)
+--- @return table? -- {title, text, timestamp} or nil
+local function getLastNotification()
+    if IY_Interface and IY_Interface.GetNotify then
+        return IY_Interface.GetNotify()
+    end
+    return nil
+end
+
+--- Clears the last notification
+local function clearLastNotification()
+    if IY_Interface and IY_Interface.ClearNotify then
+        IY_Interface.ClearNotify()
+    end
+end
+
+-- Build dynamic map after bridge connects
+task.spawn(function()
+    waitForBridge(CONFIG.BridgeTimeout)
+    if BridgeConnected then
+        task.wait(0.5) -- Small delay to ensure cmds is populated
+        buildDynamicCommandMap()
     end
 end)
 
@@ -3365,7 +3527,22 @@ local function queryAI(promptText, retryContext, attemptCount)
         local isChain = cleanPrompt:find(" and ") or cleanPrompt:find(" & ") or cleanPrompt:find(" then ")
         
         if not isChain then
-            -- OrderedFastMap lookup (deterministic, longest patterns first)
+            -- First try: Dynamic command lookup (from IY's actual cmds table)
+            if DynamicMapBuilt then
+                local parts = cleanPrompt:split(" ")
+                local baseCmdName = parts[1]:lower()
+                local cmdInfo = getDynamicCommand(baseCmdName)
+                if cmdInfo then
+                    -- Command exists in IY's dynamic map - execute directly
+                    showPreview(cleanPrompt)
+                    executeBridge(cleanPrompt, "DYNAMIC")
+                    resetVisuals(true)
+                    InputBox.Text = ""
+                    return
+                end
+            end
+            
+            -- Second try: OrderedFastMap lookup (pattern-based fallback)
             for _, entry in ipairs(OrderedFastMap) do
                 local _, _, capture, capture2 = cleanPrompt:find(entry.Pattern)
                 if _ then

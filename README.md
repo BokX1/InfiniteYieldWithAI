@@ -1,5 +1,5 @@
 
-# SmartInfiniteYield (SIY) - V1.2.2 Stable
+# SmartInfiniteYield (SIY) - V1.2.2.3 Stable
 
 **Original Idea by [VolQ5](https://github.com/BokX1/RbxLuauLLM) | Powered by Pollinations.AI (LLM Model)**
 
@@ -28,7 +28,7 @@ Key innovations include **Intelligent Caching** that learns your phrases over ti
 
 | Feature | Description |
 |---------|-------------|
-| **Hybrid Execution Engine** | Zero-latency local execution for 200+ commands, with AI fallback for complex natural language |
+| **Hybrid Execution Engine** | Zero-latency local execution for 400+ commands via dynamic command scraping, with AI fallback for complex natural language |
 | **Intelligent Caching** | Learns your phrases and executes them instantly without API calls |
 | **Token Cache Optimization** | Optimized API structure enables OpenAI token caching for reduced costs |
 | **Cache Management** | Use `clearcache` to reset learned commands, `cacheinfo` to view cache status |
@@ -228,7 +228,7 @@ When you use a phrase like "make me fast" and the AI translates it to `;speed 50
 
 ### Hybrid Dual-Path Engine
 
-SmartInfiniteYield V1.2.2 uses a sophisticated routing system that combines local speed with AI intelligence, wrapped in a streamlined compact interface.
+SmartInfiniteYield V1.2.2.3 uses a sophisticated routing system that combines local speed with AI intelligence, wrapped in a streamlined compact interface.
 
 **Path A: Fast Path (Local Execution)**
 
@@ -256,16 +256,16 @@ Version 1.2.1 introduced an event-based bridge using BindableEvents, replacing t
 
 ## What's New in V1.2.2
 
-### Latest Update: V1.2.2.1 (January 8, 2026)
+### Latest Update: V1.2.2.3 (January 10, 2026)
 
-**Bug Fixes & Stability Improvements:**
+**Dynamic Command Scraping & Feedback Loop:**
 
-| Fix | Description |
-|-----|-------------|
-| **Connection Stability** | Improved bridge connection reliability and error handling |
-| **FastMap Synchronization** | Removed invalid commands and synchronized FastMap with IYsource.lua for accurate local execution |
-| **Quick Actions Toggle** | Fixed mobile-specific Quick Actions toggle behavior for proper state management |
-| **Code Optimization** | Refactored 142 lines for better performance and maintainability |
+| Feature | Description |
+|---------|-------------|
+| **Dynamic Command Map** | Commands are now extracted directly from IY's `cmds` table at runtime—no more hardcoded lists |
+| **Enhanced Bridge v2.0** | Exposes `cmds`, `execCmd`, and `notify` for seamless integration |
+| **Notification Hooking** | Captures command output (success/error messages) for AI feedback loop |
+| **Auto-Updated Commands** | Any new IY commands are automatically supported without script updates |
 
 ### GUI Improvements
 
@@ -352,11 +352,15 @@ See [CHANGELOG.md](docs/CHANGELOG.md) for the complete version history.
 
 ### Recent Updates
 
-**V1.2.2.1** (January 8, 2026) - Connection stability improvements, FastMap synchronization with IYsource.lua, Quick Actions toggle fixes, code optimization (142 lines refactored)
+**V1.2.2.3** (January 10, 2026) - Dynamic command scraping from IY's `cmds` table, enhanced bridge v2.0 with notification hooking, feedback loop for command output capture
+
+**V1.2.2.2** (January 9, 2026) - LuaU type annotations, deterministic command matching (OrderedFastMap), input debouncing, enhanced error logging
+
+**V1.2.2.1** (January 8, 2026) - Connection stability improvements, FastMap synchronization with IYsource.lua, Quick Actions toggle fixes, code optimization
 
 **V1.2.2** - Compact mode dropdown, streamlined header layout, text collision fixes, optimized frame sizing, temporary status display, toggle quick actions, comprehensive FastMap update (400+ commands)
 
-**V1.2.1** - Smart Waypoint System, token cache optimization, event-based bridge, intelligent caching, fuzzy targeting, visual feedback, mobile quick actions, interactive tutorial, enhanced CHAT mode, input sanitization, namespace isolation, cleanup handlers, configurable constants, FastMap completeness (11 new commands)
+**V1.2.1** - Smart Waypoint System, token cache optimization, event-based bridge, intelligent caching, fuzzy targeting, visual feedback, mobile quick actions, interactive tutorial, enhanced CHAT mode, input sanitization, namespace isolation
 
 **V1.2.0** - Split-context strategy, predictive dropdown, smart keybinds, complete command database
 

@@ -6,6 +6,30 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ---
 
+## [1.2.2.3] - 2026-01-10
+
+### Added
+
+| Feature | Description |
+|---------|-------------|
+| **Dynamic Command Map** | Commands are now extracted directly from IY's `cmds` table at runtime—no more hardcoded lists |
+| **Enhanced Bridge v2.0** | Exposes `cmds`, `execCmd`, and `notify` for seamless integration |
+| **Notification Hooking** | Captures command output (success/error messages) for AI feedback loop |
+| **Auto-Updated Commands** | Any new IY commands are automatically supported without script updates |
+| **Dynamic Suggestions** | `getDynamicCommandSuggestions()` provides autocomplete from live command data |
+| **Feedback Loop** | `getLastNotification()` and `clearLastNotification()` enable command result tracking |
+
+### Technical
+
+| Improvement | Description |
+|-------------|-------------|
+| **Section 6.5** | New Dynamic Command Map Builder section with 6 utility functions |
+| **Bridge Version** | Bridge now reports version "2.0" for compatibility checking |
+| **Priority Lookup** | Dynamic map checked before OrderedFastMap for faster resolution |
+| **Console Logging** | Prints `[SIY] Loaded X commands from IY dynamically` on successful load |
+
+---
+
 ## [1.2.2.2] - 2026-01-09
 
 ### Fixed
