@@ -749,6 +749,7 @@ local function waitForBridge(timeout, retryCount)
         end
         
         connection:Disconnect()
+        removeConnection(connection)
         
         if BridgeConnected then
             return true
@@ -756,7 +757,7 @@ local function waitForBridge(timeout, retryCount)
         
         -- Try to reconnect on failure
         if attempt < maxRetries then
-            warn(string.format("SIY: Bridge connection attempt %d/%d failed, retrying...", attempt, maxRetries))
+            warn(string.format("[SIY] Bridge connection attempt %d/%d failed, retrying...", attempt, maxRetries))
             task.wait(retryDelay)
             
             -- Attempt to re-initialize bridge
@@ -843,11 +844,11 @@ task.spawn(function()
                     loadstring(source .. "\n" .. bridgeCode)()
                 end)
                 if not loadSuccess then
-                    warn("SIY: Failed to load IY source: " .. tostring(loadErr))
+                    warn("[SIY] Failed to load IY source: " .. tostring(loadErr))
                     return false
                 end
             else
-                warn("SIY: Failed to fetch IY source")
+                warn("[SIY] Failed to fetch IY source")
                 return false
             end
         end
@@ -875,7 +876,7 @@ task.spawn(function()
         BridgeConnected = true
         BridgeReady:Fire()
     else
-        warn("SIY: Bridge connection timeout after " .. tostring(maxTimeout) .. " seconds")
+        warn("[SIY] Bridge connection timeout after " .. tostring(maxTimeout) .. " seconds")
     end
 end)
 
@@ -953,51 +954,6 @@ local function getDynamicCommand(cmdName)
     return DynamicCommandMap[cmdName:lower()]
 end
 
---- Gets a list of command names for autocomplete/suggestions
---- @param prefix string? -- Optional prefix filter
---- @param limit number? -- Max results (default 10)
---- @return table -- Array of command names
-local function getDynamicCommandSuggestions(prefix, limit)
-    if not DynamicMapBuilt then
-        buildDynamicCommandMap()
-    end
-    
-    local results = {}
-    local maxResults = limit or 10
-    local prefixLower = prefix and prefix:lower() or ""
-    
-    for _, entry in ipairs(DynamicCommandList) do
-        if #results >= maxResults then break end
-        if prefixLower == "" or entry.name:lower():sub(1, #prefixLower) == prefixLower then
-            table.insert(results, entry.name)
-        end
-    end
-    
-    return results
-end
-
---- Checks if a command exists in the dynamic map
---- @param cmdName string -- Command name to check
---- @return boolean
-local function isDynamicCommand(cmdName)
-    return getDynamicCommand(cmdName) ~= nil
-end
-
---- Gets the last notification from IY (for feedback loop)
---- @return table? -- {title, text, timestamp} or nil
-local function getLastNotification()
-    if IY_Interface and IY_Interface.GetNotify then
-        return IY_Interface.GetNotify()
-    end
-    return nil
-end
-
---- Clears the last notification
-local function clearLastNotification()
-    if IY_Interface and IY_Interface.ClearNotify then
-        IY_Interface.ClearNotify()
-    end
-end
 
 -- Build dynamic map after bridge connects
 task.spawn(function()
@@ -2360,7 +2316,7 @@ local function completeTutorial()
     TweenService:Create(TutorialFrame, TweenInfo.new(0.3), {BackgroundTransparency = 1}):Play()
     for _, child in ipairs(TutorialFrame:GetDescendants()) do
         if child:IsA("GuiObject") then
-            local prop = child:IsA("TextLabel") or child:IsA("TextButton") and "TextTransparency" or "BackgroundTransparency"
+            local prop = (child:IsA("TextLabel") or child:IsA("TextButton")) and "TextTransparency" or "BackgroundTransparency"
             pcall(function()
                 TweenService:Create(child, TweenInfo.new(0.3), {BackgroundTransparency = 1, TextTransparency = 1}):Play()
             end)
@@ -4154,6 +4110,13 @@ local function cleanup()
             SIY_Screen:Destroy()
         end
     end)
+    
+    -- Destroy BindableEvent
+    pcall(function()
+        if BridgeReady then
+            BridgeReady:Destroy()
+        end
+    end)
 
     BridgeConnected = false
     IY_Interface = nil
@@ -4183,5 +4146,5 @@ end)
 setNamespaceValue("Cleanup", cleanup)
 setNamespaceValue("ClearChat", clearChatLog)
 setNamespaceValue("GetBridgeStatus", getBridgeStatus)
-setNamespaceValue("Version", "1.2.2")
+setNamespaceValue("Version", "1.2.2.3")
 setNamespaceValue("Ready", true)

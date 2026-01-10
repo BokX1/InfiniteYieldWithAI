@@ -352,7 +352,7 @@ See [CHANGELOG.md](docs/CHANGELOG.md) for the complete version history.
 
 ### Recent Updates
 
-**V1.2.2.3** (January 10, 2026) - Dynamic command scraping from IY's `cmds` table, enhanced bridge v2.0 with notification hooking, feedback loop for command output capture
+**V1.2.2.3** (January 11, 2026) - Code quality improvements: operator precedence bug fix, removed unused functions, connection cleanup enhancements, standardized error prefixes, dynamic command scraping
 
 **V1.2.2.2** (January 9, 2026) - LuaU type annotations, deterministic command matching (OrderedFastMap), input debouncing, enhanced error logging
 

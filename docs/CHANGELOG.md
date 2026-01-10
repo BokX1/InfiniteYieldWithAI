@@ -6,7 +6,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ---
 
-## [1.2.2.3] - 2026-01-10
+## [1.2.2.3] - 2026-01-11
 
 ### Added
 
@@ -16,17 +16,24 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 | **Enhanced Bridge v2.0** | Exposes `cmds`, `execCmd`, and `notify` for seamless integration |
 | **Notification Hooking** | Captures command output (success/error messages) for AI feedback loop |
 | **Auto-Updated Commands** | Any new IY commands are automatically supported without script updates |
-| **Dynamic Suggestions** | `getDynamicCommandSuggestions()` provides autocomplete from live command data |
-| **Feedback Loop** | `getLastNotification()` and `clearLastNotification()` enable command result tracking |
+
+### Fixed
+
+| Fix | Description |
+|-----|-------------|
+| **Operator Precedence Bug** | Fixed logic error in `completeTutorial()` where property selection was incorrect due to `and`/`or` precedence |
+| **Connection Cleanup** | Added `removeConnection()` call after bridge connection disconnect to prevent orphaned tracking entries |
+| **BridgeReady Leak** | Added `BridgeReady:Destroy()` to cleanup function to properly dispose of BindableEvent |
+| **Version Mismatch** | Synchronized exported version string (`1.2.2.3`) with header comment |
 
 ### Technical
 
 | Improvement | Description |
 |-------------|-------------|
-| **Section 6.5** | New Dynamic Command Map Builder section with 6 utility functions |
+| **Removed Unused Functions** | Cleaned up 4 unused utility functions (~45 lines): `getDynamicCommandSuggestions`, `isDynamicCommand`, `getLastNotification`, `clearLastNotification` |
+| **Standardized Error Prefixes** | All `warn()` messages now use consistent `[SIY]` prefix format |
 | **Bridge Version** | Bridge now reports version "2.0" for compatibility checking |
 | **Priority Lookup** | Dynamic map checked before OrderedFastMap for faster resolution |
-| **Console Logging** | Prints `[SIY] Loaded X commands from IY dynamically` on successful load |
 
 ---
 
