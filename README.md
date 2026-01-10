@@ -108,7 +108,7 @@ CMD Mode translates natural language into Infinite Yield commands and executes t
 > **SIY:** Matches movement database → Executes `;fly 50`
 
 **Example 3: Fuzzy Matching**
-> **You:** "kill valk"
+> **You:** "goto valk"
 > **SIY:** Fuzzy matches "valk" to "Valkorym" → Executes `;goto Valkorym`
 
 ### CHAT Mode (Blue)
