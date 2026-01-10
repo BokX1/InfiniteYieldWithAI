@@ -520,7 +520,7 @@ local CONFIG = {
     DropdownMaxItems = 6, -- Maximum items to show in dropdown
     
     -- v1.3.0: Sound Feedback Settings
-    EnableSounds = true, -- Enable/disable sound effects
+    EnableSounds = false, -- Enable/disable sound effects
     SoundVolume = 0.5, -- Volume for sound effects (0-1)
     
     -- v1.3.0: First-Run Tour Settings  
