@@ -4,7 +4,37 @@ This document outlines the planned technical and user experience improvements fo
 
 ---
 
-## Version 1.3.0 - TBA
+## Version 1.3.0 - Stabilization & Experience (Q1 2026)
+
+This release focuses on "Stabilization" (Core Architecture) and "Experience" (Smart Onboarding/UX), establishing a rock-solid foundation for future intelligence features.
+
+### 🌟 Smart Onboarding Experience
+
+- **Interactive "First-Run" Tour**: A guided, in-game walkthrough for new users.
+  - **Live Interaction**: Highlights UI elements (Input, Mode Toggle) and guides the user to execute their first AI command.
+  - **Context Awareness**: Recognizes the current game (e.g., "I see you're in a Tycoon! Try asking me to auto-click.")
+  - **Visual Cues**: Uses pulsating glows to draw attention to relevant buttons.
+
+### 🏗️ Core Architecture & Stabilization
+
+- **Internal Event Bus**: A central "Signal" system to decouple UI, Logic, and Services, preventing spaghetti code.
+- **Robust Lifecycle Management**: `Startup` and `Shutdown` controllers to ensure clean re-execution without crashes or memory leaks.
+- **Unified Error Handling**: Centralized error reporting to gracefully handle failures without crashing the entire script.
+
+### 🎨 UX & Integration
+
+- **Native Theme Inheritance**: Automatically adopt the user's installed Infinite Yield theme colors and fonts by hooking into global `shade`/`text` tables.
+- **Acoustic Feedback**: Subtle sound cues for AI processing states (Success chime, Error buzz, Processing hum).
+- **Enhanced Dropdown Animations**: Smooth, polished transitions for the predictive text menu.
+
+### 🧩 Ecosystem Utilization
+
+- **Deep Source Integration**: Dynamically scrape IY's `Aliases` and `Keybinds` tables at runtime for full compatibility.
+- **Plugin Bridge**: Expose SIY's AI capabilities (`askAI`, `executeSmartCommand`) to standard IY plugins, enabling AI-powered extensions.
+
+### 🛡️ Code Quality
+
+- **LuaU Type Strictness**: 100% type coverage for core modules.
 
 ---
 
