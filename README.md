@@ -32,9 +32,9 @@ Key innovations include **Intelligent Caching** that learns your phrases over ti
 | **Intelligent Caching** | Learns your phrases and executes them instantly without API calls |
 | **Token Cache Optimization** | Optimized API structure enables OpenAI token caching for reduced costs |
 | **Cache Management** | Use `clearcache` to reset learned commands, `cacheinfo` to view cache status |
-| **Fuzzy Player Targeting** | Type partial names like "kill valk" and it resolves to "Valkorym" automatically |
+| **Fuzzy Player Targeting** | Type partial names like "goto valk" and it resolves to "Valkorym" automatically |
 | **Natural Chain Detection** | Understands requests like "fly and goto random" and splits them correctly |
-| **Smart Waypoint System** | Save locations with `swp`, teleport with `gotowp` - dropdown shows saved waypoints |
+| **Smart Waypoint System** | Save locations with `swp`, teleport with `waypoints` - dropdown shows saved waypoints |
 
 ### Smart Interface
 
@@ -42,7 +42,7 @@ Key innovations include **Intelligent Caching** that learns your phrases over ti
 |---------|-------------|
 | **Compact Mode Dropdown** | Space-efficient dropdown selector (55px) to switch between CMD and CHAT modes |
 | **Predictive Dropdown** | Google-style suggestions with priority ranking as you type |
-| **Waypoint Suggestions** | Type `gotowp` to see saved waypoints, `goto` to see players |
+| **Waypoint Suggestions** | Type `waypoints` to see saved waypoints, `goto` to see players |
 | **Command Preview** | Tooltip-style preview shows exactly what will execute before it runs |
 | **Visual Processing Indicator** | Animated glow effect shows when AI is thinking |
 | **Temporary Status Display** | Status messages appear briefly (2.5s) then auto-hide for minimal UI clutter |
@@ -109,7 +109,7 @@ CMD Mode translates natural language into Infinite Yield commands and executes t
 
 **Example 3: Fuzzy Matching**
 > **You:** "kill valk"
-> **SIY:** Fuzzy matches "valk" to "Valkorym" → Executes `;kill Valkorym`
+> **SIY:** Fuzzy matches "valk" to "Valkorym" → Executes `;goto Valkorym`
 
 ### CHAT Mode (Blue)
 
@@ -136,14 +136,14 @@ Save and teleport to locations using the waypoint system:
 | Command | Description | Example |
 |---------|-------------|----------|
 | `swp [name]` | Save current position as waypoint | `swp base` |
-| `gotowp [name]` | Teleport to saved waypoint | `gotowp base` |
+| `waypoint [name]` | Teleport to saved waypoint | `waypoint base` |
 | `goto [player]` | Teleport to a player | `goto john` |
 | `waypoints` | List all saved waypoints | `waypoints` |
 | `deletewaypoint [name]` | Delete a waypoint | `deletewaypoint base` |
 
 **Dropdown Suggestions:**
 
-- Type `gotowp` to see all your saved waypoints
+- Type `waypoints` to see all your saved waypoints
 - Type `goto` to see all players in the server
 
 **Natural Language Examples:**
@@ -151,7 +151,7 @@ Save and teleport to locations using the waypoint system:
 > **SIY:** Executes `;swp farm`
 
 > **You:** "Take me to the farm waypoint"
-> **SIY:** Executes `;gotowp farm`
+> **SIY:** Executes `;waypoint farm`
 
 > **You:** "Go to John"
 > **SIY:** Executes `;goto john`
