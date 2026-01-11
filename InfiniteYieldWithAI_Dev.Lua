@@ -366,7 +366,9 @@ function AnimationManager:animateDropdown(frame, visible, duration)
     tween:Play()
     
     if not visible then
-        tween.Completed:Connect(function()
+        local conn
+        conn = tween.Completed:Connect(function()
+            if conn then conn:Disconnect() end
             frame.Visible = false
         end)
     end
@@ -863,7 +865,9 @@ function SoundManager:play(soundType)
     _activeSounds[soundType] = sound
     sound:Play()
     
-    sound.Ended:Connect(function()
+    local conn
+    conn = sound.Ended:Connect(function()
+        if conn then conn:Disconnect() end
         _activeSounds[soundType] = nil
         sound:Destroy()
     end)
@@ -2956,8 +2960,7 @@ local FastMap = {
     ["^waypoints$"] = "waypoints", ["^positions$"] = "waypoints",
     ["^showwaypoints$"] = "showwaypoints", ["^showwp$"] = "showwaypoints", ["^showwps$"] = "showwaypoints",
     ["^hidewaypoints$"] = "hidewaypoints", ["^hidewp$"] = "hidewaypoints", ["^hidewps$"] = "hidewaypoints",
-    ["^waypoint (.+)"] = "waypoint %1", ["^wp (.+)"] = "waypoint %1", ["^lpos (.+)"] = "waypoint %1",
-    ["^loadpos (.+)"] = "waypoint %1", ["^loadposition (.+)"] = "waypoint %1",
+    ["^lpos (.+)"] = "waypoint %1", ["^loadpos (.+)"] = "waypoint %1", ["^loadposition (.+)"] = "waypoint %1",
     ["^tweenwaypoint (.+)"] = "tweenwaypoint %1", ["^twp (.+)"] = "tweenwaypoint %1",
     ["^walktowaypoint (.+)"] = "walktowaypoint %1", ["^wtwp (.+)"] = "walktowaypoint %1",
     ["^deletewaypoint (.+)"] = "deletewaypoint %1", ["^dwp (.+)"] = "deletewaypoint %1",
@@ -3603,7 +3606,10 @@ local function fuzzyMatchPlayer(partial)
         threshold = math.max(CONFIG.FuzzyMatchMinThreshold, math.floor(partialLength * CONFIG.FuzzyMatchRatio))
     end
     
-    for _, player in ipairs(Players:GetPlayers()) do
+    -- Cache player list once for efficiency
+    local players = Players:GetPlayers()
+    
+    for _, player in ipairs(players) do
         local name = player.Name:lower()
         local displayName = player.DisplayName:lower()
         
@@ -4091,10 +4097,6 @@ CONTEXT: %s
                 local safeChat = aiOutput:gsub("^;chat%s+", ""):gsub("^;", ""):gsub('"', ""):gsub("\n", " ")
                 appendChatLog("assistant", safeChat)
                 recordChatMessage("assistant", safeChat)
-                executeBridge(safeChat)
-                resetVisuals()
-                InputBox.Text = ""
-                recordChatMessage("assistant", safeChat)
                 
                 -- v1.3.0: Emit success event
                 EventBus:emit("AI_REQUEST_COMPLETE", {prompt = promptText, response = safeChat})
@@ -4110,10 +4112,6 @@ CONTEXT: %s
                     return
                 end
 
-                cacheCommand(promptText, aiOutput)
-                showPreview(aiOutput)
-                task.wait(CONFIG.PreviewDelay)
-                
                 cacheCommand(promptText, aiOutput)
                 showPreview(aiOutput)
                 task.wait(CONFIG.PreviewDelay)
