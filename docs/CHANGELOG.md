@@ -6,6 +6,27 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ---
 
+## [1.3.1] - 2026-01-11
+
+### Fixed
+
+| Fix | Description |
+|-----|-------------|
+| **Duplicate CHAT Mode Calls** | Removed duplicate `recordChatMessage`, `executeBridge`, and `resetVisuals` calls in AI response handler |
+| **Duplicate CMD Mode Caching** | Removed duplicate `cacheCommand` and `showPreview` calls that caused double-caching |
+| **SoundManager Connection Leak** | Fixed `sound.Ended` connection not being tracked, preventing memory leaks during extended usage |
+| **AnimationManager Tween Leak** | Fixed `tween.Completed` connection in dropdown animations not being properly disconnected |
+| **Duplicate FastMap Entries** | Removed redundant `waypoint` and `wp` pattern definitions |
+
+### Technical
+
+| Improvement | Description |
+|-------------|-------------|
+| **Player List Caching** | `fuzzyMatchPlayer` now caches `Players:GetPlayers()` once per call for improved performance |
+| **Connection Cleanup Pattern** | Established pattern for self-disconnecting one-shot connections to prevent leaks |
+
+---
+
 ## [1.3.0] - 2026-01-11
 
 ### Added
