@@ -1,82 +1,167 @@
 # Project Roadmap: SmartInfiniteYield (SIY)
 
-This document outlines the planned technical and user experience improvements for the SmartInfiniteYield project.
+> Building the most intuitive AI interface for Roblox command execution.
 
 ---
 
-## 🚧 Current Focus: v1.3.x - Stabilization & Polish
+## Current Status
 
-*Current Version: v1.3.1*
-
-We are currently in a stabilization phase, ensuring the core architecture introduced in v1.3.0 is rock-solid.
-
-- **Bridge Reliability**: Ensuring the Event-Based Bridge handles all edge cases (disconnects, game switches).
-- **Mobile Experience**: Refining touch targets and layout for different screen sizes.
-- **Performance**: Optimizing the fuzzy matching and bridge communication to minimize frame drops.
+| | |
+|---|---|
+| **Version** | v1.3.1 Stable |
+| **Phase** | Stabilization & Polish |
+| **Last Updated** | January 12, 2026 |
 
 ---
 
-## 📅 Upcoming: v1.4.0 - Advanced Intelligence & Ecosystem
+## Release Timeline
 
-*Target: Q1 2026*
+| Version | Target | Focus | Status |
+|---------|--------|-------|--------|
+| v1.3.x | Q1 2026 | Stabilization & Bug Fixes | 🟢 Active |
+| v1.4.0 | Q2 2026 | Advanced AI & Plugin System | 🟡 Planning |
+| v1.5.0 | Q3 2026 | UI/UX Overhaul | 📋 Conceptual |
+| v2.0.0 | 2027 | Next Generation | 🔮 Vision |
 
-The next major release focuses on expanding the ecosystem and making the AI smarter.
+---
+
+## 🚧 Current Focus: v1.3.x
+
+Stabilizing the architecture introduced in v1.3.0.
+
+- [x] Event-Based Bridge system
+- [x] Sound feedback system
+- [x] Onboarding tour
+- [x] Theme inheritance
+- [x] Plugin Bridge API (v2.0)
+- [ ] Bridge edge case handling (disconnects, game switches)
+- [ ] Mobile touch target refinements
+- [ ] Performance profiling and optimization
+
+---
+
+## 📅 Next Release: v1.4.0
+
+*Target: Q2 2026*
 
 ### 🧠 AI & Intelligence
 
-- **Multi-Model Support**: Switch between OpenAI, Gemini, Claude, and Local LLMs.
-- **Conversation Memory**: Short-term context persistence for follow-up commands (e.g., "now make it faster").
-- **Smart Suggestions**: Context-aware command recommendations based on the current game genre.
+| Feature | Description | Priority |
+|---------|-------------|----------|
+| **Multi-Model Support** | Switch between OpenAI, Gemini, Claude, Local LLMs | High |
+| **Conversation Memory** | Short-term context for follow-up commands ("now faster") | High |
+| **Smart Suggestions** | Context-aware recommendations based on game genre | Medium |
+| **Command Macros** | Record and playback complex command sequences | Medium |
 
 ### 🔌 Plugin & Extension System
 
-- **Custom Plugin API**: Fully documented API for community-created extensions.
-- **Custom Quick Actions**: User-editable mobile command grid.
-- **Command Macros**: Record and playback complex command sequences.
+| Feature | Description | Priority |
+|---------|-------------|----------|
+| **Custom Plugin API** | Documented API for community extensions | High |
+| **Custom Quick Actions** | User-editable mobile command grid | Medium |
+| **Event Hooks** | Subscribe to SIY events from external scripts | Medium |
 
-### 🎨 UI/UX Overhaul
+### 🎨 UI/UX Improvements
 
-- **Theme System**: Presets (Dark, Light, OLED) and custom accent colors.
-- **In-Game Settings**: Collapsible panel to modify `CONFIG` without editing code.
-- **History & Favorites**: Searchable command history and starred commands.
+| Feature | Description | Priority |
+|---------|-------------|----------|
+| **In-Game Settings** | Collapsible panel to modify CONFIG without editing code | High |
+| **History & Favorites** | Searchable command history and starred commands | Medium |
+| **Theme Presets** | Dark, Light, OLED, and custom accent colors | Low |
 
 ---
 
-## 🔭 Future Concepts (Long Term)
+## 🔭 Future Releases: v1.5.0+
+
+### v1.5.0 - Experience Polish
+
+| Feature | Description |
+|---------|-------------|
+| **Unified Error Handling** | Severity levels, user-facing messages, debug mode |
+| **Comprehensive Type Safety** | Full LuaU type annotations |
+| **In-Game Diagnostics** | Performance metrics, connection status panel |
+| **Code Standardization** | EditorConfig, consistent patterns |
+
+### v1.6.0 - Advanced Features
+
+| Feature | Description |
+|---------|-------------|
+| **Game Profiles** | Automatic settings/macros per game ID |
+| **Service Isolation** | Dependency injection pattern |
+| **Internal Event Bus v2** | Typed events, middleware support |
+
+---
+
+## 🔮 Long-Term Vision
+
+Conceptual features under research:
 
 | Feature | Description | Status |
 |---------|-------------|--------|
-| **Voice Commands** | Speech-to-text input for hands-free operation | Researching |
-| **Game Profiles** | Automatic settings/macros per game ID | Planned |
+| **Voice Commands** | Speech-to-text for hands-free operation | Researching |
+| **Visual Scripting** | Node-based command builder for automations | Concept |
 | **Collaborative Mode** | Share commands/macros with friends in real-time | Concept |
-| **Visual Scripting** | Node-based command builder for complex automations | Concept |
+| **Cross-Platform Sync** | Sync cache and settings across devices | Concept |
 
 ---
 
-## ✅ Completed History
+## ✅ Completed Milestones
 
-### v1.3.0 - Stabilization & Experience (Jan 2026)
+### v1.3.0 - Stabilization & Experience (January 2026)
 
-- **Core Architecture**: Internal Event Bus, Lifecycle Manager, Unified Error Handling.
-- **Smart Onboarding**: Interactive "First-Run" Tour.
-- **Immersive Feedback**: Sound system (Success, Error, Processing) and pulsating animations.
-- **Integration**: Theme inheritance from Infinite Yield and Plugin Bridge API.
+- Event Bus architecture for decoupled communication
+- Lifecycle Manager for clean re-execution
+- Unified Error Handler with wrapping
+- Sound System (Processing, Success, Error)
+- Interactive 8-step Onboarding Tour
+- Theme inheritance from Infinite Yield
+- Plugin Bridge API v2.0
 
-### v1.2.0 - Intelligence & Speed (Late 2025)
+### v1.2.0 - Intelligence & Speed (December 2025)
 
-- **Hybrid Engine**: Dual-path execution (Local vs AI).
-- **Intelligent Caching**: Zero-latency execution for known phrases.
-- **Mobile-First**: Quick Actions grid and responsive UI.
+- Hybrid Dual-Path Engine (Local + AI)
+- Intelligent Caching with LRU eviction
+- Fuzzy Player Targeting (Levenshtein distance)
+- Mobile Quick Actions grid
+- ChatGPT-like CHAT mode interface
+- Waypoint system (`swp`, `gotowp`)
+- Event-Based Bridge connection
+
+### v1.1.0 - Security & Performance (November 2025)
+
+- Cloudflare API protection
+- Logic Engine v2
+- Input sanitization layer
+- Responsive UI improvements
+
+### v1.0.0 - Initial Release (October 2025)
+
+- AI translation (natural language → commands)
+- Dual modes (CMD + CHAT)
+- Processing indicator
+- Basic UI
 
 ---
 
-## Contributing
+## How to Contribute
 
-We welcome community contributions!
+We welcome contributions at all levels!
 
-1. Check the [Issues](https://github.com/BokX1/InfiniteYieldWithAI/issues) for open tasks.
-2. Fork the repository and create a feature branch.
-3. Submit a Pull Request.
+1. Check [Issues](https://github.com/BokX1/InfiniteYieldWithAI/issues) for open tasks
+2. Look for `good first issue` or `help wanted` labels
+3. Read [CONTRIBUTING.md](../CONTRIBUTING.md) for guidelines
+4. Fork → Branch → PR
 
 ---
-*Last Updated: January 12, 2026*
+
+## Feedback
+
+Have a feature idea or found a bug?
+
+- **Feature Requests**: [Open an issue](https://github.com/BokX1/InfiniteYieldWithAI/issues/new?template=feature_request.md)
+- **Bug Reports**: [Open an issue](https://github.com/BokX1/InfiniteYieldWithAI/issues/new?template=bug_report.md)
+- **Questions**: Use the `;discord` command in-game
+
+---
+
+*This roadmap is subject to change based on community feedback and priorities.*

@@ -1,132 +1,365 @@
-# SmartInfiniteYield (SIY) - V1.3.1 Stable
+# SmartInfiniteYield (SIY)
 
-**Original Idea by [VolQ5](https://github.com/BokX1/RbxLuauLLM) | Powered by Pollinations.AI (LLM Model)**
+[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
+[![Version](https://img.shields.io/badge/Version-1.3.1-green.svg)](docs/CHANGELOG.md)
+[![Roblox](https://img.shields.io/badge/Platform-Roblox-red.svg)](https://www.roblox.com/)
+[![Powered by Pollinations.AI](https://img.shields.io/badge/Powered%20by-Pollinations.AI-blueviolet.svg)](https://pollinations.ai/)
 
----
-
-## Overview
-
-**SmartInfiniteYield (SIY)** is an open-source, AI-powered wrapper for [Infinite Yield](https://github.com/EdgeIY/infiniteyield), bridging the gap between natural language and precise command execution.
-
-It features a **Hybrid Dual-Path Engine** that intelligently routes requests:
-
-1. **Fast Path**: Instant local execution for 400+ known commands (e.g., "fly", "speed 50").
-2. **AI Path**: Neural processing for complex natural language (e.g., "teleport to the red player").
-
-SIY adapts to you with **Intelligent Caching** (learning your phrases), **Fuzzy Player Targeting**, and a **Mobile-First Design**.
+> **AI-Powered Natural Language Interface for Infinite Yield**  
+> *Transform "make me fly fast" into `;fly ;speed 100` instantly.*
 
 ---
 
-## Key Features
+## Table of Contents
+
+- [Features](#features)
+- [Quick Start](#quick-start)
+- [Usage Guide](#usage-guide)
+- [Configuration](#configuration)
+- [Architecture](#architecture)
+- [Plugin API](#plugin-api)
+- [FAQ](#faq)
+- [Contributing](#contributing)
+- [Roadmap](#roadmap)
+- [Credits](#credits)
+- [License](#license)
+
+---
+
+## Features
+
+SmartInfiniteYield bridges natural language and precise command execution with a **Hybrid Dual-Path Engine**.
 
 ### 🧠 Intelligent Core
 
 | Feature | Description |
 |---------|-------------|
-| **Hybrid Engine** | Zero-latency local execution + AI fallback for complex queries. |
-| **Intelligent Caching** | Learns your phrases ("make me fast" -> `;speed 50`) and caches them for instant future use. |
-| **Fuzzy Targeting** | Type "goto valk" and it automatically resolves to "Valkorym". |
-| **Anti-Hallucination** | Validates AI commands before execution to prevent errors. |
+| **Hybrid Engine** | Zero-latency local execution for 400+ commands + AI fallback for complex queries |
+| **Intelligent Caching** | Learns your phrases (e.g., "make me fast" → `;speed 50`) for instant future use |
+| **Fuzzy Player Targeting** | Type "goto valk" and it resolves to "Valkorym" automatically |
+| **Anti-Hallucination** | Validates AI-generated commands before execution to prevent errors |
+| **Dynamic Command Map** | Commands extracted from IY's `cmds` table at runtime—always up-to-date |
 
 ### 📱 Smart Interface
 
 | Feature | Description |
 |---------|-------------|
-| **Compact Mode** | Minimalist 65px height (CMD mode) to keep your screen clear. |
-| **Mobile Quick Actions** | One-tap touch grid for common commands (Fly, Noclip, ESP, etc.). |
-| **Predictive Dropdown** | Google-style suggestions with priority ranking as you type. |
-| **Waypoint System** | Save locations (`swp`) and teleport back (`gotowp`, `game`). |
+| **Compact Mode** | Minimalist 65px height (CMD mode) keeps your screen clear |
+| **Quick Actions** | One-tap mobile grid for toggleable commands (Fly, Noclip, ESP, etc.) |
+| **Predictive Dropdown** | Google-style suggestions with priority ranking as you type |
+| **Waypoint System** | Save locations (`swp base`) and teleport back (`gotowp base`) |
+| **ChatGPT-like CHAT Mode** | Message bubbles with role indicators, timestamps, and memory indicator |
 
-### ✨ User Experience (New in v1.3)
+### ✨ User Experience
 
 | Feature | Description |
 |---------|-------------|
-| **Sound Feedback** 🎵 | Acoustic cues for success (chime), error (buzz), and processing. |
-| **Onboarding Tour** 🔦 | Interactive first-run guide teaching you how to use the AI. |
-| **Theme Inheritance** 🎨 | Automatically adopts your Infinite Yield theme colors. |
-| **Smooth Animations** | Polished UI transitions and pulsating processing effects. |
+| **Sound Feedback** 🎵 | Acoustic cues for success, error, and processing states |
+| **Onboarding Tour** 🔦 | Interactive 8-step first-run guide |
+| **Theme Inheritance** 🎨 | Automatically adopts your Infinite Yield theme colors |
+| **Smooth Animations** | Pulsating glow effects and polished UI transitions |
+| **Auto-Context Injection** | Game name, genre, team, and player count sent to AI |
+
+### 🏗️ Architecture
+
+| Feature | Description |
+|---------|-------------|
+| **Event Bus** | Decoupled communication between UI and logic layers |
+| **Lifecycle Manager** | Clean startup/shutdown with proper memory cleanup |
+| **Error Handler** | Centralized reporting prevents script crashes |
+| **Plugin Bridge** | `_G.SIY` API for external script integration |
 
 ---
 
-## Installation
+## Quick Start
 
 ### Prerequisites
 
-You need a Roblox Executor that supports `request`, `http_request`, or `fluxus.request`.
+A Roblox executor supporting one of:
 
-### Quick Start
+- `syn.request` (Synapse)
+- `http.request` / `http_request`
+- `fluxus.request` (Fluxus)
+- `request` (Generic)
 
-Copy and execute this script:
+### Installation
+
+Copy and execute this script in your executor:
 
 ```lua
 loadstring(game:HttpGet("https://raw.githubusercontent.com/BokX1/InfiniteYieldWithAI/refs/heads/main/InfiniteYieldWithAI.Lua"))()
 ```
 
-*(For the bleeding-edge development version, replace `InfiniteYieldWithAI.Lua` with `InfiniteYieldWithAI_Dev.Lua`)*
+> **Development Version**: Replace `InfiniteYieldWithAI.Lua` with `InfiniteYieldWithAI_Dev.Lua` for bleeding-edge features.
 
 ---
 
 ## Usage Guide
 
-### The Interface
+### Modes
 
-- **CMD Mode (Orange)**: For executing commands. Type "fly" or "bring me the player in red".
-- **CHAT Mode (Blue)**: For asking questions. Type "Where is the safe spot in this game?".
-- **Quick Actions (⚡)**: Mobile-optimized 3x3 grid for instant command toggles.
+| Mode | Color | Purpose | Example |
+|------|-------|---------|---------|
+| **CMD** | 🟠 Orange | Execute commands | "fly and goto john", "make all parts transparent" |
+| **CHAT** | 🔵 Blue | Ask questions | "Where's the safe spot in this game?" |
+
+### Quick Actions (Mobile)
+
+Tap the ⚡ button to reveal a 3×3 grid of toggleable commands:
+
+| | | |
+|---|---|---|
+| Fly | Speed | ESP |
+| Noclip | Jump | Invisible |
+| Teleport | Reset | Anti-Lag |
 
 ### Waypoint System
 
-- `swp [name]`: Save current location (e.g., `swp base`).
-- `gotowp [name]`: Teleport to saved location.
-- Dropdown: Type `gotowp` to see a list of your saved spots.
+| Command | Description | Example |
+|---------|-------------|---------|
+| `swp [name]` | Save current position | `swp base` |
+| `gotowp [name]` | Teleport to saved waypoint | `gotowp base` |
+| `waypoints` | List all saved waypoints | |
+| `deletewaypoint [name]` | Delete a waypoint | `deletewaypoint base` |
+
+### Keyboard Shortcuts
+
+| Key | Action |
+|-----|--------|
+| `Right Shift` | Toggle GUI visibility |
+| `Enter` | Execute current input |
+
+### Special Commands
+
+| Command | Description |
+|---------|-------------|
+| `clearcache` | Wipe all learned command mappings |
+| `cacheinfo` | Show cache statistics |
 
 ---
 
 ## Configuration
 
-You can customize SIY by modifying the `CONFIG` table at the top of the script:
+Customize SIY by modifying the `CONFIG` table at the top of the script:
 
-```lua
-local CONFIG = {
-    -- API Settings
-    ApiKey = "Null",                    -- Optional Bearer key
-    Model = "openai",                   -- AI Model
-    
-    -- Experience (New in v1.3)
-    EnableSounds = false,               -- Toggle sound effects
-    SoundVolume = 0.5,                  -- Volume (0-1)
-    EnableTour = true,                  -- Enable first-run tutorial
-    
-    -- Cache & Rate Limiting
-    CacheEnabled = true,                -- Enable phrase learning
-    AIRequestCooldown = 0.5,            -- Anti-spam delay
-    
-    -- Fuzzy Matching
-    FuzzyMatchMinThreshold = 2,         -- Sensitivity for name matching
-}
-```
+### API Settings
+
+| Option | Default | Description |
+|--------|---------|-------------|
+| `ApiKey` | `"Null"` | Optional Bearer token for API authentication |
+| `Endpoint` | `"https://..."` | AI API endpoint URL |
+| `Model` | `"openai"` | AI model to use |
+| `MaxRetries` | `2` | Maximum API request retries |
+| `RequestTimeout` | `10` | Seconds to wait for API response |
+
+### Cache Settings
+
+| Option | Default | Description |
+|--------|---------|-------------|
+| `CacheEnabled` | `true` | Enable/disable command learning |
+| `CacheFile` | `"SIY_CommandCache.json"` | Local cache file name |
+| `MaxCacheEntries` | `100` | Maximum cached commands (LRU eviction) |
+
+### Rate Limiting
+
+| Option | Default | Description |
+|--------|---------|-------------|
+| `AIRequestCooldown` | `0.5` | Minimum seconds between AI requests |
+
+### UI Timing
+
+| Option | Default | Description |
+|--------|---------|-------------|
+| `PreviewDelay` | `0.3` | Seconds to show preview before execution |
+| `ErrorDisplayTime` | `2` | Seconds to display error messages |
+| `StatusFadeTime` | `3` | Seconds before status text fades |
+| `DropdownFocusDelay` | `0.15` | Delay before hiding dropdown on blur |
+| `DropdownMaxItems` | `6` | Maximum dropdown suggestions |
+
+### Fuzzy Matching
+
+| Option | Default | Description |
+|--------|---------|-------------|
+| `FuzzyMatchMinThreshold` | `2` | Minimum Levenshtein distance threshold |
+| `FuzzyMatchRatio` | `0.5` | Ratio of input length for threshold |
+| `FuzzyMatchMinInputLength` | `3` | Minimum chars for fuzzy matching |
+
+### Bridge Connection
+
+| Option | Default | Description |
+|--------|---------|-------------|
+| `BridgeMaxRetries` | `5` | Max bridge connection retries |
+| `BridgeRetryDelay` | `0.5` | Delay between retries (seconds) |
+| `BridgeTimeout` | `15` | Total connection timeout (seconds) |
+
+### Mobile UI
+
+| Option | Default | Description |
+|--------|---------|-------------|
+| `MobileQuickActionScale` | `1.0` | Scale factor for quick actions |
+| `MobileMinCellSize` | `44` | Minimum touch target size (iOS/Android standard) |
+
+### Sound & Tour (v1.3.0+)
+
+| Option | Default | Description |
+|--------|---------|-------------|
+| `EnableSounds` | `false` | Enable/disable acoustic feedback |
+| `SoundVolume` | `0.5` | Volume level (0-1) |
+| `EnableTour` | `true` | Show onboarding tour on first run |
 
 ---
 
-## Architecture & Stability
+## Architecture
 
-V1.3.1 introduces a robust enterprise-grade architecture:
+SIY v1.3.1 features an enterprise-grade modular architecture:
 
-- **Event Bus**: Decoupled communication between UI and Logic.
-- **Lifecycle Manager**: Ensures clean startups and shutdowns (no memory leaks on re-execution).
-- **Error Handler**: Centralized reporting that prevents script crashes.
-- **Plugin Bridge**: Exposes `_G.SmartInfiniteYield` for external scripts to request AI commands.
+```
+┌─────────────────────────────────────────────────────────────┐
+│                         SIY Core                            │
+├─────────────────────────────────────────────────────────────┤
+│  EventBus          │  Decoupled pub/sub communication      │
+│  LifecycleManager  │  Startup/shutdown, memory cleanup     │
+│  ErrorHandler      │  Centralized reporting, safe wrappers │
+├─────────────────────────────────────────────────────────────┤
+│                      Integrations                           │
+├─────────────────────────────────────────────────────────────┤
+│  IYIntegration     │  Scrape aliases, keybinds, commands   │
+│  ThemeManager      │  Inherit IY theme colors              │
+│  SoundManager      │  Play processing/success/error sounds │
+├─────────────────────────────────────────────────────────────┤
+│                      UI Managers                            │
+├─────────────────────────────────────────────────────────────┤
+│  AnimationManager  │  Smooth tweens, pulsating effects     │
+│  TourManager       │  First-run onboarding flow            │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### Key Design Patterns
+
+- **Namespace Isolation**: All globals use `SmartInfiniteYield` namespace
+- **Connection Registry**: Centralized tracking prevents memory leaks
+- **Event-Driven Communication**: UI and logic communicate via `EventBus`
+- **Error Wrapping**: `ErrorHandler:wrap()` protects critical functions
+
+---
+
+## Plugin API
+
+SIY exposes a global API at `_G.SIY` (v2.0) for external script integration:
+
+### Methods
+
+```lua
+-- Execute a natural language command
+_G.SIY.askAI("make me fly fast")
+
+-- Execute a direct IY command
+_G.SIY.executeCommand(";fly ;speed 100")
+
+-- Get current status
+local status = _G.SIY.getStatus()
+-- Returns: { connected = true, mode = "CMD", ... }
+```
+
+### Events
+
+Subscribe to SIY events via the internal EventBus:
+
+| Event | Payload | Description |
+|-------|---------|-------------|
+| `AI_REQUEST_START` | `nil` | AI processing started |
+| `AI_REQUEST_COMPLETE` | `{command}` | AI returned a command |
+| `AI_REQUEST_ERROR` | `{error}` | AI request failed |
+| `COMMAND_EXECUTED` | `{command}` | Command was executed |
+
+---
+
+## FAQ
+
+### "Bridge not connected" error
+
+The bridge connects SIY to Infinite Yield's command processor. If this fails:
+
+1. **Wait a few seconds** – Bridge has auto-retry (5 attempts)
+2. **Re-execute the script** – Clears stale connections
+3. **Check executor compatibility** – Ensure HTTP requests work
+
+### Which executors are supported?
+
+Any executor with `http_request` or equivalent:
+
+- ✅ Synapse X
+- ✅ Fluxus
+- ✅ KRNL
+- ✅ Script-Ware
+- ⚠️ Others may work if they support HTTP
+
+### AI says "command not found"
+
+- The AI only knows commands documented in Infinite Yield
+- Try rephrasing your request
+- Use `cacheinfo` to check if cached commands exist
+
+### How do I clear learned commands?
+
+Type `clearcache` in CMD mode to wipe all cached phrase-to-command mappings.
 
 ---
 
 ## Contributing
 
-See [ROADMAP.md](docs/ROADMAP.md) for future plans and [CHANGELOG.md](docs/CHANGELOG.md) for version history.
+We welcome contributions! See [CONTRIBUTING.md](CONTRIBUTING.md) for detailed guidelines.
 
-**Credits**:
+**Quick Start:**
 
-- **VolQ5**: Original Idea & Logic
-- **Pollinations.AI**: AI Integration
-- **EdgeIY**: Infinite Yield Backend
+1. Fork the repository
+2. Create a feature branch: `git checkout -b feature/your-feature`
+3. Make changes to `InfiniteYieldWithAI_Dev.Lua`
+4. Test thoroughly on PC and mobile
+5. Submit a Pull Request
 
-Licensed under **Apache License 2.0**.
+---
+
+## Roadmap
+
+### Current Focus (v1.3.x)
+
+- Bridge reliability improvements
+- Mobile experience refinements
+- Performance optimizations
+
+### Coming in v1.4.0
+
+- 🧠 Multi-model AI support (GPT, Gemini, Claude)
+- 🔌 Custom plugin system
+- 🎨 In-game settings panel
+
+See [ROADMAP.md](docs/ROADMAP.md) for the complete roadmap.
+
+---
+
+## Credits
+
+| Contributor | Role |
+|-------------|------|
+| **[VolQ5](https://github.com/BokX1/RbxLuauLLM)** | Original Idea & Logic |
+| **[Pollinations.AI](https://pollinations.ai)** | AI Integration & LLM Model |
+| **[EdgeIY](https://github.com/EdgeIY/infiniteyield)** | Infinite Yield Backend |
+
+---
+
+## License
+
+This project is licensed under the **Apache License 2.0** – see the [LICENSE](LICENSE) file for details.
+
+```
+Copyright 2025-2026 SmartInfiniteYield Contributors
+
+Licensed under the Apache License, Version 2.0
+```
+
+---
+
+<p align="center">
+  <sub>Made with ❤️ by the SIY community</sub>
+</p>
