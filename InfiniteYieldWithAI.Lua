@@ -1934,8 +1934,9 @@ ConnectPersistent(MinBtn.MouseLeave, function()
 end)
 
 --// Input Area (optimized spacing for compact layout)
-local LeftPad = 8 + BtnWidth + 6
-local RightPad = 8 + 26 + 4 + 26 + 8  -- Mode dropdown + Help + Minimize buttons
+local QuickActionWidth = IsMobile and 44 or 28
+local LeftPad = 8 + BtnWidth + 6 + (IsMobile and (QuickActionWidth + 6) or 0) -- Add space for QuickAction button on mobile
+local RightPad = 8 + 26 + 4 + 26 + 8  -- Help + Minimize buttons
 
 local InputContainer = createInstance("Frame", {
     Size = UDim2.new(1, -(LeftPad + RightPad), 0, 26),
@@ -2278,12 +2279,12 @@ end
 local rows = math.ceil(#QuickActions / 3)
 local gridHeight = (rows * scaledCellHeight) + ((rows - 1) * 4) + 12
 
--- Quick Actions Toggle moved to bottom of frame for mobile (44px touch target)
+-- Quick Actions Toggle moved to left of input box for mobile (to avoid minimizing obstruction)
 local QuickActionsToggle = createInstance("TextButton", {
     Name = "QuickActionsToggle",
-    Size = IsMobile and UDim2.new(0, 44, 0, 44) or UDim2.new(0, 28, 0, 28),
-    AnchorPoint = Vector2.new(1, 1),
-    Position = UDim2.new(1, -8, 1, -8),
+    Size = UDim2.new(0, QuickActionWidth, 0, QuickActionWidth),
+    AnchorPoint = Vector2.new(0, 0), -- Top-Left alignment
+    Position = UDim2.new(0, 8 + BtnWidth + 6, 0, 10), -- Placed after Mode Dropdown
     BackgroundColor3 = Colors.Purple,
     BackgroundTransparency = 0.5,
     Text = "⚡",
