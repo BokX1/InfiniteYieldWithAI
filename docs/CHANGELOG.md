@@ -8,6 +8,20 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ## [1.3.1] - 2026-01-11
 
+### Added
+
+| Feature | Description |
+|---------|-------------|
+| **Bridge Failure Notification** | User-facing status message now displays when bridge connection fails, preventing confusion |
+
+### Changed
+
+| Change | Description |
+|--------|-------------|
+| **Mobile Touch Targets** | Quick Actions cells increased from 30px to 44px (iOS/Android standard) |
+| **Mobile Quick Actions Toggle** | Button size increased from 22x22 to 44x44 pixels on mobile for easier tapping |
+| **Mobile Touch Target Font** | Quick Actions toggle font size increased from 12 to 16 on mobile |
+
 ### Fixed
 
 | Fix | Description |
@@ -24,6 +38,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 |-------------|-------------|
 | **Player List Caching** | `fuzzyMatchPlayer` now caches `Players:GetPlayers()` once per call for improved performance |
 | **Connection Cleanup Pattern** | Established pattern for self-disconnecting one-shot connections to prevent leaks |
+| **EventBus Notification System** | Added `SHOW_NOTIFICATION` event listener for extensible system notifications |
 
 ---
 

@@ -515,7 +515,7 @@ local CONFIG = {
     
     -- Mobile UI Scaling
     MobileQuickActionScale = 1.0, -- Scale factor for mobile quick actions
-    MobileMinCellSize = 30, -- Minimum cell size for quick actions on high-density displays
+    MobileMinCellSize = 44, -- Minimum cell size for quick actions (iOS/Android standard touch target)
     
     -- Dropdown Focus Management
     DropdownFocusDelay = 0.15, -- Delay before hiding dropdown after focus loss
@@ -1294,6 +1294,12 @@ task.spawn(function()
         BridgeReady:Fire()
     else
         warn("[SIY] Bridge connection timeout after " .. tostring(maxTimeout) .. " seconds")
+        -- Notify user of bridge failure (prevents confusion)
+        EventBus:emit("SHOW_NOTIFICATION", {
+            title = "Connection Failed",
+            message = "Unable to connect to Infinite Yield. Some features may not work. Try reloading the script.",
+            duration = 8
+        })
     end
 end)
 
@@ -2272,10 +2278,10 @@ end
 local rows = math.ceil(#QuickActions / 3)
 local gridHeight = (rows * scaledCellHeight) + ((rows - 1) * 4) + 12
 
--- Quick Actions Toggle moved to bottom of frame for mobile
+-- Quick Actions Toggle moved to bottom of frame for mobile (44px touch target)
 local QuickActionsToggle = createInstance("TextButton", {
     Name = "QuickActionsToggle",
-    Size = UDim2.new(0, 22, 0, 22),
+    Size = IsMobile and UDim2.new(0, 44, 0, 44) or UDim2.new(0, 28, 0, 28),
     AnchorPoint = Vector2.new(1, 1),
     Position = UDim2.new(1, -8, 1, -8),
     BackgroundColor3 = Colors.Purple,
@@ -2283,7 +2289,7 @@ local QuickActionsToggle = createInstance("TextButton", {
     Text = "⚡",
     TextColor3 = Colors.Text,
     Font = Enum.Font.GothamBold,
-    TextSize = 12,
+    TextSize = IsMobile and 16 or 12,
     Visible = IsMobile and not IS_CHAT_MODE,
     ZIndex = 5,
     Parent = MainFrame
@@ -3498,6 +3504,13 @@ local function updateStatus(text, color, useRandom)
         TweenService:Create(StatusLabel, TweenInfo.new(3, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {TextTransparency = 0.6}):Play()
     end
 end
+
+-- EventBus listener for SHOW_NOTIFICATION (used for bridge failures and other system messages)
+EventBus:on("SHOW_NOTIFICATION", function(data)
+    if data and data.title and data.message then
+        updateStatus(data.title .. ": " .. data.message, Colors.Red, false)
+    end
+end)
 
 local function getPlayerList()
     local names = {}
