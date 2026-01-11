@@ -19,8 +19,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 | Change | Description |
 |--------|-------------|
 | **Mobile Touch Targets** | Quick Actions cells increased from 30px to 44px (iOS/Android standard) |
-| **Mobile Quick Actions Toggle** | Button size increased from 22x22 to 44x44 pixels on mobile for easier tapping |
-| **Mobile Touch Target Font** | Quick Actions toggle font size increased from 12 to 16 on mobile |
+| **Mobile Quick Actions Toggle** | Button relocated to left of input box to prevent obstruction of minimize button |
+| **Mobile Quick Actions Sizing** | Button size increased from 22x22 to 44x44 pixels, font from 12 to 16 |
 
 ### Fixed
 
