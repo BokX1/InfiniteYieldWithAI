@@ -4177,30 +4177,9 @@ local function buildSuggestions()
 end
 buildSuggestions()
 
--- Helper: Get IY waypoints from the global IY waypoint list
-local function getIYWaypoints()
-    local waypoints = {}
-    local env
 
-    if type(getgenv) == "function" then
-        local ok, result = pcall(getgenv)
-        if ok and type(result) == "table" then
-            env = result
-        end
-    end
 
-    if not env then
-        env = _G
-    end
 
-    local store = (type(env) == "table") and env.IYwaypoints
-    if type(store) == "table" then
-        for name, _ in pairs(store) do
-            table.insert(waypoints, tostring(name))
-        end
-    end
-    return waypoints
-end
 
 -- Debounce state for dropdown updates
 local dropdownDebounceId = 0
@@ -4270,7 +4249,7 @@ local function updateDropdownInternal(text)
     
     for i = 1, resultCount do
         local data = matches[i]
-        local displayColor = data.IsWaypoint and Colors.Green or (data.PlayerName and Colors.Blue or Colors.TextDim)
+        local displayColor = data.PlayerName and Colors.Blue or Colors.TextDim
         local btn = createInstance("TextButton", {
             Name = "Match",
             Size = UDim2.new(1, 0, 0, 25),
@@ -4296,7 +4275,7 @@ local function updateDropdownInternal(text)
         end)
         
         btn.MouseButton1Click:Connect(function()
-            if data.IsWaypoint or data.PlayerName then
+            if data.PlayerName then
                 -- For waypoint/player suggestions, use the full command
                 InputBox.Text = data.Key
             else
