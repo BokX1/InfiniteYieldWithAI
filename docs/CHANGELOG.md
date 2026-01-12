@@ -8,6 +8,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ## [1.3.2] - 2026-01-13
 
+### Changed
+
+| Change | Description |
+|--------|-------------|
+| **Chat Persona Revamp** | Updated Chat Mode prompt to be significantly more friendly, engaging, and "gamer-like", reducing technical jargon |
+
 ### Fixed
 
 | Fix | Description |
