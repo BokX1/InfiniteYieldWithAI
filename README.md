@@ -48,7 +48,7 @@ SmartInfiniteYield bridges natural language and precise command execution with a
 | **Quick Actions** | One-tap mobile grid for toggleable commands (Fly, Noclip, ESP, etc.) |
 | **Predictive Dropdown** | Google-style suggestions with priority ranking as you type |
 | **Waypoint System** | Save locations (`swp base`) and teleport back (`waypoint base`) |
-| **ChatGPT-like CHAT Mode** | Message bubbles with role indicators, timestamps, and memory indicator |
+| **ChatGPT-like CHAT Mode** | **Friendly Companion** persona, bubbles with role indicators, timestamps, and memory |
 
 ### ✨ User Experience
 
@@ -101,7 +101,7 @@ loadstring(game:HttpGet("https://raw.githubusercontent.com/BokX1/InfiniteYieldWi
 | Mode | Color | Purpose | Example |
 |------|-------|---------|---------|
 | **CMD** | 🟠 Orange | Execute commands | "fly and goto john", "make all parts transparent" |
-| **CHAT** | 🔵 Blue | Ask questions | "Where's the safe spot in this game?" |
+| **CHAT** | 🔵 Blue | Friendly chat | "How do I win this game, bestie?" |
 
 ### Quick Actions (Mobile)
 
