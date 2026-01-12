@@ -3793,23 +3793,7 @@ local function executeBridge(text, source)
             return
         end
 
-        --// ==========================================
-        --// GOTOWP - Waypoint Teleport Command
-        --// ==========================================
-        -- gotowp [name] - Teleport to a saved waypoint
-        local wpTarget = cleanText:match("^gotowp%s+(.+)")
-        if wpTarget then
-            wpTarget = trim(wpTarget)
-            if wpTarget == "" then
-                updateStatus("Waypoint name required", Colors.Red)
-                return
-            end
-            -- Use IY's native waypoint command
-            updateStatus("Waypoint: " .. wpTarget, Colors.Green)
-            IY_Interface.Exec("waypoint " .. wpTarget)
-            return
-        end
-        --// ==========================================
+
 
         -- Bind Commands
         local bindKey, bindCmd = cleanText:match("^bind (%w+) (.+)")
@@ -4236,8 +4220,7 @@ local function updateDropdownInternal(text)
     local matches = {}
     local textLower = text:lower()
     
-    -- Check if user is typing gotowp (waypoint-only command)
-    local wpCmd, wpPartial = text:match("^(gotowp)%s+(.*)")
+
     
     -- Check if user is typing goto/tp commands (player-only)
     local playerCmd, playerPartial = text:match("^(goto)%s+(.*)")
@@ -4245,24 +4228,7 @@ local function updateDropdownInternal(text)
     if not playerCmd then playerCmd, playerPartial = text:match("^(tp)%s+(.*)" ) end
     if not playerCmd then playerCmd, playerPartial = text:match("^(teleport)%s+(.*)" ) end
     
-    if wpCmd then
-        -- GOTOWP: Show waypoint suggestions only
-        local waypoints = getIYWaypoints()
-        local partialLower = (wpPartial or ""):lower()
-        
-        for _, wpName in ipairs(waypoints) do
-            local wpLower = wpName:lower()
-            if partialLower == "" or wpLower:sub(1, #partialLower) == partialLower or wpLower:find(partialLower, 1, true) then
-                table.insert(matches, {
-                    Key = "gotowp " .. wpName,
-                    Display = "gotowp " .. wpName .. " [waypoint]",
-                    Score = 100,
-                    IsWaypoint = true,
-                    WaypointName = wpName
-                })
-            end
-        end
-    elseif playerCmd then
+    if playerCmd then
         -- GOTO/TP: Show player suggestions only
         local partialLower = (playerPartial or ""):lower()
         
