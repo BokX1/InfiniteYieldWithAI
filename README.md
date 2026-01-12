@@ -47,7 +47,7 @@ SmartInfiniteYield bridges natural language and precise command execution with a
 | **Compact Mode** | Minimalist 65px height (CMD mode) keeps your screen clear |
 | **Quick Actions** | One-tap mobile grid for toggleable commands (Fly, Noclip, ESP, etc.) |
 | **Predictive Dropdown** | Google-style suggestions with priority ranking as you type |
-| **Waypoint System** | Save locations (`swp base`) and teleport back (`gotowp base`) |
+| **Waypoint System** | Save locations (`swp base`) and teleport back (`waypoint base`) |
 | **ChatGPT-like CHAT Mode** | Message bubbles with role indicators, timestamps, and memory indicator |
 
 ### ✨ User Experience
@@ -118,9 +118,9 @@ Tap the ⚡ button to reveal a 3×3 grid of toggleable commands:
 | Command | Description | Example |
 |---------|-------------|---------|
 | `swp [name]` | Save current position | `swp base` |
-| `gotowp [name]` | Teleport to saved waypoint | `gotowp base` |
+| `waypoint [name]` or `wp [name]` | Teleport to saved waypoint | `waypoint base` |
 | `waypoints` | List all saved waypoints | |
-| `deletewaypoint [name]` | Delete a waypoint | `deletewaypoint base` |
+| `deletewaypoint [name]` or `dwp [name]` | Delete a waypoint | `dwp base` |
 
 ### Keyboard Shortcuts
 

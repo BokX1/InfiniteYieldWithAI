@@ -31,6 +31,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 | **SoundManager Connection Leak** | Fixed `sound.Ended` connection not being tracked, preventing memory leaks during extended usage |
 | **AnimationManager Tween Leak** | Fixed `tween.Completed` connection in dropdown animations not being properly disconnected |
 | **Duplicate FastMap Entries** | Removed redundant `waypoint` and `wp` pattern definitions |
+| **Wrong Waypoint Command** | Fixed Section 3 prompt using `;gotowp` instead of correct `;waypoint` |
 
 ### Technical
 
