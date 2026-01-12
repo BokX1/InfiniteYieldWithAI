@@ -6,6 +6,21 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ---
 
+## [1.3.2] - 2026-01-13
+
+### Fixed
+
+| Fix | Description |
+|-----|-------------|
+| **Drag System Memory Leak** | Fixed `InputChanged` connection not being disconnected in `enableDrag` |
+
+### Technical
+
+| Improvement | Description |
+|-------------|-------------|
+| **Type Safety** | Added `--!nonstrict` mode and Luau type annotations to core systems (`EventBus`, `LifecycleManager`) |
+| **Error Handling** | Enhanced `ErrorHandler` with typed signatures |
+
 ## [1.3.1] - 2026-01-11
 
 ### Added

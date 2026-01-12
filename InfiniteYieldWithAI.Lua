@@ -1,3 +1,4 @@
+--!nonstrict
 --[[ 
     SMART INFINITE YIELD - V1.3.1 STABLE
     - Architecture: Context Awareness + Event-Based Bridge
@@ -132,13 +133,15 @@ end
 --// ============================================
 -- Decoupled communication between UI, Logic, and Services
 local EventBus = {}
+local EventBus = {}
+type EventCallback = (...any) -> ()
 local _eventListeners = {}
 
 --- Subscribe to an event
 --- @param eventName string
 --- @param callback function
 --- @return function -- Disconnect function
-function EventBus:on(eventName, callback)
+function EventBus:on(eventName: string, callback: EventCallback)
     _eventListeners[eventName] = _eventListeners[eventName] or {}
     table.insert(_eventListeners[eventName], callback)
     return function()
@@ -157,7 +160,7 @@ end
 --- Emit an event to all listeners
 --- @param eventName string
 --- @param ... any
-function EventBus:emit(eventName, ...)
+function EventBus:emit(eventName: string, ...: any)
     local listeners = _eventListeners[eventName]
     if listeners then
         for _, callback in ipairs(listeners) do
@@ -226,7 +229,7 @@ local ErrorHandler = {}
 --- @param source string -- Where the error came from
 --- @param message string -- Error description
 --- @param severity string? -- "warning" | "error" | "fatal"
-function ErrorHandler:report(source, message, severity)
+function ErrorHandler:report(source: string, message: string, severity: string?)
     local sev = severity or "error"
     local logMsg = string.format("[SIY %s] %s: %s", sev:upper(), source, message)
     warn(logMsg)
@@ -237,7 +240,7 @@ end
 --- @param fn function -- Function to wrap
 --- @param source string -- Source name for error reporting
 --- @return function
-function ErrorHandler:wrap(fn, source)
+function ErrorHandler:wrap(fn: (...any) -> ...any, source: string)
     return function(...)
         local results = {pcall(fn, ...)}
         local success = table.remove(results, 1)
@@ -1584,9 +1587,13 @@ local function enableDrag(frame)
             dragStart = input.Position
             startPos = frame.Position
             
-            input.Changed:Connect(function()
+            local inputChangedConn
+            inputChangedConn = input.Changed:Connect(function()
                 if input.UserInputState == Enum.UserInputState.End then
                     dragToggle = false
+                    if inputChangedConn then
+                        inputChangedConn:Disconnect()
+                    end
                 end
             end)
         end
