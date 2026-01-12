@@ -6,7 +6,7 @@
 [![Powered by Pollinations.AI](https://img.shields.io/badge/Powered%20by-Pollinations.AI-blueviolet.svg)](https://pollinations.ai/)
 
 > **AI-Powered Natural Language Interface for Infinite Yield**  
-> *Transform "make me fly fast" into `;fly ;speed 100` instantly.*
+> *Transform "make me fly fast" into `;fly ;flyspeed 5` instantly.*
 
 ---
 
