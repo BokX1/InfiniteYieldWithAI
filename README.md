@@ -211,7 +211,7 @@ Customize SIY by modifying the `CONFIG` table at the top of the script:
 
 ## Architecture
 
-SIY v1.3.1 features an enterprise-grade modular architecture:
+SIY v1.3.x features an enterprise-grade modular architecture:
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
