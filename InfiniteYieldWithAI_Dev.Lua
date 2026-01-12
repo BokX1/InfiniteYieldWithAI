@@ -1,6 +1,6 @@
 --!nonstrict
 --[[ 
-    SMART INFINITE YIELD - V1.3.1 STABLE
+    SMART INFINITE YIELD - V1.3.2 STABLE
     - Architecture: Context Awareness + Event-Based Bridge
     - Logic: VolQ5 & Pollinations.AI (LLM Model)
     - Status: Stable 
