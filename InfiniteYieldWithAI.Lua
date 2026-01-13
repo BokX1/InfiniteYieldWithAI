@@ -133,7 +133,6 @@ end
 --// ============================================
 -- Decoupled communication between UI, Logic, and Services
 local EventBus = {}
-local EventBus = {}
 type EventCallback = (...any) -> ()
 local _eventListeners = {}
 
@@ -1587,15 +1586,16 @@ local function enableDrag(frame)
             dragStart = input.Position
             startPos = frame.Position
             
-            local inputChangedConn
-            inputChangedConn = input.Changed:Connect(function()
+            local inputChangedConn = nil
+            inputChangedConn = registerConnection(input.Changed:Connect(function()
                 if input.UserInputState == Enum.UserInputState.End then
                     dragToggle = false
                     if inputChangedConn then
                         inputChangedConn:Disconnect()
+                        removeConnection(inputChangedConn)
                     end
                 end
-            end)
+            end))
         end
     end)
     
@@ -4550,7 +4550,7 @@ end)
 setNamespaceValue("Cleanup", cleanup)
 setNamespaceValue("ClearChat", clearChatLog)
 setNamespaceValue("GetBridgeStatus", getBridgeStatus)
-setNamespaceValue("Version", "1.3.1")
+setNamespaceValue("Version", "1.3.2")
 setNamespaceValue("Ready", true)
 
 

@@ -18,7 +18,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 | Fix | Description |
 |-----|-------------|
-| **Drag System Memory Leak** | Fixed `InputChanged` connection not being disconnected in `enableDrag` |
+| **Duplicate EventBus Declaration** | Removed duplicate `local EventBus = {}` declaration that shadowed the first |
+| **Drag System Memory Leak** | Fixed `InputChanged` connection not being registered/disconnected in `enableDrag` |
+| **Version String Mismatch** | Synchronized namespace version string with header comment |
 
 ### Technical
 
