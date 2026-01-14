@@ -1,10 +1,10 @@
 --!nonstrict
 --[[ 
-    SMART INFINITE YIELD - V1.3.2 STABLE
+    SMART INFINITE YIELD - V1.3.3 STABLE
     - Architecture: Context Awareness + Event-Based Bridge
     - Logic: VolQ5 & Pollinations.AI (LLM Model)
     - Status: Stable 
-    - v1.3.0: Added sound feedback config, tour config, plugin bridge ready
+    - v1.3.3: Added comprehensive LuaU type annotations, UIFactory improvements, connection leak prevention
 ]]
 
 --// ============================================
@@ -481,7 +481,56 @@ end
 --// ============================================
 --// 2. CONFIGURATION
 --// ============================================
-local CONFIG = {
+
+--[=[
+    @type ConfigType
+    Centralized configuration with full LuaU type annotations
+]=]
+type ConfigType = {
+    -- API Settings
+    ApiKey: string,
+    Endpoint: string,
+    Model: string,
+    MaxRetries: number,
+    RequestTimeout: number,
+    -- Cache Settings
+    CacheEnabled: boolean,
+    CacheFile: string,
+    MaxCacheEntries: number,
+    -- Rate Limiting
+    AIRequestCooldown: number,
+    -- Input Validation
+    MaxInputLength: number,
+    -- UI Timing Constants
+    PreviewDelay: number,
+    ErrorDisplayTime: number,
+    StatusFadeTime: number,
+    -- Fuzzy Matching
+    FuzzyMatchMinThreshold: number,
+    FuzzyMatchRatio: number,
+    FuzzyMatchMinInputLength: number,
+    -- Bridge Connection
+    BridgeMaxRetries: number,
+    BridgeRetryDelay: number,
+    BridgeTimeout: number,
+    -- Mobile UI Scaling
+    MobileQuickActionScale: number,
+    MobileMinCellSize: number,
+    -- Dropdown Focus Management
+    DropdownFocusDelay: number,
+    DropdownMaxItems: number,
+    -- Sound Feedback Settings
+    EnableSounds: boolean,
+    SoundVolume: number,
+    -- First-Run Tour Settings
+    EnableTour: boolean,
+    -- System Prompt
+    CommandPrompt: string,
+    -- Chat Mode Prompt (optional)
+    ChatPrompt: string?,
+}
+
+local CONFIG: ConfigType = {
     -- API Settings
     ApiKey = "Null",
     Endpoint = "https://infiniteyieldai.ahazihak03.workers.dev/v1/chat/completions",
@@ -1401,7 +1450,36 @@ local ScreenSize = workspace.CurrentCamera and workspace.CurrentCamera.ViewportS
 local IsHighDensity = IsMobile and (ScreenSize.X > 1200 or ScreenSize.Y > 2400)
 local MobileScaleFactor = IsHighDensity and 1.2 or CONFIG.MobileQuickActionScale
 
-local Colors = {
+--[=[
+    @type ColorPalette
+    Centralized color scheme with full LuaU type annotations
+]=]
+type ColorPalette = {
+    -- Base colors
+    Background: Color3,
+    InputBg: Color3,
+    DropdownBg: Color3,
+    Border: Color3,
+    -- Accent colors
+    Orange: Color3,
+    Blue: Color3,
+    Green: Color3,
+    Red: Color3,
+    Purple: Color3,
+    -- Text colors
+    Text: Color3,
+    TextDim: Color3,
+    Status: Color3,
+    -- Chat mode colors
+    ChatUserBubble: Color3,
+    ChatAIBubble: Color3,
+    ChatUserText: Color3,
+    ChatAIText: Color3,
+    ChatBorder: Color3,
+    ChatTimestamp: Color3,
+}
+
+local Colors: ColorPalette = {
     Background = Color3.fromRGB(20, 20, 20),
     InputBg    = Color3.fromRGB(30, 30, 30),
     DropdownBg = Color3.fromRGB(25, 25, 25),
@@ -1434,7 +1512,7 @@ local ChatMainSize = IsMobile and UDim2.new(0.9, 0, 0, 280) or UDim2.new(0, 420,
 --- @param obj GuiObject -- The GUI object to modify
 --- @param radius number -- Corner radius in pixels
 --- @return UICorner
-local function addCorner(obj, radius)
+local function addCorner(obj: GuiObject, radius: number): UICorner
     local corner = Instance.new("UICorner")
     corner.CornerRadius = UDim.new(0, radius)
     corner.Parent = obj
@@ -1446,7 +1524,7 @@ end
 --- @param color Color3 -- Stroke color
 --- @param thickness number -- Stroke thickness in pixels
 --- @return UIStroke
-local function addStroke(obj, color, thickness)
+local function addStroke(obj: GuiObject, color: Color3, thickness: number): UIStroke
     local stroke = Instance.new("UIStroke")
     stroke.Color = color
     stroke.Thickness = thickness
@@ -1458,7 +1536,7 @@ end
 --- @param className string -- The class name to create
 --- @param properties table<string, any> -- Properties to assign
 --- @return Instance
-local function createInstance(className, properties)
+local function createInstance(className: string, properties: {[string]: any}): Instance
     local success, instance = pcall(Instance.new, className)
     if not success or not instance then
         warn("[SIY] Failed to create instance:", className)
@@ -1480,8 +1558,8 @@ end
 --- @param text string -- Button text
 --- @param props table<string, any>? -- Additional properties
 --- @return TextButton
-local function createButton(text, props)
-    local defaults = {
+local function createButton(text: string, props: {[string]: any}?): TextButton
+    local defaults: {[string]: any} = {
         BackgroundColor3 = Colors.InputBg,
         Text = text,
         TextColor3 = Colors.Text,
@@ -1492,7 +1570,7 @@ local function createButton(text, props)
     if props then
         for k, v in pairs(props) do defaults[k] = v end
     end
-    local btn = createInstance("TextButton", defaults)
+    local btn = createInstance("TextButton", defaults) :: TextButton
     addCorner(btn, 4)
     return btn
 end
@@ -1501,8 +1579,8 @@ end
 --- @param text string -- Label text
 --- @param props table<string, any>? -- Additional properties
 --- @return TextLabel
-local function createLabel(text, props)
-    local defaults = {
+local function createLabel(text: string, props: {[string]: any}?): TextLabel
+    local defaults: {[string]: any} = {
         BackgroundTransparency = 1,
         Text = text,
         TextColor3 = Colors.Text,
@@ -1513,7 +1591,7 @@ local function createLabel(text, props)
     if props then
         for k, v in pairs(props) do defaults[k] = v end
     end
-    return createInstance("TextLabel", defaults)
+    return createInstance("TextLabel", defaults) :: TextLabel
 end
 
 --- Creates a styled frame with optional corner and stroke
@@ -1521,8 +1599,8 @@ end
 --- @param cornerRadius number? -- Optional corner radius
 --- @param strokeColor Color3? -- Optional stroke color
 --- @return Frame
-local function createFrame(props, cornerRadius, strokeColor)
-    local frame = createInstance("Frame", props)
+local function createFrame(props: {[string]: any}, cornerRadius: number?, strokeColor: Color3?): Frame
+    local frame = createInstance("Frame", props) :: Frame
     if cornerRadius and cornerRadius > 0 then
         addCorner(frame, cornerRadius)
     end
@@ -1618,6 +1696,16 @@ local function enableDrag(frame)
     DragRegistrations[frame] = {
         connections = connections
     }
+    
+    -- v1.3.3: Auto-cleanup when frame is destroyed to prevent memory leaks
+    local destroyCleanup
+    destroyCleanup = frame.Destroying:Connect(function()
+        disconnectDragConnections(frame)
+        if destroyCleanup then
+            destroyCleanup:Disconnect()
+        end
+    end)
+    registerConnection(destroyCleanup)
 end
 
 --// ============================================
@@ -4548,7 +4636,7 @@ end)
 setNamespaceValue("Cleanup", cleanup)
 setNamespaceValue("ClearChat", clearChatLog)
 setNamespaceValue("GetBridgeStatus", getBridgeStatus)
-setNamespaceValue("Version", "1.3.2")
+setNamespaceValue("Version", "1.3.3")
 setNamespaceValue("Ready", true)
 
 

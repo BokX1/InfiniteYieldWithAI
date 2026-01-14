@@ -6,6 +6,34 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ---
 
+## [1.3.3] - 2026-01-14
+
+### Added
+
+| Feature | Description |
+|---------|-------------|
+| **ConfigType LuaU Type** | Full type definition for CONFIG with 25+ typed fields for IDE support |
+| **ColorPalette LuaU Type** | Full type definition for Colors with 18 typed fields |
+| **Drag System Auto-Cleanup** | Frames now auto-cleanup drag connections when destroyed |
+
+### Changed
+
+| Change | Description |
+|--------|-------------|
+| **UI Helper Functions** | Enhanced with explicit LuaU type annotations and type casts |
+| **createInstance** | Now returns typed instances with proper casts |
+| **createButton/createLabel/createFrame** | All use explicit `:: Type` casts for return values |
+
+### Technical
+
+| Improvement | Description |
+|-------------|-------------|
+| **Type Safety** | Added comprehensive LuaU type annotations to core configuration and UI systems |
+| **Memory Leak Prevention** | Added `Destroying` listener to `enableDrag()` for automatic connection cleanup |
+| **IDE Support** | Type definitions provide autocomplete and error checking in supported editors |
+
+---
+
 ## [1.3.2] - 2026-01-14
 
 ### Changed
