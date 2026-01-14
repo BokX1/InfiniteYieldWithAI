@@ -3510,15 +3510,42 @@ local FastMap = {
 
 -- Convert FastMap to OrderedFastMap for deterministic matching
 -- Sorted by pattern length (descending) so specific patterns match before generic ones
+-- v1.3.3: Optimized FastMap with Indexing
+-- Groups patterns by their starting character for O(1) group lookup
 local OrderedFastMap = {}
+local FastMapIndex = {}
+local FastMapMisc = {} -- Fallback for patterns not starting with ^
+
 do
     for pattern, command in pairs(FastMap) do
-        table.insert(OrderedFastMap, { Pattern = pattern, Command = command })
+        local entry = { Pattern = pattern, Command = command }
+        
+        -- Categorize by first character if anchor is present
+        if pattern:sub(1,1) == "^" then
+            local firstChar = pattern:sub(2,2):lower()
+            if not FastMapIndex[firstChar] then
+                FastMapIndex[firstChar] = {}
+            end
+            table.insert(FastMapIndex[firstChar], entry)
+        else
+            table.insert(FastMapMisc, entry)
+        end
+        
+        -- Keep master list for fallback/iterating
+        table.insert(OrderedFastMap, entry)
     end
-    -- Sort by pattern length descending (longer = more specific = higher priority)
-    table.sort(OrderedFastMap, function(a, b)
-        return #a.Pattern > #b.Pattern
-    end)
+
+    -- Helper to sort entries by length descending (specificity)
+    local function sortEntries(t)
+        table.sort(t, function(a, b) return #a.Pattern > #b.Pattern end)
+    end
+
+    -- Sort all lists
+    sortEntries(OrderedFastMap)
+    sortEntries(FastMapMisc)
+    for _, list in pairs(FastMapIndex) do
+        sortEntries(list)
+    end
 end
 
 local Priority = {
@@ -3709,14 +3736,20 @@ local function ensureRowSize(row: {number}, size: number): nil
     return nil
 end
 
---- Calculates Levenshtein edit distance between two strings
+--- Calculates Levenshtein edit distance between two strings with optimization
 --- @param s1 string -- First string
 --- @param s2 string -- Second string
---- @return number -- Edit distance (0 = identical)
-local function levenshteinDistance(s1: string, s2: string): number
+--- @param maxDist number? -- Optional: max distance to check before giving up (optimization)
+--- @return number -- Edit distance (or maxDist + 1 if exceeded)
+local function levenshteinDistance(s1: string, s2: string, maxDist: number?): number
     local len1, len2 = #s1, #s2
     if len1 == 0 then return len2 end
     if len2 == 0 then return len1 end
+    
+    -- Optimization: Length difference check
+    if math.abs(len1 - len2) > (maxDist or math.huge) then
+        return (maxDist or 0) + 1
+    end
 
     -- Ensure s2 is the longer string to minimize memory
     if len1 > len2 then
@@ -3740,13 +3773,26 @@ local function levenshteinDistance(s1: string, s2: string): number
     for i = 1, len1 do
         current[1] = i
         local c1 = lower1:byte(i)
+        
+        -- Optimization: Track minimum distance in current row
+        local minRowDist = maxDist and current[1] or 0
 
         for j = 1, len2 do
             local cost = (c1 == lower2:byte(j)) and 0 or 1
             local insertion = current[j] + 1
             local deletion = previous[j + 1] + 1
             local substitution = previous[j] + cost
-            current[j + 1] = math.min(insertion, deletion, substitution)
+            local dist = math.min(insertion, deletion, substitution)
+            current[j + 1] = dist
+            
+            if maxDist and dist < minRowDist then
+                minRowDist = dist
+            end
+        end
+        
+        -- Optimization: Early exit if entire row exceeds max distance
+        if maxDist and minRowDist > maxDist then
+            return maxDist + 1
         end
 
         previous, current = current, previous
@@ -3815,9 +3861,9 @@ local function fuzzyMatchPlayer(partial: string?): string?
                 exactPrefixMatch = exactPrefixMatch or player.Name
             end
         else
-            -- Calculate Levenshtein distances once per player (optimization)
-            local nameScore = levenshteinDistance(partialLower, name)
-            local displayScore = levenshteinDistance(partialLower, displayName)
+            -- Calculate Levenshtein distances with optimization (maxDist = threshold)
+            local nameScore = levenshteinDistance(partialLower, name, threshold)
+            local displayScore = levenshteinDistance(partialLower, displayName, threshold)
             
             -- Contains match with pre-calculated score
             if name:find(partialLower, 1, true) and nameScore < bestScore then
@@ -4111,21 +4157,36 @@ local function queryAI(promptText, retryContext, attemptCount)
                 end
             end
             
-            -- Second try: OrderedFastMap lookup (pattern-based fallback)
-            for _, entry in ipairs(OrderedFastMap) do
-                local _, _, capture, capture2 = cleanPrompt:find(entry.Pattern)
-                if _ then
-                    local finalCmd = entry.Command
-                    if capture then finalCmd = finalCmd:gsub("%%1", capture) end
-                    if capture2 then finalCmd = finalCmd:gsub("%%2", capture2) end
-                    
-                    showPreview(finalCmd)
-                    executeBridge(finalCmd, "FAST")
-                    resetVisuals(true)
-                    InputBox.Text = ""
-                    return
+            -- Second try: Optimized FastMap lookup
+            -- v1.3.3: Use index for performance (check matching char group first)
+            local firstChar = cleanPrompt:sub(1,1):lower()
+            local targetList = FastMapIndex[firstChar] or FastMapMisc
+            
+            -- If we have a specific list, check it. If no match found (or list empty),
+            -- we might need to check Misc (though logic suggests if it starts with 'x' it must be in 'x' or Misc)
+            
+            local function checkList(list)
+                for _, entry in ipairs(list) do
+                    -- Clean prompt match
+                    local _, _, capture, capture2 = cleanPrompt:find(entry.Pattern)
+                    if _ then
+                        local finalCmd = entry.Command
+                        if capture then finalCmd = finalCmd:gsub("%%1", capture) end
+                        if capture2 then finalCmd = finalCmd:gsub("%%2", capture2) end
+                        
+                        showPreview(finalCmd)
+                        executeBridge(finalCmd, "FAST")
+                        resetVisuals(true)
+                        InputBox.Text = ""
+                        return true
+                    end
                 end
+                return false
             end
+            
+            -- Checks: 1. Indexed Group, 2. Misc Group
+            if checkList(targetList) then return end
+            if targetList ~= FastMapMisc and checkList(FastMapMisc) then return end
         end
     end
 
