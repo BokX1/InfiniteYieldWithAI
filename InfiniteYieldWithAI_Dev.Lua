@@ -3663,19 +3663,17 @@ end)
 --// v1.3.3: PLAYER LIST CACHE (Performance Optimization)
 --// ============================================
 -- Cached player data to avoid repeated Players:GetPlayers() calls
-local CachedPlayerList: {Player} = {}
-local CachedPlayerNames: string = ""
-local PlayerCacheValid: boolean = false
+local CachedPlayerList = {}
+local PlayerCacheValid = false
 
 --- Invalidates the player cache (called on join/leave)
-local function invalidatePlayerCache(): nil
+local function invalidatePlayerCache()
     PlayerCacheValid = false
-    return nil
 end
 
 --- Gets cached player list, refreshing if invalid
---- @return {Player} -- Array of current players
-local function getCachedPlayers(): {Player}
+--- @return table -- Array of current players
+local function getCachedPlayers()
     if not PlayerCacheValid then
         CachedPlayerList = Players:GetPlayers()
         PlayerCacheValid = true
