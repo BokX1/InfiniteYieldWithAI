@@ -3659,38 +3659,11 @@ EventBus:on("SHOW_NOTIFICATION", function(data)
     end
 end)
 
---// ============================================
---// v1.3.3: PLAYER LIST CACHE (Performance Optimization)
---// ============================================
--- Cached player data to avoid repeated Players:GetPlayers() calls
-local CachedPlayerList = {}
-local PlayerCacheValid = false
-
---- Invalidates the player cache (called on join/leave)
-local function invalidatePlayerCache()
-    PlayerCacheValid = false
-end
-
---- Gets cached player list, refreshing if invalid
---- @return table -- Array of current players
-local function getCachedPlayers()
-    if not PlayerCacheValid then
-        CachedPlayerList = Players:GetPlayers()
-        PlayerCacheValid = true
-    end
-    return CachedPlayerList
-end
-
--- Register cache invalidation on player changes
-registerConnection(Players.PlayerAdded:Connect(invalidatePlayerCache))
-registerConnection(Players.PlayerRemoving:Connect(invalidatePlayerCache))
-
---- Gets comma-separated list of all player names (cached)
+--- Gets comma-separated list of all player names
 --- @return string -- Player names joined by commas
-local function getPlayerList(): string
-    local players = getCachedPlayers()
-    local names: {string} = {}
-    for _, player in ipairs(players) do
+local function getPlayerList()
+    local names = {}
+    for _, player in ipairs(Players:GetPlayers()) do
         table.insert(names, player.Name)
     end
     return table.concat(names, ", ")
@@ -3699,7 +3672,7 @@ end
 --- Checks if text references a player target requiring context injection
 --- @param text string -- Text to check for player references
 --- @return boolean -- True if player context should be injected
-local function needsPlayerContext(text: string): boolean
+local function needsPlayerContext(text)
     local lowerText = text:lower()
     for _, trigger in ipairs(TargetTriggers) do
         if lowerText:find("%f[%w]" .. trigger .. "%f[%W]") then return true end
@@ -3709,8 +3682,7 @@ local function needsPlayerContext(text: string): boolean
         return true
     end
 
-    -- v1.3.3: Use cached player list for performance
-    for _, player in ipairs(getCachedPlayers()) do
+    for _, player in ipairs(Players:GetPlayers()) do
         local name = player.Name:lower()
         local displayName = player.DisplayName:lower()
 
@@ -3810,8 +3782,8 @@ local function fuzzyMatchPlayer(partial: string?): string?
         threshold = math.max(CONFIG.FuzzyMatchMinThreshold, math.floor(partialLength * CONFIG.FuzzyMatchRatio))
     end
     
-    -- v1.3.3: Use cached player list for performance
-    local players = getCachedPlayers()
+    -- Cache player list once for efficiency
+    local players = Players:GetPlayers()
     
     for _, player in ipairs(players) do
         local name = player.Name:lower()
