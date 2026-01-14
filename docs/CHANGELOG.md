@@ -14,6 +14,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 |---------|-------------|
 | **ConfigType LuaU Type** | Full type definition for CONFIG with 25+ typed fields for IDE support |
 | **ColorPalette LuaU Type** | Full type definition for Colors with 18 typed fields |
+| **CacheEntry Type** | Type definition for cache entries with command and timestamp |
+| **BridgeStatus Type** | Type definition for bridge connection status |
 | **Drag System Auto-Cleanup** | Frames now auto-cleanup drag connections when destroyed |
 
 ### Changed
@@ -21,14 +23,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 | Change | Description |
 |--------|-------------|
 | **UI Helper Functions** | Enhanced with explicit LuaU type annotations and type casts |
-| **createInstance** | Now returns typed instances with proper casts |
-| **createButton/createLabel/createFrame** | All use explicit `:: Type` casts for return values |
+| **Cache System Functions** | All 6 cache functions now have full type annotations |
+| **Bridge Functions** | `waitForBridge` and `getBridgeStatus` have full type annotations |
+| **Fuzzy Matching System** | `levenshteinDistance`, `fuzzyMatchPlayer` and helpers are typed |
+| **Utility Functions** | `trim`, `normalizeInput`, `sanitizeInput` have type signatures |
 
 ### Technical
 
 | Improvement | Description |
 |-------------|-------------|
-| **Type Safety** | Added comprehensive LuaU type annotations to core configuration and UI systems |
+| **Comprehensive Type Safety** | Added LuaU type annotations to 17+ core functions |
 | **Memory Leak Prevention** | Added `Destroying` listener to `enableDrag()` for automatic connection cleanup |
 | **IDE Support** | Type definitions provide autocomplete and error checking in supported editors |
 

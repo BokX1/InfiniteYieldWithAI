@@ -1048,11 +1048,17 @@ end
 --// ============================================
 --// 4. UTILITY FUNCTIONS
 --// ============================================
-local function trim(str)
+--- Trims leading and trailing whitespace from string
+--- @param str string -- String to trim
+--- @return string -- Trimmed string
+local function trim(str: string): string
     return str:gsub("^%s+", ""):gsub("%s+$", "")
 end
 
-local function normalizeInput(text)
+--- Normalizes input text for cache key lookup
+--- @param text string -- Text to normalize
+--- @return string -- Normalized lowercase text
+local function normalizeInput(text: string): string
     return text:lower():gsub("^%s+", ""):gsub("%s+$", ""):gsub("%s+", " ")
 end
 
@@ -1066,8 +1072,10 @@ local DangerousTokens = {
     debug = true
 }
 
--- Input sanitization for security
-local function sanitizeInput(text)
+--- Sanitizes user input for security
+--- @param text string? -- Text to sanitize
+--- @return string -- Sanitized text
+local function sanitizeInput(text: string?): string
     if not text or type(text) ~= "string" then return "" end
     
     -- Remove control characters (except newline and tab)
@@ -1107,9 +1115,23 @@ end
 --// ============================================
 --// 5. COMMAND CACHE SYSTEM
 --// ============================================
-local CommandCache = {}
 
-local function loadCache()
+--[=[
+    @type CacheEntry
+    Structure for cached command entries with timestamp for LRU eviction
+]=]
+type CacheEntry = {
+    command: string,
+    timestamp: number
+}
+
+type CommandCacheType = {[string]: CacheEntry}
+
+local CommandCache: CommandCacheType = {}
+
+--- Loads cache from file system
+--- @return nil
+local function loadCache(): nil
     if not CONFIG.CacheEnabled then return end
     
     local success, content = pcall(function()
@@ -1119,12 +1141,15 @@ local function loadCache()
     if success and content then
         local parseSuccess, parsed = pcall(HttpService.JSONDecode, HttpService, content)
         if parseSuccess and parsed then
-            CommandCache = parsed
+            CommandCache = parsed :: CommandCacheType
         end
     end
+    return nil
 end
 
-local function saveCache()
+--- Saves cache to file system
+--- @return nil
+local function saveCache(): nil
     if not CONFIG.CacheEnabled then return end
     
     pcall(function()
@@ -1132,14 +1157,22 @@ local function saveCache()
             writefile(CONFIG.CacheFile, HttpService:JSONEncode(CommandCache))
         end
     end)
+    return nil
 end
 
-local function getCachedCommand(input)
+--- Gets a cached command by input key
+--- @param input string -- The user input to look up
+--- @return CacheEntry? -- The cached entry or nil
+local function getCachedCommand(input: string): CacheEntry?
     local key = normalizeInput(input)
     return CommandCache[key]
 end
 
-local function cacheCommand(input, output)
+--- Caches a command translation for future lookups
+--- @param input string -- The original user input
+--- @param output string -- The translated command
+--- @return nil
+local function cacheCommand(input: string, output: string): nil
     if not CONFIG.CacheEnabled then return end
     if not output or output == "" or output:lower():find("sure") then return end
     
@@ -1150,7 +1183,8 @@ local function cacheCommand(input, output)
     for _ in pairs(CommandCache) do count = count + 1 end
     
     if count >= CONFIG.MaxCacheEntries then
-        local oldestKey, oldestTime = nil, math.huge
+        local oldestKey: string? = nil
+        local oldestTime: number = math.huge
         for k, v in pairs(CommandCache) do
             if v.timestamp and v.timestamp < oldestTime then
                 oldestTime = v.timestamp
@@ -1165,15 +1199,20 @@ local function cacheCommand(input, output)
         timestamp = os.time()
     }
     saveCache()
+    return nil
 end
 
-local function clearCache()
+--- Clears all cached commands
+--- @return boolean -- Always returns true
+local function clearCache(): boolean
     CommandCache = {}
     saveCache()
     return true
 end
 
-local function getCacheInfo()
+--- Gets cache statistics
+--- @return (number, number) -- Current count and max entries
+local function getCacheInfo(): (number, number)
     local count = 0
     for _ in pairs(CommandCache) do count = count + 1 end
     return count, CONFIG.MaxCacheEntries
@@ -1185,13 +1224,27 @@ loadCache()
 --// ============================================
 --// 6. BRIDGE SYSTEM (Event-Based with Configurable Retries)
 --// ============================================
+
+--[=[
+    @type BridgeStatus
+    Status information for the IY bridge connection
+]=]
+type BridgeStatus = {
+    connected: boolean,
+    attempts: number,
+    interface: boolean
+}
+
 local IY_Interface = nil
 local BridgeReady = Instance.new("BindableEvent")
-local BridgeConnected = false
-local BridgeConnectionAttempts = 0
+local BridgeConnected: boolean = false
+local BridgeConnectionAttempts: number = 0
 
--- Enhanced waitForBridge with configurable retries
-local function waitForBridge(timeout, retryCount)
+--- Waits for bridge connection with configurable retries
+--- @param timeout number? -- Maximum wait time in seconds
+--- @param retryCount number? -- Number of retry attempts
+--- @return boolean -- True if bridge connected
+local function waitForBridge(timeout: number?, retryCount: number?): boolean
     if BridgeConnected then return true end
     
     local maxRetries = retryCount or CONFIG.BridgeMaxRetries
@@ -1241,8 +1294,9 @@ local function waitForBridge(timeout, retryCount)
     return BridgeConnected
 end
 
--- Get bridge connection status for debugging
-local function getBridgeStatus()
+--- Gets bridge connection status for debugging
+--- @return BridgeStatus -- Current bridge status
+local function getBridgeStatus(): BridgeStatus
     return {
         connected = BridgeConnected,
         attempts = BridgeConnectionAttempts,
@@ -3605,15 +3659,20 @@ EventBus:on("SHOW_NOTIFICATION", function(data)
     end
 end)
 
-local function getPlayerList()
-    local names = {}
+--- Gets comma-separated list of all player names
+--- @return string -- Player names joined by commas
+local function getPlayerList(): string
+    local names: {string} = {}
     for _, player in ipairs(Players:GetPlayers()) do
         table.insert(names, player.Name)
     end
     return table.concat(names, ", ")
 end
 
-local function needsPlayerContext(text)
+--- Checks if text references a player target requiring context injection
+--- @param text string -- Text to check for player references
+--- @return boolean -- True if player context should be injected
+local function needsPlayerContext(text: string): boolean
     local lowerText = text:lower()
     for _, trigger in ipairs(TargetTriggers) do
         if lowerText:find("%f[%w]" .. trigger .. "%f[%W]") then return true end
@@ -3635,18 +3694,26 @@ local function needsPlayerContext(text)
 end
 
 --// Levenshtein Distance for Fuzzy Matching
-local levRowA = {}
-local levRowB = {}
+local levRowA: {number} = {}
+local levRowB: {number} = {}
 
-local function ensureRowSize(row, size)
+--- Ensures row array has at least 'size' elements
+--- @param row {number} -- Row array to resize
+--- @param size number -- Required minimum size
+local function ensureRowSize(row: {number}, size: number): nil
     if #row < size then
         for i = #row + 1, size do
             row[i] = 0
         end
     end
+    return nil
 end
 
-local function levenshteinDistance(s1, s2)
+--- Calculates Levenshtein edit distance between two strings
+--- @param s1 string -- First string
+--- @param s2 string -- Second string
+--- @return number -- Edit distance (0 = identical)
+local function levenshteinDistance(s1: string, s2: string): number
     local len1, len2 = #s1, #s2
     if len1 == 0 then return len2 end
     if len2 == 0 then return len1 end
@@ -3688,7 +3755,10 @@ local function levenshteinDistance(s1, s2)
     return previous[len2 + 1]
 end
 
-local function fuzzyMatchPlayer(partial)
+--- Fuzzy matches a partial name to a player in the server
+--- @param partial string? -- Partial player name to match
+--- @return string? -- Matched player name or nil
+local function fuzzyMatchPlayer(partial: string?): string?
     if not partial or partial == "" then return nil end
     
     local partialLower = partial:lower()
