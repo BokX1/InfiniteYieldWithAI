@@ -17,6 +17,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 | **CacheEntry Type** | Type definition for cache entries with command and timestamp |
 | **BridgeStatus Type** | Type definition for bridge connection status |
 | **Drag System Auto-Cleanup** | Frames now auto-cleanup drag connections when destroyed |
+| **Player List Cache** | Cached player list with automatic invalidation on join/leave events |
 
 ### Changed
 
@@ -27,6 +28,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 | **Bridge Functions** | `waitForBridge` and `getBridgeStatus` have full type annotations |
 | **Fuzzy Matching System** | `levenshteinDistance`, `fuzzyMatchPlayer` and helpers are typed |
 | **Utility Functions** | `trim`, `normalizeInput`, `sanitizeInput` have type signatures |
+| **Player Context Functions** | `needsPlayerContext`, `getPlayerList`, `fuzzyMatchPlayer` now use cached players |
 
 ### Fixed
 
@@ -41,6 +43,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 | **Comprehensive Type Safety** | Added LuaU type annotations to 17+ core functions |
 | **Memory Leak Prevention** | Added `Destroying` listener to `enableDrag()` for automatic connection cleanup |
 | **IDE Support** | Type definitions provide autocomplete and error checking in supported editors |
+| **Player Cache Performance** | `getCachedPlayers()` reduces repeated `Players:GetPlayers()` calls with auto-invalidation |
 
 ---
 

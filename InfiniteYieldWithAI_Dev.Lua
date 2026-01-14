@@ -3659,11 +3659,40 @@ EventBus:on("SHOW_NOTIFICATION", function(data)
     end
 end)
 
---- Gets comma-separated list of all player names
+--// ============================================
+--// v1.3.3: PLAYER LIST CACHE (Performance Optimization)
+--// ============================================
+-- Cached player data to avoid repeated Players:GetPlayers() calls
+local CachedPlayerList: {Player} = {}
+local CachedPlayerNames: string = ""
+local PlayerCacheValid: boolean = false
+
+--- Invalidates the player cache (called on join/leave)
+local function invalidatePlayerCache(): nil
+    PlayerCacheValid = false
+    return nil
+end
+
+--- Gets cached player list, refreshing if invalid
+--- @return {Player} -- Array of current players
+local function getCachedPlayers(): {Player}
+    if not PlayerCacheValid then
+        CachedPlayerList = Players:GetPlayers()
+        PlayerCacheValid = true
+    end
+    return CachedPlayerList
+end
+
+-- Register cache invalidation on player changes
+registerConnection(Players.PlayerAdded:Connect(invalidatePlayerCache))
+registerConnection(Players.PlayerRemoving:Connect(invalidatePlayerCache))
+
+--- Gets comma-separated list of all player names (cached)
 --- @return string -- Player names joined by commas
 local function getPlayerList(): string
+    local players = getCachedPlayers()
     local names: {string} = {}
-    for _, player in ipairs(Players:GetPlayers()) do
+    for _, player in ipairs(players) do
         table.insert(names, player.Name)
     end
     return table.concat(names, ", ")
@@ -3682,7 +3711,8 @@ local function needsPlayerContext(text: string): boolean
         return true
     end
 
-    for _, player in ipairs(Players:GetPlayers()) do
+    -- v1.3.3: Use cached player list for performance
+    for _, player in ipairs(getCachedPlayers()) do
         local name = player.Name:lower()
         local displayName = player.DisplayName:lower()
 
@@ -3782,8 +3812,8 @@ local function fuzzyMatchPlayer(partial: string?): string?
         threshold = math.max(CONFIG.FuzzyMatchMinThreshold, math.floor(partialLength * CONFIG.FuzzyMatchRatio))
     end
     
-    -- Cache player list once for efficiency
-    local players = Players:GetPlayers()
+    -- v1.3.3: Use cached player list for performance
+    local players = getCachedPlayers()
     
     for _, player in ipairs(players) do
         local name = player.Name:lower()
