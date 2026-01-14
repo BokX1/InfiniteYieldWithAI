@@ -28,6 +28,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 | **Fuzzy Matching System** | `levenshteinDistance`, `fuzzyMatchPlayer` and helpers are typed |
 | **Utility Functions** | `trim`, `normalizeInput`, `sanitizeInput` have type signatures |
 
+### Fixed
+
+| Fix | Description |
+|-----|-------------|
+| **Cache Commands Not Executing** | `clearcache` and `cacheinfo` commands now intercept early in Fast Path before AI query |
+
 ### Technical
 
 | Improvement | Description |

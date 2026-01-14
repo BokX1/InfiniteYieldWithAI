@@ -4054,6 +4054,23 @@ local function queryAI(promptText, retryContext, attemptCount)
     
     -- Fast Path (Non-AI)
     if not IS_CHAT_MODE and not retryContext then
+        -- v1.3.3: Direct utility commands - intercept before any AI processing
+        local cleanedPrompt = normalizeInput(promptText):gsub("^;", "")
+        if cleanedPrompt == "clearcache" then
+            clearCache()
+            updateStatus("Cache Cleared - All learned commands removed", Colors.Green)
+            resetVisuals()
+            InputBox.Text = ""
+            return
+        end
+        if cleanedPrompt == "cacheinfo" then
+            local count, max = getCacheInfo()
+            updateStatus(string.format("Cache: %d/%d commands stored", count, max), Colors.Purple)
+            resetVisuals()
+            InputBox.Text = ""
+            return
+        end
+        
         -- Manual chain execution
         if promptText:find(";") then
             executeBridge(promptText, "MANUAL")
