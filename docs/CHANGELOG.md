@@ -6,7 +6,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ---
 
-## [1.3.2] - 2026-01-13
+## [1.3.2] - 2026-01-14
 
 ### Changed
 
@@ -21,6 +21,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 | **Duplicate EventBus Declaration** | Removed duplicate `local EventBus = {}` declaration that shadowed the first |
 | **Drag System Memory Leak** | Fixed `InputChanged` connection not being registered/disconnected in `enableDrag` |
 | **Version String Mismatch** | Synchronized namespace version string with header comment |
+| **Section Numbering** | Fixed duplicate section numbering (1C was used twice) - Error Handler now correctly labeled as 1D |
+| **IS_CHAT_MODE Declaration Order** | Added forward declaration of `IS_CHAT_MODE` in UI Configuration section before its first usage |
+| **PluginBridge Method Name** | Fixed `executeCommand` function calling incorrect method `execCmd` instead of `Exec` |
+| **FastMap Duplicates** | Removed 24 duplicate command patterns from FastMap that were already defined elsewhere |
 
 ### Technical
 
@@ -28,6 +32,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 |-------------|-------------|
 | **Type Safety** | Added `--!nonstrict` mode and Luau type annotations to core systems (`EventBus`, `LifecycleManager`) |
 | **Error Handling** | Enhanced `ErrorHandler` with typed signatures |
+| **Code Cleanup** | Consolidated duplicate entries and improved code organization |
 
 ## [1.3.1] - 2026-01-11
 

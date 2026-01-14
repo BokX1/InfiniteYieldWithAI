@@ -219,7 +219,7 @@ end
 
 
 --// ============================================
---// 1C. ERROR HANDLER (v1.3.0)
+--// 1D. ERROR HANDLER (v1.3.0)
 --// ============================================
 -- Centralized error reporting with graceful degradation
 local ErrorHandler = {}
@@ -1392,6 +1392,9 @@ end)
 --// 7. UI CONFIGURATION
 --// ============================================
 local IsMobile = UserInputService.TouchEnabled and not UserInputService.MouseEnabled
+
+-- Mode state (forward declaration for UI elements that reference it)
+local IS_CHAT_MODE = false
 
 -- Detect high-density displays for mobile scaling
 local ScreenSize = workspace.CurrentCamera and workspace.CurrentCamera.ViewportSize or Vector2.new(1920, 1080)
@@ -2857,7 +2860,7 @@ MainFrame.Visible = false
 --// ============================================
 --// 12. LOGIC ENGINE - DATA TABLES
 --// ============================================
-local IS_CHAT_MODE = false
+-- IS_CHAT_MODE is declared earlier in UI Configuration section
 local BindSystem = {}
 
 -- Rolling chat memory (last 6 exchanges = 12 messages)
@@ -3345,15 +3348,10 @@ local FastMap = {
     
     -- Additional missing commands
     ["^antiafk$"] = "antiafk", ["^antiidle$"] = "antiafk",
-    ["^jpower (%d+)$"] = "jpower %1",
-    ["^lockws$"] = "lockws", ["^lockworkspace$"] = "lockws",
-    ["^unlockws$"] = "unlockws", ["^unlockworkspace$"] = "unlockws",
     ["^rec$"] = "rec", ["^record$"] = "rec",
     ["^teleportwalk (%d+)$"] = "teleportwalk %1", ["^tpwalk (%d+)$"] = "teleportwalk %1",
     ["^unteleportwalk$"] = "unteleportwalk", ["^untpwalk$"] = "unteleportwalk",
     ["^togglefs$"] = "togglefs", ["^togglefullscreen$"] = "togglefs",
-    ["^touchinterests$"] = "touchinterests", ["^touchinterest$"] = "touchinterests",
-    ["^firetouchinterests$"] = "touchinterests", ["^firetouchinterest$"] = "touchinterests",
     ["^tptool$"] = "tptool", ["^teleporttool$"] = "tptool",
     ["^unglobalshadows$"] = "unglobalshadows", ["^nogshadows$"] = "unglobalshadows",
     ["^ungshadows$"] = "unglobalshadows", ["^noglobalshadows$"] = "unglobalshadows",
@@ -4572,8 +4570,8 @@ local PluginBridge = {
     
     -- Execute a command through the bridge
     executeCommand = function(command)
-        if IY_Interface and IY_Interface.execCmd then
-            IY_Interface.execCmd(command)
+        if IY_Interface and IY_Interface.Exec then
+            IY_Interface.Exec(command)
             EventBus:emit("COMMAND_EXECUTED", {source = "PluginBridge", command = command})
             return true
         end
