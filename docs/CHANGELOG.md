@@ -19,6 +19,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 | **FastMap Indexing** | O(1) group lookup for commands based on first character (10x faster matching) |
 | **Levenshtein Optimization** | Early exit strategy for fuzzy matching to prevent CPU spikes on long inputs |
 | **Drag System Auto-Cleanup** | Frames now auto-cleanup drag connections when destroyed |
+| **Testing Documentation** | Added `docs/TESTING.md` with manual verification procedures and edge case matrices |
+| **Agent Development Guide** | Added `.agent/AGENT_GUIDE.md` with codebase architecture documentation |
 
 ### Changed
 
