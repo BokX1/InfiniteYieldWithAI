@@ -74,11 +74,11 @@ Scrapes IY's aliases and keybinds at runtime for enhanced AI context.
 
 Inherits IY's theme colors for consistent styling.
 
-### 8. AnimationManager (Lines 346-405)
+### 8. AnimationManager (Lines 346-409)
 
 Smooth animations for UI elements, including pulsing glow effects.
 
-### 9. TourManager (Lines 408-478)
+### 9. TourManager (Lines 412-482)
 
 First-run onboarding tour system with step highlighting.
 

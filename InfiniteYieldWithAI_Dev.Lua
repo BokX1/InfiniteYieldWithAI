@@ -253,7 +253,7 @@ end
 
 
 --// ============================================
---// 1D. IY INTEGRATION (v1.3.0)
+--// 1E. IY INTEGRATION (v1.3.0)
 --// ============================================
 -- Scrapes IY's aliases and keybinds at runtime
 local IYIntegration = {}
@@ -300,7 +300,7 @@ end
 
 
 --// ============================================
---// 1E. THEME MANAGER (v1.3.0)
+--// 1F. THEME MANAGER (v1.3.0)
 --// ============================================
 -- Inherits IY's theme colors for consistent styling
 local ThemeManager = {}
@@ -344,7 +344,7 @@ end
 
 
 --// ============================================
---// 1F. ANIMATION MANAGER (v1.3.0)
+--// 1G. ANIMATION MANAGER (v1.3.0)
 --// ============================================
 -- Smooth animations for UI elements
 local AnimationManager = {}
@@ -370,9 +370,13 @@ function AnimationManager:animateDropdown(frame, visible, duration)
     if not visible then
         local conn
         conn = tween.Completed:Connect(function()
-            if conn then conn:Disconnect() end
+            if conn then
+                conn:Disconnect()
+                removeConnection(conn)
+            end
             frame.Visible = false
         end)
+        registerConnection(conn)
     end
     return tween
 end
@@ -406,7 +410,7 @@ end
 
 
 --// ============================================
---// 1G. TOUR MANAGER (v1.3.0)
+--// 1H. TOUR MANAGER (v1.3.0)
 --// ============================================
 -- First-run onboarding tour
 local TourManager = {}

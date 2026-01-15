@@ -39,6 +39,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 | Fix | Description |
 |-----|-------------|
 | **Cache Commands Not Executing** | `clearcache` and `cacheinfo` commands now intercept early in Fast Path before AI query |
+| **Duplicate Section Numbering** | Fixed `1D` label used for both Error Handler and IY Integration - sections now correctly labeled 1D through 1H |
+| **Tween Connection Memory Leak** | `animateDropdown` now registers `tween.Completed` connection for proper cleanup |
 
 ### Technical
 
