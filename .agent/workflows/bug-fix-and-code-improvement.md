@@ -4,125 +4,128 @@ description: Workflow for bug fixing and code improvement in InfiniteYieldWithAI
 
 # Bug Fix & Code Improvement Workflow
 
-## Prerequisites
+> **Target:** `InfiniteYieldWithAI_Dev.Lua` (4800+ lines, Lua/LuaU)
 
-- Read `.agent/AGENT_GUIDE.md` for architecture overview and line ranges
-- Review `docs/CHANGELOG.md` for recent changes and known fixes
-- Review `docs/TESTING.md` for verification procedures
+## Before You Start
 
----
-
-## Phase 1: Analysis (Read-Only)
-
-### 1.1 Scan for Common Bug Patterns
-
-Search the dev file for these known issues:
-
-```powershell
-# Duplicate declarations
-rg "local\s+\w+\s*=\s*\{\}" InfiniteYieldWithAI_Dev.Lua --line-number
-```
-
-// turbo
-
-```powershell
-# Unregistered connections (potential memory leaks)
-rg ":Connect\(function" InfiniteYieldWithAI_Dev.Lua --line-number | findstr /V "registerConnection"
-```
-
-// turbo
-
-```powershell
-# Missing type annotations on functions
-rg "^local function \w+\([^)]*\)$" InfiniteYieldWithAI_Dev.Lua --line-number
-```
-
-### 1.2 Check for Unused Variables
-
-```powershell
-# List all local variables and check for usage
-rg "^local (\w+)" InfiniteYieldWithAI_Dev.Lua --only-matching --line-number
-```
-
-### 1.3 Verify FastMap Consistency
-
-Check for duplicate FastMap entries:
-
-```powershell
-rg '^\s*\{.*",' InfiniteYieldWithAI_Dev.Lua | Sort-Object | Get-Unique -AsString
-```
+1. Read `.agent/AGENT_GUIDE.md` for architecture and component line ranges
+2. Check `docs/CHANGELOG.md` for recent fixes (avoid duplicating work)
 
 ---
 
-## Phase 2: Bug Classification
+## Phase 1: Analysis
 
-Categorize discovered issues by severity:
+### 1.1 Bug Pattern Scans
 
-| Severity | Description | Action Required |
-|----------|-------------|-----------------|
-| **Critical** | Runtime errors, script crashes | Fix immediately |
-| **High** | Memory leaks, incorrect behavior | Fix before release |
-| **Medium** | Performance issues, dead code | Fix when time permits |
-| **Low** | Style inconsistencies, missing types | Batch fix |
+Use the grep_search tool to find common issues:
+
+| Pattern | What to Search | Why |
+|---------|----------------|-----|
+| Duplicate tables | `local \w+ = {}` | Find shadowed declarations |
+| Unregistered connections | `Connect(function` then verify `registerConnection` nearby | Memory leaks |
+| Missing type annotations | `local function \w+\(` without `: type` | Code quality |
+| Duplicate FastMap | Same command pattern twice | Redundant entries |
+
+### 1.2 Key Sections to Audit
+
+Use view_file to examine these high-risk areas:
+
+| Section | Lines | Common Issues |
+|---------|-------|---------------|
+| Connection Management | 62-128 | Untracked connections |
+| EventBus | 131-176 | Duplicate declarations |
+| AnimationManager | 346-409 | Tween connection leaks |
+| Drag System | 1670-1750 | InputChanged leaks |
+| Cache System | 1115-1220 | Invalid entries |
+| Bridge System | 1224-1410 | Retry logic bugs |
+| FastMap | 3104-3600 | Duplicate patterns |
+| AI Query | 4082-4370 | HTTP error handling |
+| Suggestion System | 4372-4550 | Player matching bugs |
+
+### 1.3 Section Numbering Check
+
+Verify section headers follow sequential order:
+
+- 1A → 1B → 1C → 1D → 1E → 1F → 1G → 1H
+- 2 → 3 → 4 → ... → 17
+
+---
+
+## Phase 2: Classification
+
+Categorize bugs by severity before fixing:
+
+| Severity | Examples | Priority |
+|----------|----------|----------|
+| **Critical** | Script won't load, runtime errors | Fix first |
+| **High** | Memory leaks, wrong behavior | Fix before release |
+| **Medium** | Performance, dead code | Fix when convenient |
+| **Low** | Missing types, style issues | Batch fix |
 
 ---
 
 ## Phase 3: Implementation
 
-### 3.1 Create a Fix Branch (If Using Git)
+### 3.1 Code Conventions (MUST FOLLOW)
 
-```powershell
-git checkout -b fix/issue-description
+```lua
+-- ✅ Register ALL signal connections
+local conn = signal:Connect(function() ... end)
+registerConnection(conn)
+
+-- ✅ Use type annotations
+local function foo(bar: string): number
+
+-- ✅ Clean up one-shot connections
+conn = event:Connect(function()
+    conn:Disconnect()
+    removeConnection(conn)
+    -- do work
+end)
+registerConnection(conn)
+
+-- ✅ Wrap critical functions
+local safeFn = ErrorHandler:wrap(riskyFn, "SourceName")
+
+-- ✅ Use EventBus for cross-component communication
+EventBus:emit("EVENT_NAME", data)
 ```
 
-### 3.2 Make Changes to Dev File ONLY
+### 3.2 Edit Workflow
 
-- **Edit** `InfiniteYieldWithAI_Dev.Lua`
-- **Follow** code conventions from `AGENT_GUIDE.md`:
-  - Use `registerConnection()` for all signal connections
-  - Use LuaU type annotations for functions
-  - Use `ErrorHandler:wrap()` for critical functions
-  - Use `EventBus` for cross-component communication
+1. **Edit ONLY** `InfiniteYieldWithAI_Dev.Lua`
+2. Make targeted edits using replace_file_content or multi_replace_file_content
+3. Keep changes minimal - avoid refactoring unrelated code
 
-### 3.3 Update Section Comments
+### 3.3 Section Header Format
 
-If modifying a section, verify the header comment line range:
-
-```
---// ============ SECTION N: Name ============
+```lua
+--// ============================================
+--// NX. COMPONENT NAME (vX.X.X)
+--// ============================================
+-- Brief description
 ```
 
 ---
 
 ## Phase 4: Verification
 
-### 4.1 Syntax Check
+### 4.1 Syntax Validation
 
-Verify the script has no syntax errors:
+Verify balanced constructs by counting:
 
-```powershell
-# Quick syntax validation (look for unbalanced brackets/keywords)
-rg "function|end|if|then|else|for|while|do|repeat|until" InfiniteYieldWithAI_Dev.Lua --count
-```
+- `function` should roughly equal `end` count
+- `if` + `for` + `while` should have corresponding `end`
 
-### 4.2 Run Manual Tests
+### 4.2 Test Matrix (from TESTING.md)
 
-Follow the test matrix in `docs/TESTING.md`:
-
-1. **Script Load Test** - Verify script loads without errors
-2. **Basic Commands** - Test speed, fly, direct commands
-3. **Cache System** - Verify cache hit, clear, info
-4. **Fuzzy Matching** - Test partial player names
-
-### 4.3 Performance Validation
-
-Ensure changes don't regress performance:
-
-| Metric | Target |
-|--------|--------|
-| FastMap lookup | <5ms |
-| Fuzzy match (short) | <1ms |
-| UI responsiveness | <16ms |
+| Category | Test Cases |
+|----------|------------|
+| Script Load | Loads without errors, UI appears |
+| Basic Commands | `speed`, `fly`, `goto`, `help` |
+| Cache System | `clearcache`, `cacheinfo`, cache hit |
+| Fuzzy Match | Partial names, `@display`, `me`, `random` |
+| Chain Commands | `fly; speed 100`, `noclip; fly; goto me` |
 
 ---
 
@@ -136,73 +139,60 @@ Ensure changes don't regress performance:
 Copy-Item InfiniteYieldWithAI_Dev.Lua InfiniteYieldWithAI.Lua -Force
 ```
 
-### 5.2 Update Changelog
+### 5.2 Update CHANGELOG.md
 
-Add entry to `docs/CHANGELOG.md` following the existing table format:
-
-```markdown
-### Fixed
-
-| Fix | Description |
-|-----|-------------|
-| **Issue Name** | Brief description of fix |
-```
-
-### 5.3 Update Documentation
-
-If line ranges changed, update `.agent/AGENT_GUIDE.md`:
+Add to the current version's `### Fixed` section:
 
 ```markdown
-| Component | Lines | Description |
-|-----------|-------|-------------|
-| ComponentName | XXX-YYY | Description |
+| **Bug Name** | Brief description of what was fixed |
 ```
 
-### 5.4 Commit Changes
+### 5.3 Update AGENT_GUIDE.md (if needed)
+
+Update line numbers in the component table if sections shifted.
+
+### 5.4 Commit and Push
 
 ```powershell
-git add .
-git commit -m "fix: description of fix"
+git add InfiniteYieldWithAI_Dev.Lua InfiniteYieldWithAI.Lua docs/CHANGELOG.md .agent/AGENT_GUIDE.md
+git commit -m "fix: brief description"
+git push
 ```
 
 ---
 
-## Quick Reference: Key Files
+## Quick Reference
 
-| File | Purpose |
-|------|---------|
-| `InfiniteYieldWithAI_Dev.Lua` | Development file (EDIT THIS) |
-| `InfiniteYieldWithAI.Lua` | Production mirror |
-| `.agent/AGENT_GUIDE.md` | Architecture reference |
+### File Map
+
+| File | Role |
+|------|------|
+| `InfiniteYieldWithAI_Dev.Lua` | Development (EDIT THIS) |
+| `InfiniteYieldWithAI.Lua` | Production (mirror only) |
+| `IYsource.lua` | Reference for IY commands (read-only) |
+| `.agent/AGENT_GUIDE.md` | Architecture docs |
 | `docs/CHANGELOG.md` | Version history |
 | `docs/TESTING.md` | Test procedures |
-| `docs/ROADMAP.md` | Future plans |
 
----
+### Common Bug Patterns
 
-## Quick Reference: Core Components
+| Bug | Fix Pattern |
+|-----|-------------|
+| Unregistered connection | Add `registerConnection(conn)` after `:Connect()` |
+| One-shot connection leak | Add `removeConnection(conn)` inside callback before disconnect |
+| Duplicate section number | Renumber downstream sections (1D, 1E, 1F...) |
+| Tween completion leak | Register the `tween.Completed:Connect()` connection |
+| Missing type annotation | Add `: TypeName` to function parameters and return |
 
-| Component | Lines | Common Bugs |
-|-----------|-------|-------------|
-| Connection Mgmt | 62-128 | Unregistered connections |
-| EventBus | 131-174 | Duplicate declarations |
-| Cache System | 1115-1200 | Invalid cache entries |
-| FastMap | 3102-3600 | Duplicate patterns |
-| AI Query | 4079-4367 | HTTP error handling |
+### Session Checklist
 
----
-
-## Checklist Template
-
-Copy this checklist for each bug fix session:
-
-```markdown
-- [ ] Read AGENT_GUIDE.md for context
-- [ ] Identify bug pattern and severity
-- [ ] Make fix in InfiniteYieldWithAI_Dev.Lua
-- [ ] Verify fix with manual testing
-- [ ] Mirror to InfiniteYieldWithAI.Lua
-- [ ] Update CHANGELOG.md
-- [ ] Update AGENT_GUIDE.md if line ranges changed
-- [ ] Commit changes
+```
+[ ] Read AGENT_GUIDE.md
+[ ] Scan for bug patterns
+[ ] Classify by severity
+[ ] Fix in Dev file only
+[ ] Mirror to production
+[ ] Update CHANGELOG.md
+[ ] Update AGENT_GUIDE.md (if lines changed)
+[ ] Commit and push
 ```
