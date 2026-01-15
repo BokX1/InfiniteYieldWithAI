@@ -6,7 +6,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ---
 
-## [1.3.3] - 2026-01-14
+## [1.3.3] - 2026-01-16
 
 ### Added
 
@@ -26,6 +26,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 | Change | Description |
 |--------|-------------|
+| **AGENT_GUIDE.md Overhaul** | Updated all line number references to match v1.3.3 codebase, added 7 missing component sections |
+| **TESTING.md Expansion** | Added 5 new test sections: Waypoint System, State Toggle Commands, Mobile-Specific Tests, Bridge Connection, Performance Benchmarks |
 | **UI Helper Functions** | Enhanced with explicit LuaU type annotations and type casts |
 | **Cache System Functions** | All 6 cache functions now have full type annotations |
 | **Bridge Functions** | `waitForBridge` and `getBridgeStatus` have full type annotations |
