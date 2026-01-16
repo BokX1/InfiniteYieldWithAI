@@ -538,7 +538,7 @@ local CONFIG: ConfigType = {
     -- API Settings
     ApiKey = "Null",
     Endpoint = "https://infiniteyieldai.ahazihak03.workers.dev/v1/chat/completions",
-    Model = "openai",
+    Model = "deepseek",
     MaxRetries = 2,
     RequestTimeout = 10, -- Seconds to wait for API response
     
