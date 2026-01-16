@@ -29,3 +29,10 @@ SIY_CommandCache.json
 # Temporary files
 *.tmp
 *.temp
+
+# Gemini agent artifacts
+.gemini/
+
+# Lua linters
+*.luacheckrc
+selene.toml

@@ -8,9 +8,9 @@
 
 | | |
 |---|---|
-| **Version** | v1.3.1 Stable |
+| **Version** | v1.3.3 Stable |
 | **Phase** | Stabilization & Polish |
-| **Last Updated** | January 12, 2026 |
+| **Last Updated** | January 16, 2026 |
 
 ---
 
@@ -106,6 +106,30 @@ Conceptual features under research:
 ---
 
 ## ✅ Completed Milestones
+
+### v1.3.3 - Type Safety & Performance (January 2026)
+
+- Comprehensive LuaU type annotations (25+ typed fields)
+- FastMap O(1) indexing with character groups
+- Levenshtein distance optimization with early exit
+- Drag system auto-cleanup on frame destruction
+- Fixed cache commands (`clearcache`, `cacheinfo`) not executing
+
+### v1.3.2 - Chat Persona & Bug Fixes (January 2026)
+
+- Revamped CHAT mode persona (friendly, gamer-like)
+- Fixed duplicate EventBus declaration
+- Fixed drag system memory leak
+- Fixed PluginBridge method name
+- Removed 24 duplicate FastMap patterns
+
+### v1.3.1 - Mobile & Bridge Improvements (January 2026)
+
+- Bridge failure notification for users
+- Mobile touch targets increased to 44px
+- Mobile Quick Actions toggle relocated
+- Fixed duplicate CHAT/CMD mode calls
+- Fixed SoundManager connection leak
 
 ### v1.3.0 - Stabilization & Experience (January 2026)
 

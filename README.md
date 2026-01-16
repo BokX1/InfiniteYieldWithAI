@@ -1,7 +1,7 @@
 # SmartInfiniteYield (SIY)
 
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/Version-1.3.x-green.svg)](docs/CHANGELOG.md)
+[![Version](https://img.shields.io/badge/Version-1.3.3-green.svg)](docs/CHANGELOG.md)
 [![Roblox](https://img.shields.io/badge/Platform-Roblox-red.svg)](https://www.roblox.com/)
 [![Powered by Pollinations.AI](https://img.shields.io/badge/Powered%20by-Pollinations.AI-blueviolet.svg)](https://pollinations.ai/)
 
@@ -23,6 +23,8 @@
 - [Roadmap](#roadmap)
 - [Credits](#credits)
 - [License](#license)
+
+**Developer Docs:** [Architecture](docs/ARCHITECTURE.md) • [API Reference](docs/API.md) • [Testing](docs/TESTING.md)
 
 ---
 
@@ -148,7 +150,7 @@ Customize SIY by modifying the `CONFIG` table at the top of the script:
 |--------|---------|-------------|
 | `ApiKey` | `"Null"` | Optional Bearer token for API authentication |
 | `Endpoint` | `"https://..."` | AI API endpoint URL |
-| `Model` | `"openai"` | AI model to use |
+| `Model` | `"deepseek"` | AI model to use |
 | `MaxRetries` | `2` | Maximum API request retries |
 | `RequestTimeout` | `10` | Seconds to wait for API response |
 
