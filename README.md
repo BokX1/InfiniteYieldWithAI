@@ -1,7 +1,7 @@
 # SmartInfiniteYield (SIY)
 
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/Version-1.3.2-green.svg)](docs/CHANGELOG.md)
+[![Version](https://img.shields.io/badge/Version-1.3.x-green.svg)](docs/CHANGELOG.md)
 [![Roblox](https://img.shields.io/badge/Platform-Roblox-red.svg)](https://www.roblox.com/)
 [![Powered by Pollinations.AI](https://img.shields.io/badge/Powered%20by-Pollinations.AI-blueviolet.svg)](https://pollinations.ai/)
 
