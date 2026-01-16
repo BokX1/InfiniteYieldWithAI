@@ -26,7 +26,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 | Change | Description |
 |--------|-------------|
-| **AI Model Upgrade** | Switched from Pollinations.AI to DeepSeek model for improved reasoning and faster responses |
+| **AI Model Upgrade** | Updated AI model to DeepSeek (via Pollinations.AI) for improved reasoning and faster responses |
 | **AGENT_GUIDE.md Overhaul** | Updated all line number references to match v1.3.3 codebase, added 7 missing component sections |
 | **TESTING.md Expansion** | Added 5 new test sections: Waypoint System, State Toggle Commands, Mobile-Specific Tests, Bridge Connection, Performance Benchmarks |
 | **UI Helper Functions** | Enhanced with explicit LuaU type annotations and type casts |
